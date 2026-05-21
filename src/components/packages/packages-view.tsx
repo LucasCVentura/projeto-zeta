@@ -132,7 +132,9 @@ export function PackagesView({ packages: initialPackages, procedures }: Props) {
                 <Label>Procedimento *</Label>
                 <Select value={procedureId} onValueChange={setProcedureId} disabled={!!editing}>
                   <SelectTrigger className="w-full">
-                    <SelectValue />
+                    <SelectValue>
+                      {procedures.find((p) => p.id === procedureId)?.name ?? "Selecione..."}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {procedures.map((p) => (

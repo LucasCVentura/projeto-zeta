@@ -90,7 +90,9 @@ export function ClientPackagesSection({ clientId, clientPackages: initial, avail
             <label className="text-xs text-muted-foreground">Pacote</label>
             <Select value={selectedPkgId} onValueChange={setSelectedPkgId}>
               <SelectTrigger className="w-full">
-                <SelectValue />
+                <SelectValue>
+                  {(() => { const p = activePackages.find((p) => p.id === selectedPkgId); return p ? `${p.name} — ${p.totalSessions} sessões · ${formatPrice(p.price)}` : "Selecione..." })()}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {activePackages.map((p) => (

@@ -130,7 +130,7 @@ export function SuppliesView({ supplies: initial }: Props) {
                 <Label>Unidade</Label>
                 <Select value={unit} onValueChange={setUnit}>
                   <SelectTrigger className="w-full">
-                    <SelectValue />
+                    <SelectValue>{unit}</SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {UNITS.map((u) => <SelectItem key={u} value={u}>{u}</SelectItem>)}

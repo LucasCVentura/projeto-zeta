@@ -95,7 +95,11 @@ export function ProcedureSuppliesPanel({ procedureId }: { procedureId: string })
           <Label className="text-xs">Insumo</Label>
           <Select value={supplyId} onValueChange={setSupplyId}>
             <SelectTrigger className="w-full h-9">
-              <SelectValue />
+              <SelectValue>
+                {supplies.find((s) => s.id === supplyId)?.name
+                  ? `${supplies.find((s) => s.id === supplyId)!.name} (${supplies.find((s) => s.id === supplyId)!.unit})`
+                  : "Selecione..."}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {supplies.map((s) => (
