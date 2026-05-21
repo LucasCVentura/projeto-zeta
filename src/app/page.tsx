@@ -160,7 +160,7 @@ export default function LandingPage() {
               <div className="h-2.5 w-2.5 rounded-full bg-amber-400/60" />
               <div className="h-2.5 w-2.5 rounded-full bg-green-400/60" />
               <div className="mx-auto rounded-md border border-border bg-background px-12 py-1 text-xs text-muted-foreground">
-                app.zeta.com.br
+                app.kiraclinic.com.br
               </div>
             </div>
             {/* Mock UI */}
