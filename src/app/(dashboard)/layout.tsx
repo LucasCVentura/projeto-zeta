@@ -34,7 +34,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
       const isTrialing = org.subscriptionStatus === "trialing" && trialEnd != null && trialEnd > new Date()
 
       if (!isActive && !isTrialing) {
-        redirect("/assinar")
+        const motivo = org.subscriptionStatus === "trialing" ? "trial-expirado" : "sem-assinatura"
+        redirect(`/assinar?motivo=${motivo}`)
       }
 
       if (isTrialing && trialEnd) {
