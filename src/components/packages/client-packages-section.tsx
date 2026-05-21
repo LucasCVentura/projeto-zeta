@@ -2,8 +2,9 @@
 
 import { useState } from "react"
 import { assignPackageToClientAction } from "@/actions/packages"
-import { Package, Plus, ChevronDown, X } from "lucide-react"
+import { Package, Plus, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { NativeSelect } from "@/components/ui/native-select"
 import { cn } from "@/lib/utils"
 
 type ClientPkg = {
@@ -87,20 +88,13 @@ export function ClientPackagesSection({ clientId, clientPackages: initial, avail
         <form onSubmit={handleAssign} className="rounded-lg border border-border p-3 space-y-3">
           <div className="space-y-1.5">
             <label className="text-xs text-muted-foreground">Pacote</label>
-            <div className="relative">
-              <select
-                value={selectedPkgId}
-                onChange={(e) => setSelectedPkgId(e.target.value)}
-                className="w-full appearance-none rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-primary"
-              >
-                {activePackages.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name} — {p.totalSessions} sessões · {formatPrice(p.price)}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-            </div>
+            <NativeSelect value={selectedPkgId} onChange={(e) => setSelectedPkgId(e.target.value)}>
+              {activePackages.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name} — {p.totalSessions} sessões · {formatPrice(p.price)}
+                </option>
+              ))}
+            </NativeSelect>
           </div>
           <div className="space-y-1.5">
             <label className="text-xs text-muted-foreground">Data de compra</label>

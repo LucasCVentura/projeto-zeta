@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
+import { NativeSelect } from "@/components/ui/native-select"
 import {
   getProcedureSuppliesAction,
   addProcedureSupplyAction,
@@ -95,15 +96,11 @@ export function ProcedureSuppliesPanel({ procedureId }: { procedureId: string })
       <form onSubmit={handleAdd} className="flex gap-2 items-end">
         <div className="flex-1 space-y-1">
           <Label className="text-xs">Insumo</Label>
-          <select
-            value={supplyId}
-            onChange={(e) => setSupplyId(e.target.value)}
-            className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-primary"
-          >
+          <NativeSelect value={supplyId} onChange={(e) => setSupplyId(e.target.value)}>
             {supplies.map((s) => (
               <option key={s.id} value={s.id}>{s.name} ({s.unit})</option>
             ))}
-          </select>
+          </NativeSelect>
         </div>
         <div className="w-24 space-y-1">
           <Label className="text-xs">Qtd/sessão</Label>

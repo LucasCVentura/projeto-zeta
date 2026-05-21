@@ -4,7 +4,8 @@ import { useState } from "react"
 import {
   createSupplyAction, updateSupplyAction, deleteSupplyAction,
 } from "@/actions/supplies"
-import { Plus, Pencil, Trash2, AlertTriangle, ChevronDown, X } from "lucide-react"
+import { Plus, Pencil, Trash2, AlertTriangle, X } from "lucide-react"
+import { NativeSelect } from "@/components/ui/native-select"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -127,13 +128,9 @@ export function SuppliesView({ supplies: initial }: Props) {
               </div>
               <div className="space-y-2">
                 <Label>Unidade</Label>
-                <div className="relative">
-                  <select value={unit} onChange={(e) => setUnit(e.target.value)}
-                    className="w-full appearance-none rounded-lg border border-input bg-background px-3 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
-                    {UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
-                  </select>
-                  <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-                </div>
+                <NativeSelect value={unit} onChange={(e) => setUnit(e.target.value)}>
+                  {UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
+                </NativeSelect>
               </div>
               <div className="space-y-2">
                 <Label>Custo por unidade (R$)</Label>

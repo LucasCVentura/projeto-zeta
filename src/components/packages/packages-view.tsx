@@ -2,7 +2,8 @@
 
 import { useState } from "react"
 import { createPackageAction, updatePackageAction, deletePackageAction } from "@/actions/packages"
-import { Plus, Pencil, Trash2, Package, ChevronDown } from "lucide-react"
+import { Plus, Pencil, Trash2, Package } from "lucide-react"
+import { NativeSelect } from "@/components/ui/native-select"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -129,19 +130,11 @@ export function PackagesView({ packages: initialPackages, procedures }: Props) {
 
               <div className="space-y-2">
                 <Label>Procedimento *</Label>
-                <div className="relative">
-                  <select
-                    value={procedureId}
-                    onChange={(e) => setProcedureId(e.target.value)}
-                    disabled={!!editing}
-                    className="w-full appearance-none rounded-lg border border-input bg-background px-3 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
-                  >
-                    {procedures.map((p) => (
-                      <option key={p.id} value={p.id}>{p.name}</option>
-                    ))}
-                  </select>
-                  <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-                </div>
+                <NativeSelect value={procedureId} onChange={(e) => setProcedureId(e.target.value)} disabled={!!editing}>
+                  {procedures.map((p) => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </NativeSelect>
               </div>
 
               <div className="space-y-2">
