@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { createCheckoutSessionAction } from "@/actions/subscription"
+import { BonsaiIcon } from "@/components/ui/bonsai-icon"
 
 const features = [
   "Agenda inteligente com gestão de horários",
