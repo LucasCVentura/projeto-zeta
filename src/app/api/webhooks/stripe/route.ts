@@ -1,9 +1,19 @@
 import { NextRequest, NextResponse } from "next/server"
 import { stripe } from "@/lib/stripe"
 import { db } from "@/db"
-import { organizations } from "@/db/schema"
+import { organizations, users, organizationMembers } from "@/db/schema"
 import { eq } from "drizzle-orm"
 import type Stripe from "stripe"
+
+async function getOrgOwner(organizationId: string) {
+  const [row] = await db
+    .select({ name: users.name, email: users.email })
+    .from(users)
+    .innerJoin(organizationMembers, eq(organizationMembers.userId, users.id))
+    .where(eq(organizationMembers.organizationId, organizationId))
+    .limit(1)
+  return row ?? null
+}
 
 export async function POST(req: NextRequest) {
   const body = await req.text()
@@ -23,11 +33,16 @@ export async function POST(req: NextRequest) {
       if (!organizationId) break
 
       await db.update(organizations)
-        .set({
-          subscriptionStatus: "active",
-          stripeSubscriptionId: session.subscription as string,
-        })
+        .set({ subscriptionStatus: "active", stripeSubscriptionId: session.subscription as string })
         .where(eq(organizations.id, organizationId))
+
+      try {
+        const owner = await getOrgOwner(organizationId)
+        if (owner?.email) {
+          const { sendSubscriptionActiveEmail } = await import("@/lib/email")
+          await sendSubscriptionActiveEmail(owner.email, owner.name ?? "")
+        }
+      } catch { /* não bloqueia */ }
       break
     }
 

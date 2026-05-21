@@ -96,6 +96,14 @@ export async function registerAction(data: {
     })
   })
 
+  // E-mail de boas-vindas — fire and forget
+  try {
+    const { sendWelcomeEmail } = await import("@/lib/email")
+    await sendWelcomeEmail(data.email, data.name)
+  } catch {
+    // não bloqueia o cadastro se o e-mail falhar
+  }
+
   return { success: true }
 }
 
