@@ -34,7 +34,7 @@ export function Header() {
       setItems(data as LowStockItem[])
       setLoaded(true)
     })
-  }, [])
+  }, [pathname])
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
