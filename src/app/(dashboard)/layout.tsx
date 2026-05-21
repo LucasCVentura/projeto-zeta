@@ -2,6 +2,7 @@ import { Sidebar } from "@/components/layout/sidebar"
 import { MobileNav } from "@/components/layout/mobile-nav"
 import { Header } from "@/components/layout/header"
 import { AuthSessionProvider } from "@/components/layout/session-provider"
+import { TrialBanner } from "@/components/subscription/trial-banner"
 import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import { db } from "@/db"
@@ -18,6 +19,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
     .where(and(eq(organizationMembers.userId, session.user.id), eq(organizationMembers.active, true)))
     .limit(1)
 
+  let trialDaysLeft: number | null = null
+
   if (membership) {
     const [org] = await db
       .select({ subscriptionStatus: organizations.subscriptionStatus, trialEndsAt: organizations.trialEndsAt })
@@ -27,13 +30,15 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
     if (org) {
       const isActive = org.subscriptionStatus === "active"
-      const isTrialing =
-        org.subscriptionStatus === "trialing" &&
-        org.trialEndsAt != null &&
-        new Date(org.trialEndsAt) > new Date()
+      const trialEnd = org.trialEndsAt ? new Date(org.trialEndsAt) : null
+      const isTrialing = org.subscriptionStatus === "trialing" && trialEnd != null && trialEnd > new Date()
 
       if (!isActive && !isTrialing) {
         redirect("/assinar")
+      }
+
+      if (isTrialing && trialEnd) {
+        trialDaysLeft = Math.ceil((trialEnd.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
       }
     }
   }
@@ -45,6 +50,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           <Sidebar />
         </div>
         <div className="flex flex-1 flex-col overflow-hidden">
+          {trialDaysLeft !== null && <TrialBanner daysLeft={trialDaysLeft} />}
           <Header />
           <main className="flex-1 overflow-y-auto pb-16 lg:pb-0">
             {children}
