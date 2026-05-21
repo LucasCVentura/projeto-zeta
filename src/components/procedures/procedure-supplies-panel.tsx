@@ -43,8 +43,7 @@ export function ProcedureSuppliesPanel({ procedureId }: { procedureId: string })
     })
   }, [procedureId])
 
-  async function handleAdd(e: React.FormEvent) {
-    e.preventDefault()
+  async function handleAdd() {
     if (!supplyId || !qty) return
     setLoading(true)
     await addProcedureSupplyAction({ procedureId, supplyId, quantityPerSession: parseFloat(qty) })
@@ -90,7 +89,7 @@ export function ProcedureSuppliesPanel({ procedureId }: { procedureId: string })
         </div>
       )}
 
-      <form onSubmit={handleAdd} className="flex gap-2 items-end">
+      <div className="flex gap-2 items-end">
         <div className="flex-1 space-y-1">
           <Label className="text-xs">Insumo</Label>
           <Select value={supplyId} onValueChange={setSupplyId}>
@@ -112,10 +111,10 @@ export function ProcedureSuppliesPanel({ procedureId }: { procedureId: string })
           <Label className="text-xs">Qtd/sessão</Label>
           <Input value={qty} onChange={(e) => setQty(e.target.value)} inputMode="decimal" className="h-9 text-sm" />
         </div>
-        <Button type="submit" size="sm" disabled={loading} className="h-9">
+        <Button type="button" size="sm" disabled={loading} onClick={handleAdd} className="h-9">
           <Plus size={14} />
         </Button>
-      </form>
+      </div>
     </div>
   )
 }
