@@ -3,14 +3,14 @@
 import { useEffect, useState } from "react"
 
 export function useTheme() {
-  const [isDark, setIsDark] = useState(false)
+  const [isDark, setIsDark] = useState(() =>
+    typeof document !== "undefined"
+      ? document.documentElement.classList.contains("dark")
+      : false
+  )
 
   useEffect(() => {
-    const stored = localStorage.getItem("theme")
-    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches
-    const dark = stored ? stored === "dark" : prefersDark
-    setIsDark(dark)
-    document.documentElement.classList.toggle("dark", dark)
+    setIsDark(document.documentElement.classList.contains("dark"))
   }, [])
 
   function toggle() {
