@@ -1,6 +1,5 @@
 import Link from "next/link"
 import { Calendar, Stethoscope, Building2, ChevronRight, Package, CreditCard } from "lucide-react"
-import { BillingPortalButton } from "@/components/subscription/billing-portal-button"
 
 const sections = [
   {
@@ -56,19 +55,19 @@ export default function ConfiguracoesPage() {
         ))}
       </div>
 
-      {/* Assinatura */}
-      <div className="surface space-y-3">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-            <CreditCard size={18} className="text-primary" />
-          </div>
-          <div>
-            <p className="font-medium text-sm">Assinatura</p>
-            <p className="text-xs text-muted-foreground">Gerencie seu plano e dados de pagamento</p>
-          </div>
+      <Link
+        href="/configuracoes/assinatura"
+        className="surface flex items-center gap-4 hover:border-primary/30 hover:bg-primary/5 transition-colors no-underline"
+      >
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+          <CreditCard size={18} className="text-primary" />
         </div>
-        <BillingPortalButton />
-      </div>
+        <div className="flex-1 min-w-0">
+          <p className="font-medium text-sm">Assinatura</p>
+          <p className="text-xs text-muted-foreground">Status, próxima cobrança e dados de pagamento</p>
+        </div>
+        <ChevronRight size={16} className="text-muted-foreground shrink-0" />
+      </Link>
     </div>
   )
 }
