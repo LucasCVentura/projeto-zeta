@@ -15,6 +15,7 @@ import {
 import { Pencil, Trash2, Plus, Check, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { Procedure } from "@/db/schema"
+import { ProcedureSuppliesPanel } from "./procedure-supplies-panel"
 
 function formatPrice(cents: number) {
   return (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
@@ -180,6 +181,8 @@ function ProcedureRow({
             onChange={(e) => setValue("price", maskPrice(e.target.value))}
           />
         </div>
+        <ProcedureSuppliesPanel procedureId={procedure.id} />
+
         <div className="col-span-2 flex gap-2">
           <Button type="button" variant="outline" size="sm" onClick={onCancelEdit}>
             <X size={13} className="mr-1" /> Cancelar

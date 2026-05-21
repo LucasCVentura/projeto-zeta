@@ -3,9 +3,8 @@
 import { useState } from "react"
 import {
   createSupplyAction, updateSupplyAction, deleteSupplyAction,
-  getProcedureSuppliesAction, addProcedureSupplyAction, removeProcedureSupplyAction,
 } from "@/actions/supplies"
-import { Plus, Pencil, Trash2, AlertTriangle, ChevronDown, Link2, X } from "lucide-react"
+import { Plus, Pencil, Trash2, AlertTriangle, ChevronDown, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -23,20 +22,8 @@ type SupplyRow = {
   updatedAt: Date
 }
 
-type Procedure = { id: string; name: string; price: number }
-
-type ProcedureSupply = {
-  id: string
-  supplyId: string
-  supplyName: string
-  unit: string
-  costPerUnit: number
-  quantityPerSession: string
-}
-
 type Props = {
   supplies: SupplyRow[]
-  procedures: Procedure[]
 }
 
 function formatPrice(cents: number) {
@@ -45,7 +32,7 @@ function formatPrice(cents: number) {
 
 const UNITS = ["un", "ml", "g", "mg", "L", "kg", "cx", "fr"]
 
-export function SuppliesView({ supplies: initial, procedures }: Props) {
+export function SuppliesView({ supplies: initial }: Props) {
   const [supplies, setSupplies] = useState(initial)
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<SupplyRow | null>(null)
@@ -57,14 +44,6 @@ export function SuppliesView({ supplies: initial, procedures }: Props) {
   const [costRaw, setCostRaw] = useState("")
   const [stock, setStock] = useState("")
   const [minStock, setMinStock] = useState("")
-
-  // procedure link panel
-  const [linkingProcedureId, setLinkingProcedureId] = useState("")
-  const [procSupplies, setProcSupplies] = useState<ProcedureSupply[]>([])
-  const [showLinkPanel, setShowLinkPanel] = useState(false)
-  const [linkSupplyId, setLinkSupplyId] = useState("")
-  const [linkQty, setLinkQty] = useState("")
-  const [linkLoading, setLinkLoading] = useState(false)
 
   function openNew() {
     setEditing(null); setName(""); setUnit("un"); setCostRaw(""); setStock(""); setMinStock(""); setShowForm(true)
@@ -105,35 +84,6 @@ export function SuppliesView({ supplies: initial, procedures }: Props) {
     if (!confirm("Remover este insumo?")) return
     await deleteSupplyAction(id)
     setSupplies((prev) => prev.filter((s) => s.id !== id))
-  }
-
-  async function openLinkPanel(procedureId: string) {
-    setLinkingProcedureId(procedureId)
-    setLinkSupplyId(supplies[0]?.id ?? "")
-    setLinkQty("1")
-    const data = await getProcedureSuppliesAction(procedureId)
-    setProcSupplies(data as ProcedureSupply[])
-    setShowLinkPanel(true)
-  }
-
-  async function handleAddLink(e: React.FormEvent) {
-    e.preventDefault()
-    if (!linkSupplyId || !linkQty) return
-    setLinkLoading(true)
-    await addProcedureSupplyAction({
-      procedureId: linkingProcedureId,
-      supplyId: linkSupplyId,
-      quantityPerSession: parseFloat(linkQty.replace(",", ".")) || 1,
-    })
-    const data = await getProcedureSuppliesAction(linkingProcedureId)
-    setProcSupplies(data as ProcedureSupply[])
-    setLinkLoading(false)
-    setLinkQty("1")
-  }
-
-  async function handleRemoveLink(id: string) {
-    await removeProcedureSupplyAction(id)
-    setProcSupplies((prev) => prev.filter((s) => s.id !== id))
   }
 
   const lowStock = supplies.filter((s) => parseFloat(s.currentStock) <= parseFloat(s.minStock) && parseFloat(s.minStock) > 0)
@@ -206,74 +156,6 @@ export function SuppliesView({ supplies: initial, procedures }: Props) {
         </div>
       )}
 
-      {/* Painel de vinculação insumo × procedimento */}
-      {showLinkPanel && (
-        <div className="surface space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="font-medium">Insumos por procedimento</h2>
-            <button onClick={() => setShowLinkPanel(false)} className="text-muted-foreground hover:text-foreground">
-              <X size={16} />
-            </button>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Procedimento</Label>
-            <div className="relative">
-              <select value={linkingProcedureId}
-                onChange={async (e) => {
-                  setLinkingProcedureId(e.target.value)
-                  const data = await getProcedureSuppliesAction(e.target.value)
-                  setProcSupplies(data as ProcedureSupply[])
-                }}
-                className="w-full appearance-none rounded-lg border border-input bg-background px-3 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
-                {procedures.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-              </select>
-              <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-            </div>
-          </div>
-
-          {/* Insumos já vinculados */}
-          {procSupplies.length > 0 && (
-            <div className="space-y-2">
-              {procSupplies.map((ps) => (
-                <div key={ps.id} className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
-                  <div>
-                    <p className="text-sm font-medium">{ps.supplyName}</p>
-                    <p className="text-xs text-muted-foreground">{ps.quantityPerSession} {ps.unit} por sessão · custo: {formatPrice(ps.costPerUnit * parseFloat(ps.quantityPerSession))}</p>
-                  </div>
-                  <button onClick={() => handleRemoveLink(ps.id)} className="text-muted-foreground hover:text-destructive transition-colors">
-                    <X size={14} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Adicionar insumo ao procedimento */}
-          {supplies.length > 0 && (
-            <form onSubmit={handleAddLink} className="flex gap-2 items-end">
-              <div className="flex-1 space-y-1">
-                <Label className="text-xs">Insumo</Label>
-                <div className="relative">
-                  <select value={linkSupplyId} onChange={(e) => setLinkSupplyId(e.target.value)}
-                    className="w-full appearance-none rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-primary">
-                    {supplies.map((s) => <option key={s.id} value={s.id}>{s.name} ({s.unit})</option>)}
-                  </select>
-                  <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-                </div>
-              </div>
-              <div className="w-24 space-y-1">
-                <Label className="text-xs">Qtd/sessão</Label>
-                <Input value={linkQty} onChange={(e) => setLinkQty(e.target.value)} className="h-9 text-sm" />
-              </div>
-              <Button type="submit" size="sm" disabled={linkLoading} className="h-9">
-                <Plus size={14} />
-              </Button>
-            </form>
-          )}
-        </div>
-      )}
-
       {/* Lista de insumos */}
       {supplies.length === 0 ? (
         <div className="surface flex flex-col items-center gap-3 py-16 text-center">
@@ -312,13 +194,6 @@ export function SuppliesView({ supplies: initial, procedures }: Props) {
                       <td className="hidden sm:table-cell px-4 py-3 text-right tabular-nums">{formatPrice(s.costPerUnit)}</td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-1">
-                          <button
-                            onClick={() => procedures.length > 0 ? openLinkPanel(procedures[0].id) : null}
-                            title="Vincular a procedimento"
-                            className="flex h-7 w-7 items-center justify-center rounded-lg hover:bg-accent transition-colors text-muted-foreground hover:text-foreground"
-                          >
-                            <Link2 size={13} />
-                          </button>
                           <button onClick={() => openEdit(s)} className="flex h-7 w-7 items-center justify-center rounded-lg hover:bg-accent transition-colors text-muted-foreground hover:text-foreground">
                             <Pencil size={13} />
                           </button>
@@ -336,16 +211,6 @@ export function SuppliesView({ supplies: initial, procedures }: Props) {
         </div>
       )}
 
-      {/* Atalho para vinculação */}
-      {supplies.length > 0 && procedures.length > 0 && !showLinkPanel && (
-        <button
-          onClick={() => openLinkPanel(procedures[0].id)}
-          className="flex items-center gap-2 text-sm text-primary hover:underline underline-offset-4"
-        >
-          <Link2 size={14} />
-          Gerenciar insumos por procedimento
-        </button>
-      )}
     </div>
   )
 }
