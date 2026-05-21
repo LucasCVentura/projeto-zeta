@@ -16,7 +16,20 @@ const titles: Record<string, string> = {
   "/estoque": "Estoque",
 }
 
+const STORAGE_KEY = "kira:dismissed-notifications"
+
 type LowStockItem = { id: string; name: string; currentStock: string; minStock: string; unit: string }
+
+function getDismissed(): Set<string> {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    return new Set(raw ? JSON.parse(raw) : [])
+  } catch { return new Set() }
+}
+
+function saveDismissed(ids: Set<string>) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify([...ids]))
+}
 
 export function Header() {
   const pathname = usePathname()
@@ -25,13 +38,15 @@ export function Header() {
   )?.[1] ?? "Kira"
 
   const [open, setOpen] = useState(false)
-  const [items, setItems] = useState<LowStockItem[]>([])
+  const [allItems, setAllItems] = useState<LowStockItem[]>([])
+  const [dismissed, setDismissed] = useState<Set<string>>(new Set())
   const [loaded, setLoaded] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
+    setDismissed(getDismissed())
     getLowStockSuppliesAction().then((data) => {
-      setItems(data as LowStockItem[])
+      setAllItems(data as LowStockItem[])
       setLoaded(true)
     })
   }, [pathname])
@@ -43,6 +58,21 @@ export function Header() {
     document.addEventListener("mousedown", handleClick)
     return () => document.removeEventListener("mousedown", handleClick)
   }, [])
+
+  const unread = allItems.filter((i) => !dismissed.has(i.id))
+
+  function dismissOne(id: string) {
+    const next = new Set(dismissed)
+    next.add(id)
+    setDismissed(next)
+    saveDismissed(next)
+  }
+
+  function dismissAll() {
+    const next = new Set(allItems.map((i) => i.id))
+    setDismissed(next)
+    saveDismissed(next)
+  }
 
   return (
     <header className="flex h-16 items-center justify-between border-b border-border bg-background px-4 lg:px-6">
@@ -58,33 +88,36 @@ export function Header() {
               <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
               <path d="M13.73 21a2 2 0 0 1-3.46 0" />
             </svg>
-            {loaded && items.length > 0 && (
+            {loaded && unread.length > 0 && (
               <span className="absolute right-1.5 top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-white">
-                {items.length > 9 ? "9+" : items.length}
+                {unread.length > 9 ? "9+" : unread.length}
               </span>
             )}
           </button>
 
           {open && (
-            <div className="absolute right-0 top-full mt-1 w-72 rounded-lg border bg-popover shadow-lg z-50 overflow-hidden">
-              <div className="border-b px-3 py-2.5">
+            <div className="absolute right-0 top-full mt-1 w-76 rounded-lg border bg-popover shadow-lg z-50 overflow-hidden">
+              <div className="flex items-center justify-between border-b px-3 py-2.5">
                 <p className="text-sm font-medium">Notificações</p>
+                {unread.length > 0 && (
+                  <button
+                    onClick={dismissAll}
+                    className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    Marcar todas como lidas
+                  </button>
+                )}
               </div>
 
-              {items.length === 0 ? (
+              {unread.length === 0 ? (
                 <div className="px-3 py-6 text-center">
                   <p className="text-sm text-muted-foreground">Nenhuma notificação</p>
                 </div>
               ) : (
                 <>
                   <div className="max-h-72 overflow-y-auto">
-                    {items.map((item) => (
-                      <Link
-                        key={item.id}
-                        href="/estoque"
-                        onClick={() => setOpen(false)}
-                        className="flex items-start gap-3 px-3 py-2.5 hover:bg-accent transition-colors"
-                      >
+                    {unread.map((item) => (
+                      <div key={item.id} className="flex items-start gap-3 px-3 py-2.5 hover:bg-accent transition-colors group">
                         <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-destructive/10">
                           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-destructive">
                             <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
@@ -92,13 +125,26 @@ export function Header() {
                             <line x1="12" y1="17" x2="12.01" y2="17" />
                           </svg>
                         </div>
-                        <div className="min-w-0 flex-1">
+                        <Link
+                          href="/estoque"
+                          onClick={() => setOpen(false)}
+                          className="min-w-0 flex-1"
+                        >
                           <p className="text-sm font-medium truncate">{item.name}</p>
                           <p className="text-xs text-muted-foreground">
                             Estoque: {item.currentStock} {item.unit} (mínimo: {item.minStock} {item.unit})
                           </p>
-                        </div>
-                      </Link>
+                        </Link>
+                        <button
+                          onClick={() => dismissOne(item.id)}
+                          title="Marcar como lida"
+                          className="mt-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground"
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                          </svg>
+                        </button>
+                      </div>
                     ))}
                   </div>
                   <div className="border-t px-3 py-2">
