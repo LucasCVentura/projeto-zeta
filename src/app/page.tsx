@@ -383,8 +383,9 @@ export default function LandingPage() {
           </div>
           <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} Zeta. Todos os direitos reservados.</p>
           <div className="flex gap-5 text-xs text-muted-foreground">
+            <Link href="/termos" className="hover:text-foreground transition-colors">Termos de Uso</Link>
+            <Link href="/privacidade" className="hover:text-foreground transition-colors">Privacidade</Link>
             <Link href="/login" className="hover:text-foreground transition-colors">Entrar</Link>
-            <Link href="/register" className="hover:text-foreground transition-colors">Cadastrar</Link>
           </div>
         </div>
       </footer>
