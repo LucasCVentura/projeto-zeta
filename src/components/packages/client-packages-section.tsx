@@ -4,7 +4,7 @@ import { useState } from "react"
 import { assignPackageToClientAction } from "@/actions/packages"
 import { Package, Plus, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { NativeSelect } from "@/components/ui/native-select"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 
 type ClientPkg = {
@@ -88,13 +88,18 @@ export function ClientPackagesSection({ clientId, clientPackages: initial, avail
         <form onSubmit={handleAssign} className="rounded-lg border border-border p-3 space-y-3">
           <div className="space-y-1.5">
             <label className="text-xs text-muted-foreground">Pacote</label>
-            <NativeSelect value={selectedPkgId} onChange={(e) => setSelectedPkgId(e.target.value)}>
-              {activePackages.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name} — {p.totalSessions} sessões · {formatPrice(p.price)}
-                </option>
-              ))}
-            </NativeSelect>
+            <Select value={selectedPkgId} onValueChange={setSelectedPkgId}>
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {activePackages.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.name} — {p.totalSessions} sessões · {formatPrice(p.price)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-1.5">
             <label className="text-xs text-muted-foreground">Data de compra</label>

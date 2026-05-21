@@ -4,13 +4,13 @@ import { useState, useEffect } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
-import { NativeSelect } from "@/components/ui/native-select"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   getProcedureSuppliesAction,
   addProcedureSupplyAction,
   removeProcedureSupplyAction,
+  getSuppliesAction,
 } from "@/actions/supplies"
-import { getSuppliesAction } from "@/actions/supplies"
 import { X, Plus } from "lucide-react"
 
 type ProcedureSupply = {
@@ -36,10 +36,7 @@ export function ProcedureSuppliesPanel({ procedureId }: { procedureId: string })
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    getProcedureSuppliesAction(procedureId).then((d) => {
-      const data = d as ProcedureSupply[]
-      setLinked(data)
-    })
+    getProcedureSuppliesAction(procedureId).then((d) => setLinked(d as ProcedureSupply[]))
     getSuppliesAction().then((d) => {
       setSupplies(d as Supply[])
       if (d.length > 0) setSupplyId((d[0] as Supply).id)
@@ -96,20 +93,20 @@ export function ProcedureSuppliesPanel({ procedureId }: { procedureId: string })
       <form onSubmit={handleAdd} className="flex gap-2 items-end">
         <div className="flex-1 space-y-1">
           <Label className="text-xs">Insumo</Label>
-          <NativeSelect value={supplyId} onChange={(e) => setSupplyId(e.target.value)}>
-            {supplies.map((s) => (
-              <option key={s.id} value={s.id}>{s.name} ({s.unit})</option>
-            ))}
-          </NativeSelect>
+          <Select value={supplyId} onValueChange={setSupplyId}>
+            <SelectTrigger className="w-full h-9">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {supplies.map((s) => (
+                <SelectItem key={s.id} value={s.id}>{s.name} ({s.unit})</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div className="w-24 space-y-1">
           <Label className="text-xs">Qtd/sessão</Label>
-          <Input
-            value={qty}
-            onChange={(e) => setQty(e.target.value)}
-            inputMode="decimal"
-            className="h-9 text-sm"
-          />
+          <Input value={qty} onChange={(e) => setQty(e.target.value)} inputMode="decimal" className="h-9 text-sm" />
         </div>
         <Button type="submit" size="sm" disabled={loading} className="h-9">
           <Plus size={14} />

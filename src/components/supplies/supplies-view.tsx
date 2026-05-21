@@ -5,7 +5,7 @@ import {
   createSupplyAction, updateSupplyAction, deleteSupplyAction,
 } from "@/actions/supplies"
 import { Plus, Pencil, Trash2, AlertTriangle, X } from "lucide-react"
-import { NativeSelect } from "@/components/ui/native-select"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -128,9 +128,14 @@ export function SuppliesView({ supplies: initial }: Props) {
               </div>
               <div className="space-y-2">
                 <Label>Unidade</Label>
-                <NativeSelect value={unit} onChange={(e) => setUnit(e.target.value)}>
-                  {UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
-                </NativeSelect>
+                <Select value={unit} onValueChange={setUnit}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {UNITS.map((u) => <SelectItem key={u} value={u}>{u}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
                 <Label>Custo por unidade (R$)</Label>

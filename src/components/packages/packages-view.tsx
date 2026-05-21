@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { createPackageAction, updatePackageAction, deletePackageAction } from "@/actions/packages"
 import { Plus, Pencil, Trash2, Package } from "lucide-react"
-import { NativeSelect } from "@/components/ui/native-select"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -130,11 +130,16 @@ export function PackagesView({ packages: initialPackages, procedures }: Props) {
 
               <div className="space-y-2">
                 <Label>Procedimento *</Label>
-                <NativeSelect value={procedureId} onChange={(e) => setProcedureId(e.target.value)} disabled={!!editing}>
-                  {procedures.map((p) => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
-                </NativeSelect>
+                <Select value={procedureId} onValueChange={setProcedureId} disabled={!!editing}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {procedures.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">
