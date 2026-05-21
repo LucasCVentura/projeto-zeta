@@ -83,6 +83,8 @@ export async function registerAction(data: {
         type: data.clinicName ? "clinic" : "individual",
         ownerId: userId,
         instagram: data.instagram ? data.instagram.replace(/^@/, "") : null,
+        subscriptionStatus: "trialing",
+        trialEndsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       })
       .returning({ id: organizations.id })
 
