@@ -1,3 +1,5 @@
+import { BonsaiIcon } from "@/components/ui/bonsai-icon"
+
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen lg:grid lg:grid-cols-2">
@@ -8,7 +10,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary">
             <SparkleIcon className="text-primary-foreground" />
           </div>
-          <span className="text-lg font-semibold tracking-tight">Zeta</span>
+          <span className="text-lg font-semibold tracking-tight">Kira</span>
         </div>
 
         <div className="mx-auto w-full max-w-sm sm:max-w-md">{children}</div>
@@ -24,7 +26,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20">
             <SparkleIcon className="text-white" />
           </div>
-          <span className="text-lg font-semibold tracking-tight text-white">Zeta</span>
+          <span className="text-lg font-semibold tracking-tight text-white">Kira</span>
         </div>
 
         <div className="relative z-10 space-y-6">
@@ -54,7 +56,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         </div>
 
         <p className="relative z-10 text-sm text-white/40">
-          © {new Date().getFullYear()} Zeta. Todos os direitos reservados.
+          © {new Date().getFullYear()} Kira. Todos os direitos reservados.
         </p>
       </div>
     </div>
@@ -62,11 +64,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
 }
 
 function SparkleIcon({ className }: { className?: string }) {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}>
-      <path d="M12 2L9.5 9.5 2 12l7.5 2.5L12 22l2.5-7.5L22 12l-7.5-2.5z" strokeLinejoin="round" strokeLinecap="round"/>
-    </svg>
-  )
+  return <BonsaiIcon size={16} className={className} />
 }
 
 function CheckIcon() {

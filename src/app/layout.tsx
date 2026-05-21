@@ -16,7 +16,7 @@ const playfair = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-  title: "Zeta — Gestão para Estética",
+  title: "Kira — Gestão para Estética",
   description: "Plataforma de gestão para profissionais da estética e biomédicos estetas.",
 };
 

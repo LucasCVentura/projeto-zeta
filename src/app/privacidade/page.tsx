@@ -1,7 +1,8 @@
 import Link from "next/link"
+import { BonsaiIcon } from "@/components/ui/bonsai-icon"
 import { ArrowLeft } from "lucide-react"
 
-export const metadata = { title: "Política de Privacidade — Zeta" }
+export const metadata = { title: "Política de Privacidade — Kira" }
 
 export default function PrivacidadePage() {
   const updated = "21 de maio de 2025"
@@ -15,25 +16,23 @@ export default function PrivacidadePage() {
           </Link>
           <div className="flex items-center gap-2.5">
             <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-primary-foreground">
-                <path d="M12 2L9.5 9.5 2 12l7.5 2.5L12 22l2.5-7.5L22 12l-7.5-2.5z" strokeLinejoin="round" strokeLinecap="round" />
-              </svg>
+              <BonsaiIcon size={14} className="text-primary-foreground" />
             </div>
-            <span className="font-semibold">Zeta</span>
+            <span className="font-semibold">Kira</span>
           </div>
           <div>
             <h1 className="font-heading text-3xl font-bold">Política de Privacidade</h1>
             <p className="mt-1 text-sm text-muted-foreground">Última atualização: {updated}</p>
           </div>
           <p className="text-muted-foreground leading-relaxed">
-            Esta Política descreve como o Zeta coleta, usa, armazena e protege seus dados pessoais, em conformidade com a Lei Geral de Proteção de Dados (LGPD — Lei nº 13.709/2018).
+            Esta Política descreve como o Kira coleta, usa, armazena e protege seus dados pessoais, em conformidade com a Lei Geral de Proteção de Dados (LGPD — Lei nº 13.709/2018).
           </p>
         </div>
 
         <div className="space-y-8 text-foreground">
 
           <Section title="1. Controlador e Operador de Dados">
-            <p>O Zeta atua como <strong>controlador</strong> dos dados dos Usuários da plataforma (profissionais de estética) e como <strong>operador</strong> dos dados dos clientes finais cadastrados pelos Usuários.</p>
+            <p>O Kira atua como <strong>controlador</strong> dos dados dos Usuários da plataforma (profissionais de estética) e como <strong>operador</strong> dos dados dos clientes finais cadastrados pelos Usuários.</p>
             <p>Encarregado de Dados (DPO): <strong>contato@zeta.com.br</strong></p>
           </Section>
 
@@ -91,7 +90,7 @@ export default function PrivacidadePage() {
           </Section>
 
           <Section title="5. Cookies e Tecnologias Similares">
-            <p>O Zeta utiliza <strong>exclusivamente cookies essenciais</strong> para o funcionamento da plataforma:</p>
+            <p>O Kira utiliza <strong>exclusivamente cookies essenciais</strong> para o funcionamento da plataforma:</p>
             <ul>
               <li><strong>Cookie de sessão</strong> — mantém você autenticado durante o uso. Expira em 30 dias ou ao sair da conta.</li>
             </ul>

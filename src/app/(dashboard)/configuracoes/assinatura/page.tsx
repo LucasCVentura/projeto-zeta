@@ -87,7 +87,7 @@ export default async function AssinaturaPage() {
             <strong>
               {new Date(org.trialEndsAt).toLocaleDateString("pt-BR", { day: "numeric", month: "long", year: "numeric" })}
             </strong>
-            . Assine para continuar usando o Zeta.
+            . Assine para continuar usando o Kira.
           </div>
         )}
 
@@ -96,7 +96,7 @@ export default async function AssinaturaPage() {
           <div className="space-y-3 pt-1">
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">Plano</span>
-              <span className="font-medium">Zeta Pro</span>
+              <span className="font-medium">Kira Pro</span>
             </div>
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">Valor</span>

@@ -1,4 +1,5 @@
 import Link from "next/link"
+import { BonsaiIcon } from "@/components/ui/bonsai-icon"
 
 const features = [
   {
@@ -24,9 +25,7 @@ const features = [
   },
   {
     icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
-        <path d="M12 2L9.5 9.5 2 12l7.5 2.5L12 22l2.5-7.5L22 12l-7.5-2.5z" strokeLinejoin="round" strokeLinecap="round" />
-      </svg>
+      <BonsaiIcon size={20} />
     ),
     title: "IA para evolução",
     description: "Análise automática de fotos antes e depois, com relatórios de evolução gerados por IA.",
@@ -79,11 +78,9 @@ export default function LandingPage() {
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5">
           <div className="flex items-center gap-2.5">
             <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-primary-foreground">
-                <path d="M12 2L9.5 9.5 2 12l7.5 2.5L12 22l2.5-7.5L22 12l-7.5-2.5z" strokeLinejoin="round" strokeLinecap="round" />
-              </svg>
+              <BonsaiIcon size={13} className="text-primary-foreground" />
             </div>
-            <span className="font-semibold tracking-tight">Zeta</span>
+            <span className="font-semibold tracking-tight">Kira</span>
           </div>
           <div className="flex items-center gap-3">
             <Link href="/login" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
@@ -303,7 +300,7 @@ export default function LandingPage() {
 
           <div className="rounded-3xl border-2 border-primary/20 bg-card p-8 shadow-xl shadow-primary/10 space-y-6">
             <div>
-              <p className="text-sm font-medium text-muted-foreground mb-1">Zeta Pro</p>
+              <p className="text-sm font-medium text-muted-foreground mb-1">Kira Pro</p>
               <div className="flex items-end justify-center gap-1">
                 <span className="text-lg text-muted-foreground">R$</span>
                 <span className="font-heading text-6xl font-bold">49</span>
@@ -375,13 +372,11 @@ export default function LandingPage() {
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 sm:flex-row">
           <div className="flex items-center gap-2">
             <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-primary-foreground">
-                <path d="M12 2L9.5 9.5 2 12l7.5 2.5L12 22l2.5-7.5L22 12l-7.5-2.5z" strokeLinejoin="round" strokeLinecap="round" />
-              </svg>
+              <BonsaiIcon size={11} className="text-primary-foreground" />
             </div>
-            <span className="text-sm font-semibold">Zeta</span>
+            <span className="text-sm font-semibold">Kira</span>
           </div>
-          <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} Zeta. Todos os direitos reservados.</p>
+          <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} Kira. Todos os direitos reservados.</p>
           <div className="flex gap-5 text-xs text-muted-foreground">
             <Link href="/termos" className="hover:text-foreground transition-colors">Termos de Uso</Link>
             <Link href="/privacidade" className="hover:text-foreground transition-colors">Privacidade</Link>

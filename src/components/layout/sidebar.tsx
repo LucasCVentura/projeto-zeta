@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react"
 import { cn } from "@/lib/utils"
 import { useTheme } from "@/hooks/use-theme"
 import { mediaUrl } from "@/lib/media-url"
+import { BonsaiIcon } from "@/components/ui/bonsai-icon"
 import Image from "next/image"
 
 const navItems = [
@@ -84,11 +85,9 @@ export function Sidebar() {
       {/* Logo */}
       <div className="flex h-16 items-center gap-2.5 border-b border-border px-5">
         <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-primary-foreground">
-            <path d="M12 2L9.5 9.5 2 12l7.5 2.5L12 22l2.5-7.5L22 12l-7.5-2.5z" strokeLinejoin="round" strokeLinecap="round" />
-          </svg>
+          <BonsaiIcon size={14} className="text-primary-foreground" />
         </div>
-        <span className="font-semibold tracking-tight">Zeta</span>
+        <span className="font-semibold tracking-tight">Kira</span>
       </div>
 
       {/* Nav */}

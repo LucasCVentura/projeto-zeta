@@ -17,7 +17,7 @@ export function Header() {
   const pathname = usePathname()
   const title = Object.entries(titles).find(([key]) =>
     pathname === key || pathname.startsWith(key + "/")
-  )?.[1] ?? "Zeta"
+  )?.[1] ?? "Kira"
 
   return (
     <header className="flex h-16 items-center justify-between border-b border-border bg-background px-4 lg:px-6">

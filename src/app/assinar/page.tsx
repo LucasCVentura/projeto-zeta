@@ -27,17 +27,15 @@ export default function AssinarPage() {
         {/* Logo */}
         <div className="flex items-center justify-center gap-2.5">
           <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-primary-foreground">
-              <path d="M12 2L9.5 9.5 2 12l7.5 2.5L12 22l2.5-7.5L22 12l-7.5-2.5z" strokeLinejoin="round" strokeLinecap="round" />
-            </svg>
+            <BonsaiIcon size={14} className="text-primary-foreground" />
           </div>
-          <span className="text-xl font-semibold tracking-tight">Zeta</span>
+          <span className="text-xl font-semibold tracking-tight">Kira</span>
         </div>
 
         {/* Card */}
         <div className="rounded-2xl border border-border bg-card p-8 shadow-sm space-y-6">
           <div className="text-center space-y-1">
-            <h1 className="text-2xl font-bold font-heading">Zeta Pro</h1>
+            <h1 className="text-2xl font-bold font-heading">Kira Pro</h1>
             <p className="text-muted-foreground text-sm">Tudo que sua clínica precisa em um só lugar</p>
           </div>
 
