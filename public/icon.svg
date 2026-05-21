@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none" stroke="#b06070" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Tronco -->
+  <line x1="16" y1="28" x2="16" y2="18"/>
+  <!-- Base / vaso -->
+  <line x1="11" y1="28" x2="21" y2="28"/>
+  <!-- Galho esquerdo -->
+  <path d="M16 18c-2.5-1.5-6-1.5-8-5"/>
+  <!-- Galho direito -->
+  <path d="M16 18c2.5-1.5 6-1.5 8-5"/>
+  <!-- Copa esquerda inferior -->
+  <path d="M8 13c-1.5-3 0-6.5 4-6.5"/>
+  <!-- Copa direita inferior -->
+  <path d="M24 13c1.5-3 0-6.5-4-6.5"/>
+  <!-- Copa central topo -->
+  <path d="M12 6.5c0-3 2-5.5 4-5.5s4 2.5 4 5.5"/>
+  <!-- Folhagem esquerda -->
+  <path d="M7 13c0 2.5 2.5 4 5 4"/>
+  <!-- Folhagem direita -->
+  <path d="M25 13c0 2.5-2.5 4-5 4"/>
+  <!-- Folhagem centro -->
+  <path d="M11 17c1.5 1.5 3.5 2 5 1.5"/>
+</svg>
