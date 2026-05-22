@@ -5,7 +5,7 @@ import { getClientPackagesAction } from "@/actions/packages"
 import { getPackagesAction } from "@/actions/packages"
 import { StatusBadge } from "@/components/agenda/status-badge"
 import { ClientPackagesSection } from "@/components/packages/client-packages-section"
-import { ArrowLeft, Phone, Mail, CalendarDays, User, Pencil, Images } from "lucide-react"
+import { ArrowLeft, Phone, Mail, CalendarDays, User, Pencil, Images, ExternalLink } from "lucide-react"
 
 type Props = { params: Promise<{ id: string }> }
 
@@ -165,7 +165,18 @@ export default async function ClientePerfilPage({ params }: Props) {
                   <p className="text-xs text-muted-foreground">{formatDateTime(appt.date, appt.startTime)}</p>
                   {appt.notes && <p className="mt-1 text-xs text-muted-foreground italic">{appt.notes}</p>}
                 </div>
-                <StatusBadge status={appt.status} />
+                <div className="flex items-center gap-2 shrink-0">
+                  <StatusBadge status={appt.status} />
+                  {appt.status === "completed" && (
+                    <Link
+                      href={`/consulta/${appt.id}`}
+                      className="flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                      title="Ver consulta / anexar fotos"
+                    >
+                      <ExternalLink size={12} />
+                    </Link>
+                  )}
+                </div>
               </div>
             ))}
           </div>
