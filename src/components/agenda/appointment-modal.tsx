@@ -124,7 +124,10 @@ export function AppointmentModal({ open, onClose, date, time }: Props) {
     setAiExplanation(null)
     const result = await suggestRecurrenceAction(selectedClient.id)
     setAiLoading(false)
-    if (!result.success || !result.frequency) return
+    if (!result.success || !result.frequency) {
+      setAiExplanation(result.error ?? "Não foi possível gerar sugestão.")
+      return
+    }
     setValue("frequency", result.frequency)
     setValue("recurrenceCount", result.count ?? 4)
     setAiExplanation(result.explanation ?? null)
