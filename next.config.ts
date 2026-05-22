@@ -4,9 +4,6 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  images: {
-    localPatterns: [{ pathname: "/uploads/**" }],
-  },
 };
 
 export default nextConfig;
