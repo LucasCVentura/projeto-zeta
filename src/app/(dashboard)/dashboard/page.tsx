@@ -1,8 +1,10 @@
 import { CalendarDays, Users, CalendarCheck, TrendingUp, Clock, AlertTriangle } from "lucide-react"
 import { getDashboardDataAction } from "@/actions/dashboard"
 import { getLowStockSuppliesAction } from "@/actions/supplies"
+import { getOnboardingStatusAction } from "@/actions/onboarding"
 import { StatusBadge } from "@/components/agenda/status-badge"
 import { RevenueChart, ProceduresChart, StatusChart } from "@/components/dashboard/dashboard-charts"
+import { OnboardingChecklist } from "@/components/dashboard/onboarding-checklist"
 import Link from "next/link"
 
 function formatCurrency(cents: number) {
@@ -10,9 +12,10 @@ function formatCurrency(cents: number) {
 }
 
 export default async function DashboardPage() {
-  const [data, lowStock] = await Promise.all([
+  const [data, lowStock, onboarding] = await Promise.all([
     getDashboardDataAction(),
     getLowStockSuppliesAction(),
+    getOnboardingStatusAction(),
   ])
 
   const stats = [
@@ -49,6 +52,11 @@ export default async function DashboardPage() {
             {lowStock.map((s) => s.name).join(", ")}
           </p>
         </Link>
+      )}
+
+      {/* Onboarding */}
+      {!onboarding.hasAppointment && (
+        <OnboardingChecklist {...onboarding} />
       )}
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
