@@ -4,6 +4,7 @@ import { WelcomeEmail } from "@/emails/welcome"
 import { TrialEndingEmail } from "@/emails/trial-ending"
 import { TrialExpiredEmail } from "@/emails/trial-expired"
 import { SubscriptionActiveEmail } from "@/emails/subscription-active"
+import { ResetPasswordEmail } from "@/emails/reset-password"
 
 export async function sendWelcomeEmail(to: string, name: string) {
   await resend.emails.send({
@@ -31,6 +32,16 @@ export async function sendTrialExpiredEmail(to: string, name: string) {
     to,
     subject: "Seu período de teste terminou — seus dados estão salvos",
     react: createElement(TrialExpiredEmail, { name, appUrl: APP_URL }),
+  })
+}
+
+export async function sendResetPasswordEmail(to: string, name: string, token: string) {
+  const resetUrl = `${APP_URL}/reset-password?token=${token}`
+  await resend.emails.send({
+    from: FROM_EMAIL,
+    to,
+    subject: "Redefinição de senha — Kira",
+    react: createElement(ResetPasswordEmail, { name, resetUrl }),
   })
 }
 

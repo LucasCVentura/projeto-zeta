@@ -388,6 +388,21 @@ export const procedureSupplies = pgTable("procedure_supplies", {
   (t) => [unique("uniq_proc_supply").on(t.procedureId, t.supplyId)]
 )
 
+// ── password_reset_tokens ─────────────────────────────────────────────────────
+
+export const passwordResetTokens = pgTable("password_reset_tokens", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  token: text("token").notNull().unique(),
+  expiresAt: timestamp("expires_at").notNull(),
+  usedAt: timestamp("used_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+})
+
 // ── client_anamnesis ──────────────────────────────────────────────────────────
 
 export const clientAnamnesis = pgTable("client_anamnesis", {
@@ -538,3 +553,4 @@ export type NewClientPackage = typeof clientPackages.$inferInsert
 export type Supply = typeof supplies.$inferSelect
 export type NewSupply = typeof supplies.$inferInsert
 export type ProcedureSupply = typeof procedureSupplies.$inferSelect
+export type PasswordResetToken = typeof passwordResetTokens.$inferSelect
