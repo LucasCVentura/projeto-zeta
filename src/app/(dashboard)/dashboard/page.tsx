@@ -2,6 +2,7 @@ import { CalendarDays, Users, CalendarCheck, TrendingUp, Clock, AlertTriangle } 
 import { getDashboardDataAction } from "@/actions/dashboard"
 import { getLowStockSuppliesAction } from "@/actions/supplies"
 import { StatusBadge } from "@/components/agenda/status-badge"
+import { RevenueChart, ProceduresChart, StatusChart } from "@/components/dashboard/dashboard-charts"
 import Link from "next/link"
 
 function formatCurrency(cents: number) {
@@ -61,6 +62,13 @@ export default async function DashboardPage() {
           </div>
         ))}
       </div>
+
+      {/* Gráficos */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <RevenueChart data={data.revenueChart} />
+        <StatusChart data={data.statusCounts} />
+      </div>
+      <ProceduresChart data={data.topProcedures} />
 
       {/* Atendimentos de hoje */}
       <div className="surface space-y-4">

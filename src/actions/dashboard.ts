@@ -2,7 +2,7 @@
 
 import { db } from "@/db"
 import { appointments, clients, transactions } from "@/db/schema"
-import { eq, and, gte, lte, sum, count, sql } from "drizzle-orm"
+import { eq, and, gte, lte, sum, count, sql, isNotNull } from "drizzle-orm"
 import { requireSession } from "@/lib/session"
 
 export async function getDashboardDataAction() {
@@ -80,6 +80,78 @@ export async function getDashboardDataAction() {
 
   const confirmedToday = upcomingToday.filter((a) => a.status === "confirmed").length
 
+  // Receita dos últimos 6 meses
+  const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1)
+  const sixMonthsAgoStr = sixMonthsAgo.toISOString().split("T")[0]
+
+  const revenueByMonth = await db
+    .select({
+      month: sql<string>`to_char(${transactions.date}::date, 'YYYY-MM')`,
+      total: sum(transactions.amount),
+    })
+    .from(transactions)
+    .where(
+      and(
+        eq(transactions.organizationId, organizationId),
+        eq(transactions.professionalId, userId),
+        gte(transactions.date, sixMonthsAgoStr),
+      )
+    )
+    .groupBy(sql`to_char(${transactions.date}::date, 'YYYY-MM')`)
+    .orderBy(sql`to_char(${transactions.date}::date, 'YYYY-MM')`)
+
+  // Preenche meses sem receita
+  const monthLabels: { key: string; label: string }[] = []
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
+    const label = d.toLocaleDateString("pt-BR", { month: "short" })
+    monthLabels.push({ key, label })
+  }
+  const revenueChart = monthLabels.map(({ key, label }) => {
+    const found = revenueByMonth.find((r) => r.month === key)
+    return { month: label, total: Number(found?.total ?? 0) }
+  })
+
+  // Top 5 procedimentos
+  const topProcedures = await db
+    .select({
+      procedure: appointments.procedure,
+      count: count(),
+    })
+    .from(appointments)
+    .where(
+      and(
+        eq(appointments.organizationId, organizationId),
+        eq(appointments.professionalId, userId),
+        isNotNull(appointments.procedure),
+        sql`${appointments.status} != 'cancelled'`,
+        gte(appointments.date, sixMonthsAgoStr),
+      )
+    )
+    .groupBy(appointments.procedure)
+    .orderBy(sql`count(*) desc`)
+    .limit(5)
+    .then((r) => r.map((row) => ({ name: row.procedure ?? "", count: Number(row.count) })))
+
+  // Agendamentos por status no mês
+  const statusCounts = await db
+    .select({
+      status: appointments.status,
+      count: count(),
+    })
+    .from(appointments)
+    .where(
+      and(
+        eq(appointments.organizationId, organizationId),
+        eq(appointments.professionalId, userId),
+        gte(appointments.date, monthStart),
+        lte(appointments.date, monthEnd),
+      )
+    )
+    .groupBy(appointments.status)
+    .then((r) => r.map((row) => ({ status: row.status, count: Number(row.count) })))
+
   return {
     todayCount: Number(todayAppointments),
     totalClients: Number(totalClients),
@@ -87,5 +159,8 @@ export async function getDashboardDataAction() {
     monthRevenue,
     upcomingToday,
     today,
+    revenueChart,
+    topProcedures,
+    statusCounts,
   }
 }
