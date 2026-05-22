@@ -3,14 +3,12 @@
 import { useEffect, useState } from "react"
 
 export function useTheme() {
-  const [isDark, setIsDark] = useState(() =>
-    typeof document !== "undefined"
-      ? document.documentElement.classList.contains("dark")
-      : false
-  )
+  const [isDark, setIsDark] = useState(false)
+  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
     setIsDark(document.documentElement.classList.contains("dark"))
+    setMounted(true)
   }, [])
 
   function toggle() {
@@ -20,5 +18,5 @@ export function useTheme() {
     localStorage.setItem("theme", next ? "dark" : "light")
   }
 
-  return { isDark, toggle }
+  return { isDark, toggle, mounted }
 }

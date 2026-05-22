@@ -79,7 +79,7 @@ const navItems = [
 
 export function Sidebar() {
   const pathname = usePathname()
-  const { isDark, toggle } = useTheme()
+  const { isDark, toggle, mounted } = useTheme()
 
   return (
     <aside className="flex h-full w-60 flex-col border-r border-border bg-sidebar">
@@ -119,9 +119,14 @@ export function Sidebar() {
       <div className="border-t border-border p-3 space-y-1">
         <button
           onClick={toggle}
+          suppressHydrationWarning
           className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
         >
-          {isDark ? (
+          {!mounted ? (
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+              <circle cx="12" cy="12" r="5" />
+            </svg>
+          ) : isDark ? (
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
               <circle cx="12" cy="12" r="5" />
               <line x1="12" y1="1" x2="12" y2="3" />
@@ -138,7 +143,7 @@ export function Sidebar() {
               <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
             </svg>
           )}
-          {isDark ? "Modo claro" : "Modo escuro"}
+          {mounted ? (isDark ? "Modo claro" : "Modo escuro") : "Modo escuro"}
         </button>
         <UserMenu />
       </div>
