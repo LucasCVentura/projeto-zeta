@@ -88,6 +88,10 @@ export function ClientForm({ defaultValues }: { defaultValues?: Partial<FormData
   }
 
   async function onSubmit(data: FormData) {
+    if (step < STEPS.length - 1) {
+      await nextStep()
+      return
+    }
     setIsLoading(true)
     setError(null)
     const result = await createClientAction({
