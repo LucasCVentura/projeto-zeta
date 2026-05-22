@@ -87,11 +87,7 @@ export function ClientForm({ defaultValues }: { defaultValues?: Partial<FormData
     if (valid) setStep((s) => Math.min(s + 1, STEPS.length - 1))
   }
 
-  async function onSubmit(data: FormData) {
-    if (step < STEPS.length - 1) {
-      await nextStep()
-      return
-    }
+  async function submitForm(data: FormData) {
     setIsLoading(true)
     setError(null)
     const result = await createClientAction({
@@ -125,7 +121,10 @@ export function ClientForm({ defaultValues }: { defaultValues?: Partial<FormData
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+    <form
+      onSubmit={(e) => e.preventDefault()}
+      className="space-y-6"
+    >
       {/* Step indicator */}
       <div className="flex items-center gap-2">
         {STEPS.map((label, i) => (
@@ -323,7 +322,7 @@ export function ClientForm({ defaultValues }: { defaultValues?: Partial<FormData
         {step < STEPS.length - 1 ? (
           <Button type="button" className="flex-1" onClick={nextStep}>Continuar</Button>
         ) : (
-          <Button type="submit" className="flex-1" disabled={isLoading}>
+          <Button type="button" className="flex-1" disabled={isLoading} onClick={handleSubmit(submitForm)}>
             {isLoading ? "Salvando..." : "Cadastrar cliente"}
           </Button>
         )}

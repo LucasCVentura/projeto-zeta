@@ -1,5 +1,6 @@
 import * as React from "react"
 import { EmailBase, EmailHeading, EmailText, EmailButton, EmailDivider } from "./base"
+import { PLAN_PRICE_BRL } from "@/lib/config"
 
 export function TrialEndingEmail({ name, daysLeft, appUrl }: { name: string; daysLeft: number; appUrl: string }) {
   return (
@@ -14,11 +15,11 @@ export function TrialEndingEmail({ name, daysLeft, appUrl }: { name: string; day
       </EmailText>
 
       <EmailText>
-        Para continuar com sua agenda, clientes e prontuários sem interrupção, assine o plano Kira Pro por apenas <strong>R$49,90/mês</strong>.
+        Para continuar com sua agenda, clientes e prontuários sem interrupção, assine o plano Kira Pro por apenas <strong>{PLAN_PRICE_BRL}/mês</strong>.
       </EmailText>
 
       <EmailButton href={`${appUrl}/assinar`}>
-        Assinar Kira Pro — R$49,90/mês
+        Assinar Kira Pro — {PLAN_PRICE_BRL}/mês
       </EmailButton>
 
       <EmailDivider />

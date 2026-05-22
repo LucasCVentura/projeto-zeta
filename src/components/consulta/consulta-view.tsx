@@ -3,10 +3,10 @@
 import { useState, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { saveConsultaNotesAction } from "@/actions/consulta"
-import { uploadClientPhotoAction, getClientPhotosAction } from "@/actions/photos"
+import { uploadClientPhotoAction, getClientPhotosAction, deleteClientPhotoAction } from "@/actions/photos"
 import { PhotoComparison, CompareButton } from "@/components/photos/photo-comparison"
 import { CompleteAppointmentModal } from "@/components/agenda/complete-appointment-modal"
-import { ArrowLeft, Camera, CheckCircle2, Save, Images, RotateCcw, Check } from "lucide-react"
+import { ArrowLeft, Camera, CheckCircle2, Save, Images, RotateCcw, Check, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { mediaUrl } from "@/lib/media-url"
@@ -57,6 +57,8 @@ export function ConsultaView({ appointment, allClientPhotos: initialPhotos }: Pr
   const [pendingPreview, setPendingPreview] = useState<string | null>(null)
 
   const cameraRef = useRef<HTMLInputElement>(null)
+  const uploadRef = useRef<HTMLInputElement>(null)
+  const isCompleted = appointment.status === "completed"
 
   const sessionPhotos = allPhotos.filter((p) => sessionPhotoIds.includes(p.id))
   const previousPhotos = allPhotos.filter((p) => !sessionPhotoIds.includes(p.id))
@@ -81,6 +83,24 @@ export function ConsultaView({ appointment, allClientPhotos: initialPhotos }: Pr
     setTimeout(() => cameraRef.current?.click(), 50)
   }
 
+  async function handleUpload(file: File) {
+    if (!file.type.startsWith("image/")) return
+    setIsUploading(true)
+    if (uploadRef.current) uploadRef.current.value = ""
+
+    const fd = new FormData()
+    fd.append("photo", file)
+    fd.append("takenAt", appointment.date)
+    if (appointment.procedureId) fd.append("procedureId", appointment.procedureId)
+
+    const result = await uploadClientPhotoAction(appointment.clientId, fd)
+    setIsUploading(false)
+    if (result.success && result.photo) {
+      setSessionPhotoIds((prev) => [...prev, result.photo!.id])
+      await refreshPhotos()
+    }
+  }
+
   async function handleConfirmPhoto() {
     if (!pendingFile) return
     setIsUploading(true)
@@ -99,6 +119,13 @@ export function ConsultaView({ appointment, allClientPhotos: initialPhotos }: Pr
       setSessionPhotoIds((prev) => [...prev, result.photo!.id])
       await refreshPhotos()
     }
+  }
+
+  async function handleDeletePhoto(photoId: string) {
+    await deleteClientPhotoAction(photoId, appointment.clientId)
+    setSessionPhotoIds((prev) => prev.filter((id) => id !== photoId))
+    setSelected((prev) => prev.filter((id) => id !== photoId))
+    await refreshPhotos()
   }
 
   async function saveNotes() {
@@ -198,7 +225,7 @@ export function ConsultaView({ appointment, allClientPhotos: initialPhotos }: Pr
         procedurePrice={appointment.procedurePrice ?? undefined}
       />
 
-      <div className="container-page max-w-xl py-6 space-y-6 pb-32">
+      <div className={cn("container-page max-w-xl py-6 space-y-6", !isCompleted && "pb-32")}>
         {/* Header */}
         <div className="flex items-start justify-between gap-4">
           <Link
@@ -255,14 +282,24 @@ export function ConsultaView({ appointment, allClientPhotos: initialPhotos }: Pr
         <div className="surface space-y-4">
           <div className="flex items-center justify-between">
             <p className="text-sm font-medium">Fotos desta consulta</p>
-            <button
-              onClick={() => cameraRef.current?.click()}
-              disabled={isUploading}
-              className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
-            >
-              <Camera size={13} />
-              {isUploading ? "Salvando..." : "Tirar foto"}
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => uploadRef.current?.click()}
+                disabled={isUploading}
+                className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-accent disabled:opacity-50 transition-colors"
+              >
+                <Images size={13} />
+                Anexar
+              </button>
+              <button
+                onClick={() => cameraRef.current?.click()}
+                disabled={isUploading}
+                className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
+              >
+                <Camera size={13} />
+                {isUploading ? "Salvando..." : "Tirar foto"}
+              </button>
+            </div>
             <input
               ref={cameraRef}
               type="file"
@@ -270,6 +307,13 @@ export function ConsultaView({ appointment, allClientPhotos: initialPhotos }: Pr
               capture="environment"
               className="hidden"
               onChange={(e) => e.target.files?.[0] && handleCapture(e.target.files[0])}
+            />
+            <input
+              ref={uploadRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0])}
             />
           </div>
 
@@ -289,6 +333,7 @@ export function ConsultaView({ appointment, allClientPhotos: initialPhotos }: Pr
                   selectMode={selectMode}
                   selectedIndex={selected.indexOf(photo.id)}
                   onSelect={() => toggleSelect(photo.id)}
+                  onDelete={() => handleDeletePhoto(photo.id)}
                 />
               ))}
             </div>
@@ -317,6 +362,7 @@ export function ConsultaView({ appointment, allClientPhotos: initialPhotos }: Pr
                   selectMode={selectMode}
                   selectedIndex={selected.indexOf(photo.id)}
                   onSelect={() => toggleSelect(photo.id)}
+                  onDelete={() => handleDeletePhoto(photo.id)}
                 />
               ))}
             </div>
@@ -350,23 +396,25 @@ export function ConsultaView({ appointment, allClientPhotos: initialPhotos }: Pr
         )}
       </div>
 
-      {/* Footer fixo — Concluir */}
-      <div className="fixed bottom-0 left-0 right-0 border-t border-border bg-background/95 backdrop-blur px-4 py-3 lg:left-60">
-        <Button
-          onClick={() => setCompleteModal(true)}
-          className="w-full bg-green-600 hover:bg-green-700 text-white"
-          size="lg"
-        >
-          <CheckCircle2 size={18} className="mr-2" />
-          Concluir atendimento
-        </Button>
-      </div>
+      {/* Footer fixo */}
+      {!isCompleted && (
+        <div className="fixed bottom-0 left-0 right-0 border-t border-border bg-background/95 backdrop-blur px-4 py-3 lg:left-60">
+          <Button
+            onClick={() => setCompleteModal(true)}
+            className="w-full bg-green-600 hover:bg-green-700 text-white"
+            size="lg"
+          >
+            <CheckCircle2 size={18} className="mr-2" />
+            Concluir atendimento
+          </Button>
+        </div>
+      )}
     </>
   )
 }
 
 function PhotoThumb({
-  photo, isSelected, isDisabled, selectMode, selectedIndex, onSelect,
+  photo, isSelected, isDisabled, selectMode, selectedIndex, onSelect, onDelete,
 }: {
   photo: ClientPhoto
   isSelected: boolean
@@ -374,7 +422,17 @@ function PhotoThumb({
   selectMode: boolean
   selectedIndex: number
   onSelect: () => void
+  onDelete: () => void
 }) {
+  const [deleting, setDeleting] = useState(false)
+
+  async function handleDelete(e: React.MouseEvent) {
+    e.stopPropagation()
+    if (!confirm("Excluir esta foto?")) return
+    setDeleting(true)
+    await onDelete()
+  }
+
   return (
     <div
       onClick={() => selectMode && !isDisabled && onSelect()}
@@ -405,11 +463,20 @@ function PhotoThumb({
       )}
 
       {!selectMode && (
-        <div className="absolute bottom-0 left-0 right-0 bg-linear-to-t from-black/60 to-transparent px-2 py-2 opacity-0 group-hover:opacity-100 transition-opacity">
-          <p className="text-[10px] text-white/90">
-            {new Date(photo.takenAt + "T12:00:00").toLocaleDateString("pt-BR", { day: "numeric", month: "short" })}
-          </p>
-        </div>
+        <>
+          <div className="absolute bottom-0 left-0 right-0 bg-linear-to-t from-black/60 to-transparent px-2 py-2">
+            <p className="text-[10px] text-white/90">
+              {new Date(photo.takenAt + "T12:00:00").toLocaleDateString("pt-BR", { day: "numeric", month: "short" })}
+            </p>
+          </div>
+          <button
+            onClick={handleDelete}
+            disabled={deleting}
+            className="absolute top-1.5 right-1.5 flex h-6 w-6 items-center justify-center rounded-md bg-black/40 text-white/70 hover:bg-red-600 hover:text-white transition-colors disabled:opacity-50"
+          >
+            <Trash2 size={11} />
+          </button>
+        </>
       )}
     </div>
   )

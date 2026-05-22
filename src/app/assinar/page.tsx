@@ -24,9 +24,16 @@ function AssinarContent() {
   const trialExpirado = motivo === "trial-expirado"
   const semAssinatura = motivo === "sem-assinatura"
 
+  const [subscribeError, setSubscribeError] = useState<string | null>(null)
+
   async function handleSubscribe() {
     setLoading(true)
-    await createCheckoutSessionAction()
+    setSubscribeError(null)
+    const result = await createCheckoutSessionAction()
+    if (result?.error) {
+      setSubscribeError(result.error)
+      setLoading(false)
+    }
   }
 
   return (
@@ -108,6 +115,10 @@ function AssinarContent() {
               </span>
             ) : trialExpirado ? "Assinar e continuar" : "Assinar agora"}
           </button>
+
+          {subscribeError && (
+            <p className="text-center text-sm text-destructive">{subscribeError}</p>
+          )}
 
           <p className="text-center text-xs text-muted-foreground">
             Cancele quando quiser · Sem fidelidade

@@ -3,9 +3,9 @@ import Link from "next/link"
 import { getClientAction } from "@/actions/clients"
 import { getClientPackagesAction } from "@/actions/packages"
 import { getPackagesAction } from "@/actions/packages"
-import { StatusBadge } from "@/components/agenda/status-badge"
 import { ClientPackagesSection } from "@/components/packages/client-packages-section"
-import { ArrowLeft, Phone, Mail, CalendarDays, User, Pencil, Images, ExternalLink } from "lucide-react"
+import { ClientHistory } from "@/components/clients/client-history"
+import { ArrowLeft, Phone, Mail, CalendarDays, Pencil, Images } from "lucide-react"
 
 type Props = { params: Promise<{ id: string }> }
 
@@ -143,45 +143,7 @@ export default async function ClientePerfilPage({ params }: Props) {
       />
 
       {/* Histórico de atendimentos */}
-      <div className="surface space-y-4">
-        <div className="flex items-center justify-between">
-          <p className="text-sm font-medium">Histórico</p>
-          <span className="text-xs text-muted-foreground">{history.length} atendimento{history.length !== 1 ? "s" : ""}</span>
-        </div>
-
-        {history.length === 0 ? (
-          <div className="flex flex-col items-center gap-2 py-8 text-center">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
-              <User size={16} className="text-muted-foreground" />
-            </div>
-            <p className="text-sm text-muted-foreground">Nenhum atendimento registrado.</p>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {history.map((appt) => (
-              <div key={appt.id} className="flex items-start justify-between rounded-lg border border-border px-4 py-3 gap-3">
-                <div className="min-w-0">
-                  <p className="text-sm font-medium">{appt.procedure ?? "Procedimento não informado"}</p>
-                  <p className="text-xs text-muted-foreground">{formatDateTime(appt.date, appt.startTime)}</p>
-                  {appt.notes && <p className="mt-1 text-xs text-muted-foreground italic">{appt.notes}</p>}
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <StatusBadge status={appt.status} />
-                  {appt.status === "completed" && (
-                    <Link
-                      href={`/consulta/${appt.id}`}
-                      className="flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
-                      title="Ver consulta / anexar fotos"
-                    >
-                      <ExternalLink size={12} />
-                    </Link>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+      <ClientHistory history={history} />
     </div>
   )
 }

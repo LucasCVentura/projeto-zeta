@@ -2,7 +2,7 @@
 
 import { db } from "@/db"
 import { clients, clientAnamnesis, appointments } from "@/db/schema"
-import { eq, and, ilike, or, count, max, sql } from "drizzle-orm"
+import { eq, and, ilike, or, count, max, sql, desc, asc } from "drizzle-orm"
 import { requireSession } from "@/lib/session"
 import { can } from "@/lib/permissions"
 import { revalidatePath } from "next/cache"
@@ -85,7 +85,7 @@ export async function getClientAction(clientId: string) {
         eq(appointments.organizationId, organizationId)
       )
     )
-    .orderBy(sql`${appointments.date} DESC, ${appointments.startTime} DESC`)
+    .orderBy(asc(appointments.date), asc(appointments.startTime))
 
   return { client, anamnesis: anamnesis[0] ?? null, history }
 }

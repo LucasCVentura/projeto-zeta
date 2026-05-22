@@ -1,5 +1,6 @@
 import * as React from "react"
 import { EmailBase, EmailHeading, EmailText, EmailButton, EmailDivider } from "./base"
+import { PLAN_PRICE_BRL } from "@/lib/config"
 
 export function TrialExpiredEmail({ name, appUrl }: { name: string; appUrl: string }) {
   return (
@@ -19,7 +20,7 @@ export function TrialExpiredEmail({ name, appUrl }: { name: string; appUrl: stri
       </EmailText>
 
       <EmailButton href={`${appUrl}/assinar`}>
-        Reativar minha conta — R$49,90/mês
+        {`Reativar minha conta — ${PLAN_PRICE_BRL}/mês`}
       </EmailButton>
 
       <EmailDivider />

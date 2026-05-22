@@ -7,7 +7,9 @@ import { eq } from "drizzle-orm"
 import { requireSession } from "@/lib/session"
 import { stripe, PRICE_ID } from "@/lib/stripe"
 
-export async function createCheckoutSessionAction() {
+type ActionResult = { error: string }
+
+export async function createCheckoutSessionAction(): Promise<ActionResult | void> {
   const { organizationId } = await requireSession()
 
   const [org] = await db
@@ -16,7 +18,7 @@ export async function createCheckoutSessionAction() {
     .where(eq(organizations.id, organizationId))
     .limit(1)
 
-  if (!org) throw new Error("Organization not found")
+  if (!org) return { error: "Organização não encontrada." }
 
   let customerId = org.stripeCustomerId
 
@@ -44,10 +46,12 @@ export async function createCheckoutSessionAction() {
     locale: "pt-BR",
   })
 
-  redirect(session.url!)
+  if (!session.url) return { error: "Erro ao iniciar sessão de pagamento. Tente novamente." }
+
+  redirect(session.url)
 }
 
-export async function createBillingPortalAction() {
+export async function createBillingPortalAction(): Promise<ActionResult | void> {
   const { organizationId } = await requireSession()
 
   const [org] = await db
@@ -56,7 +60,7 @@ export async function createBillingPortalAction() {
     .where(eq(organizations.id, organizationId))
     .limit(1)
 
-  if (!org?.stripeCustomerId) throw new Error("No Stripe customer")
+  if (!org?.stripeCustomerId) return { error: "Nenhuma assinatura ativa encontrada." }
 
   const baseUrl = process.env.AUTH_URL ?? "http://localhost:3000"
 
@@ -64,6 +68,8 @@ export async function createBillingPortalAction() {
     customer: org.stripeCustomerId,
     return_url: `${baseUrl}/configuracoes`,
   })
+
+  if (!session.url) return { error: "Erro ao abrir portal de pagamento. Tente novamente." }
 
   redirect(session.url)
 }

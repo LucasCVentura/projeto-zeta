@@ -1,4 +1,5 @@
 import { requireSession } from "@/lib/session"
+import { PLAN_PRICE_BRL } from "@/lib/config"
 import { db } from "@/db"
 import { organizations } from "@/db/schema"
 import { eq } from "drizzle-orm"
@@ -139,7 +140,7 @@ export default async function AssinaturaPage() {
             href="/assinar"
             className="flex w-full items-center justify-center rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
           >
-            Assinar por R$49,90/mês
+            {`Assinar por ${PLAN_PRICE_BRL}/mês`}
           </Link>
         )}
         {(isActive || sub) && <BillingPortalButton />}
