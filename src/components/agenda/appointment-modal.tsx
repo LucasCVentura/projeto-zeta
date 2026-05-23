@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { createAppointmentAction, getClientsAction, getProceduresForBookingAction } from "@/actions/schedule"
 import { suggestRecurrenceAction } from "@/actions/ai"
-import { getClientPackagesAction } from "@/actions/packages"
+import { getActiveClientPackagesForProcedureAction } from "@/actions/packages"
 import { Search, User, ChevronDown, X, Sparkles, Loader2, Package } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -31,7 +31,7 @@ const schema = z.object({
 type FormData = z.infer<typeof schema>
 type Client = { id: string; name: string; phone: string | null }
 type Procedure = { id: string; name: string; price: number }
-type ActivePackage = { id: string; packageName: string; sessionsUsed: number; totalSessions: number; sessionsRemaining: number; procedureId: string; procedureName: string }
+type ActivePackage = { id: string; packageName: string; sessionsUsed: number; totalSessions: number; sessionsRemaining: number }
 
 const FREQUENCY_OPTIONS = [
   { value: "weekly", label: "Semanal" },
@@ -99,59 +99,22 @@ export function AppointmentModal({ open, onClose, date, time }: Props) {
     (c.phone ?? "").includes(clientSearch)
   )
 
-  async function selectClient(client: Client) {
+  function selectClient(client: Client) {
     setSelectedClient(client)
     setValue("clientId", client.id)
     setClientPickerOpen(false)
     setClientSearch("")
-    setSelectedPackageId(null)
-    const pkgs = await getClientPackagesAction(client.id)
-    setActivePackages((pkgs as ActivePackage[]).filter((p) => p.sessionsRemaining > 0))
   }
 
   async function selectProcedure(proc: Procedure) {
     setSelectedProcedure(proc)
     setValue("procedureId", proc.id)
     setProcedurePickerOpen(false)
-    // keep selectedPackageId if it matches this procedure
-    if (selectedPackageId) {
-      const pkg = activePackages.find((p) => p.id === selectedPackageId)
-      if (pkg && pkg.procedureId !== proc.id) setSelectedPackageId(null)
-    }
-  }
-
-  async function selectPackage(pkg: ActivePackage) {
-    const isDeselecting = selectedPackageId === pkg.id
-    setSelectedPackageId(isDeselecting ? null : pkg.id)
-
-    if (isDeselecting) {
-      setValue("recurring", false)
-      setAiExplanation(null)
-      return
-    }
-
-    // auto-fill procedure
-    const proc = procedures.find((p) => p.id === pkg.procedureId)
-    if (proc) { setSelectedProcedure(proc); setValue("procedureId", proc.id) }
-    else { setSelectedProcedure({ id: pkg.procedureId, name: pkg.procedureName, price: 0 }); setValue("procedureId", pkg.procedureId) }
-
-    // auto-enable recurrence with remaining sessions
-    setValue("recurring", true)
-    setValue("recurrenceCount", pkg.sessionsRemaining)
-
-    // auto-trigger AI suggestion
+    setSelectedPackageId(null)
+    setActivePackages([])
     if (selectedClient) {
-      setAiLoading(true)
-      setAiExplanation(null)
-      const result = await suggestRecurrenceAction(selectedClient.id)
-      setAiLoading(false)
-      if (result.success && result.frequency) {
-        setValue("frequency", result.frequency)
-        setValue("recurrenceCount", result.count ?? pkg.sessionsRemaining)
-        setAiExplanation(result.explanation ?? null)
-      } else {
-        setAiExplanation(null) // no data — let user pick manually, controls are already open
-      }
+      const pkgs = await getActiveClientPackagesForProcedureAction(selectedClient.id, proc.id)
+      setActivePackages(pkgs as ActivePackage[])
     }
   }
 
@@ -231,7 +194,7 @@ export function AppointmentModal({ open, onClose, date, time }: Props) {
               placeholder="Selecionar cliente..."
               isOpen={clientPickerOpen}
               onToggle={() => setClientPickerOpen((v) => !v)}
-              onClear={() => { setSelectedClient(null); setValue("clientId", ""); setActivePackages([]); setSelectedPackageId(null) }}
+              onClear={() => { setSelectedClient(null); setValue("clientId", "") }}
             />
             {clientPickerOpen && (
               <PickerDropdown
@@ -254,56 +217,12 @@ export function AppointmentModal({ open, onClose, date, time }: Props) {
             {errors.clientId && <p className="text-destructive text-xs">{errors.clientId.message}</p>}
           </div>
 
-          {/* Pacotes ativos do cliente */}
-          {activePackages.length > 0 && (
-            <div className="space-y-2">
-              <Label className="flex items-center gap-1.5">
-                <Package size={13} className="text-primary" />
-                Usar sessão de pacote
-              </Label>
-              <div className="space-y-1.5">
-                {activePackages.map((pkg) => (
-                  <button
-                    key={pkg.id}
-                    type="button"
-                    onClick={() => selectPackage(pkg)}
-                    className={cn(
-                      "flex w-full items-center justify-between rounded-lg border px-3 py-2.5 text-sm transition-colors",
-                      selectedPackageId === pkg.id
-                        ? "border-primary bg-primary/5 text-primary"
-                        : "border-border hover:border-primary/40"
-                    )}
-                  >
-                    <div className="text-left">
-                      <p className="font-medium">{pkg.packageName}</p>
-                      <p className={cn("text-xs", selectedPackageId === pkg.id ? "text-primary/70" : "text-muted-foreground")}>{pkg.procedureName}</p>
-                    </div>
-                    <span className={cn("text-xs shrink-0", selectedPackageId === pkg.id ? "text-primary" : "text-muted-foreground")}>
-                      {pkg.sessionsRemaining} restante{pkg.sessionsRemaining !== 1 ? "s" : ""}
-                    </span>
-                  </button>
-                ))}
-              </div>
-              {selectedPackageId && !aiLoading && (
-                <p className="text-xs text-primary">
-                  Sessão será descontada do pacote ao concluir o atendimento.
-                </p>
-              )}
-              {selectedPackageId && aiLoading && (
-                <div className="flex items-center gap-2 text-xs text-primary">
-                  <Loader2 size={12} className="animate-spin" />
-                  Analisando histórico para sugerir datas...
-                </div>
-              )}
-            </div>
-          )}
-
           {/* Procedimento */}
           <div className="space-y-2">
             <Label>Procedimento <span className="text-muted-foreground">(opcional)</span></Label>
             <PickerButton
               selected={selectedProcedure
-                ? { label: selectedProcedure.name, sub: selectedProcedure.price > 0 ? formatPrice(selectedProcedure.price) : undefined }
+                ? { label: selectedProcedure.name, sub: formatPrice(selectedProcedure.price) }
                 : null}
               placeholder="Selecionar procedimento..."
               isOpen={procedurePickerOpen}
@@ -323,13 +242,48 @@ export function AppointmentModal({ open, onClose, date, time }: Props) {
                   <PickerItem
                     key={p.id}
                     label={p.name}
-                    sub={p.price > 0 ? formatPrice(p.price) : undefined}
+                    sub={formatPrice(p.price)}
                     onClick={() => selectProcedure(p)}
                   />
                 ))}
               </PickerDropdown>
             )}
           </div>
+
+          {/* Pacotes ativos do cliente para este procedimento */}
+          {activePackages.length > 0 && (
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1.5">
+                <Package size={13} className="text-primary" />
+                Usar sessão de pacote
+              </Label>
+              <div className="space-y-1.5">
+                {activePackages.map((pkg) => (
+                  <button
+                    key={pkg.id}
+                    type="button"
+                    onClick={() => setSelectedPackageId(selectedPackageId === pkg.id ? null : pkg.id)}
+                    className={cn(
+                      "flex w-full items-center justify-between rounded-lg border px-3 py-2.5 text-sm transition-colors",
+                      selectedPackageId === pkg.id
+                        ? "border-primary bg-primary/5 text-primary"
+                        : "border-border hover:border-primary/40"
+                    )}
+                  >
+                    <span className="font-medium">{pkg.packageName}</span>
+                    <span className={cn("text-xs", selectedPackageId === pkg.id ? "text-primary" : "text-muted-foreground")}>
+                      {pkg.sessionsRemaining} sessão{pkg.sessionsRemaining !== 1 ? "ões" : ""} restante{pkg.sessionsRemaining !== 1 ? "s" : ""}
+                    </span>
+                  </button>
+                ))}
+              </div>
+              {selectedPackageId && (
+                <p className="text-xs text-primary">
+                  Sessão será descontada do pacote ao concluir o atendimento.
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Observações */}
           <div className="space-y-2">
@@ -338,16 +292,13 @@ export function AppointmentModal({ open, onClose, date, time }: Props) {
           </div>
 
           {/* Recorrência */}
-          <div className={cn("space-y-3 rounded-lg border p-3 transition-colors", selectedPackageId ? "border-primary/30 bg-primary/5" : "border-border")}>
+          <div className="space-y-3 rounded-lg border border-border p-3">
             <button
               type="button"
               onClick={() => setValue("recurring", !recurring)}
               className="flex w-full items-center justify-between text-sm"
             >
-              <span className="font-medium flex items-center gap-2">
-                {selectedPackageId ? <Package size={13} className="text-primary" /> : null}
-                {selectedPackageId ? "Agendar sessões do pacote" : "Repetir agendamento"}
-              </span>
+              <span className="font-medium">Repetir agendamento</span>
               <div className={cn(
                 "relative h-6 w-10 shrink-0 rounded-full outline-none transition-colors",
                 recurring ? "bg-primary" : "bg-muted"
@@ -403,14 +354,17 @@ export function AppointmentModal({ open, onClose, date, time }: Props) {
                   </span>
                 </div>
 
-                {selectedClient && !selectedPackageId && (
+                {selectedClient && (
                   <button
                     type="button"
                     onClick={handleAiSuggest}
                     disabled={aiLoading}
                     className="flex items-center gap-1.5 text-xs text-primary hover:underline underline-offset-4 disabled:opacity-50"
                   >
-                    {aiLoading ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                    {aiLoading
+                      ? <Loader2 size={12} className="animate-spin" />
+                      : <Sparkles size={12} />
+                    }
                     {aiLoading ? "Analisando histórico..." : "Sugerir com IA"}
                   </button>
                 )}
@@ -420,12 +374,6 @@ export function AppointmentModal({ open, onClose, date, time }: Props) {
                     <Sparkles size={12} className="text-primary mt-0.5 shrink-0" />
                     <p className="text-xs text-muted-foreground leading-relaxed">{aiExplanation}</p>
                   </div>
-                )}
-
-                {selectedPackageId && !aiLoading && !aiExplanation && (
-                  <p className="text-xs text-muted-foreground">
-                    Sem histórico suficiente para sugestão automática. Ajuste o intervalo e confirme.
-                  </p>
                 )}
               </div>
             )}

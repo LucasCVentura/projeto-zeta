@@ -2,15 +2,17 @@
 
 import { useState } from "react"
 import { assignPackageToClientAction } from "@/actions/packages"
-import { Package, Plus, X } from "lucide-react"
+import { Package, Plus, CalendarDays } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
+import { SchedulePackageModal } from "./schedule-package-modal"
 
 type ClientPkg = {
   id: string
   packageName: string
   procedureName: string
+  procedureId: string
   totalSessions: number
   sessionsUsed: number
   sessionsRemaining: number
@@ -21,6 +23,7 @@ type ClientPkg = {
 type AvailablePkg = {
   id: string
   name: string
+  procedureId: string
   procedureName: string
   totalSessions: number
   price: number
@@ -40,6 +43,7 @@ function formatPrice(cents: number) {
 export function ClientPackagesSection({ clientId, clientPackages: initial, availablePackages }: Props) {
   const [packages, setPackages] = useState(initial)
   const [showAssign, setShowAssign] = useState(false)
+  const [schedulingPkg, setSchedulingPkg] = useState<ClientPkg | null>(null)
   const [selectedPkgId, setSelectedPkgId] = useState(availablePackages[0]?.id ?? "")
   const [purchasedAt, setPurchasedAt] = useState(() => new Date().toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" }))
   const [loading, setLoading] = useState(false)
@@ -58,6 +62,7 @@ export function ClientPackagesSection({ clientId, clientPackages: initial, avail
         id: crypto.randomUUID(),
         packageName: pkg.name,
         procedureName: pkg.procedureName,
+        procedureId: pkg.procedureId ?? "",
         totalSessions: pkg.totalSessions,
         sessionsUsed: 0,
         sessionsRemaining: pkg.totalSessions,
@@ -70,6 +75,19 @@ export function ClientPackagesSection({ clientId, clientPackages: initial, avail
   }
 
   return (
+    <>
+    {schedulingPkg && (
+      <SchedulePackageModal
+        open={!!schedulingPkg}
+        onClose={() => setSchedulingPkg(null)}
+        clientId={clientId}
+        clientPackageId={schedulingPkg.id}
+        packageName={schedulingPkg.packageName}
+        procedureId={schedulingPkg.procedureId}
+        procedureName={schedulingPkg.procedureName}
+        sessionsRemaining={schedulingPkg.sessionsRemaining}
+      />
+    )}
     <div className="surface space-y-4">
       <div className="flex items-center justify-between">
         <p className="text-sm font-medium">Pacotes</p>
@@ -160,11 +178,22 @@ export function ClientPackagesSection({ clientId, clientPackages: initial, avail
                     {pkg.sessionsUsed} de {pkg.totalSessions} sessões usadas
                   </p>
                 </div>
+                {pkg.isActive && (
+                  <button
+                    type="button"
+                    onClick={() => setSchedulingPkg(pkg)}
+                    className="flex items-center gap-1.5 text-xs text-primary hover:underline underline-offset-4 w-fit"
+                  >
+                    <CalendarDays size={12} />
+                    Agendar sessões
+                  </button>
+                )}
               </div>
             )
           })}
         </div>
       )}
     </div>
+    </>
   )
 }
