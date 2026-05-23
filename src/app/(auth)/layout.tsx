@@ -6,11 +6,11 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       {/* Form panel — mobile: full screen, desktop: right side */}
       <div className="flex min-h-screen flex-col justify-center px-6 py-12 lg:order-2 lg:px-12">
         {/* Mobile logo */}
-        <div className="mb-10 flex items-center gap-2.5 lg:hidden">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-primary/10">
-            <SparkleIcon />
+        <div className="mb-10 flex flex-col items-center gap-2 lg:hidden">
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-primary/10">
+            <KiraMark size={32} />
           </div>
-          <span className="text-lg font-semibold tracking-tight">Kira</span>
+          <span className="text-xl font-semibold tracking-tight">Kira</span>
         </div>
 
         <div className="mx-auto w-full max-w-sm sm:max-w-md">{children}</div>

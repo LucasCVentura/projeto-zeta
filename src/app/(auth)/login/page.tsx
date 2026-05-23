@@ -48,7 +48,7 @@ export default function LoginPage() {
   return (
     <div className="space-y-8">
       <div className="space-y-2">
-        <h2 className="font-heading text-2xl font-bold tracking-tight">Bem-vinda de volta</h2>
+        <h2 className="font-heading text-2xl font-bold tracking-tight">Bem-vindo(a) de volta</h2>
         <p className="text-muted-foreground text-sm">Entre na sua conta para continuar</p>
       </div>
 
