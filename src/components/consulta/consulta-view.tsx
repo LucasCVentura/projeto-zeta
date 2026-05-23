@@ -401,7 +401,7 @@ export function ConsultaView({ appointment, allClientPhotos: initialPhotos }: Pr
 
       {/* Footer fixo */}
       {canComplete && (
-        <div className="fixed bottom-0 left-0 right-0 border-t border-border bg-background/95 backdrop-blur px-4 py-3 lg:left-60">
+        <div className="fixed bottom-16 sm:bottom-0 left-0 right-0 border-t border-border bg-background/95 backdrop-blur px-4 py-3 lg:left-60">
           <Button
             onClick={() => setCompleteModal(true)}
             className="w-full bg-green-600 hover:bg-green-700 text-white"
