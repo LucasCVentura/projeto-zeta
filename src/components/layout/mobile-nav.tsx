@@ -1,9 +1,9 @@
 "use client"
 
 import Link from "next/link"
-import { usePathname, useRouter } from "next/navigation"
+import { usePathname } from "next/navigation"
 import { useSession, signOut } from "next-auth/react"
-import { useState, useEffect, useRef, useTransition } from "react"
+import { useState, useEffect, useRef } from "react"
 import { cn } from "@/lib/utils"
 import { useTheme } from "@/hooks/use-theme"
 import { mediaUrl } from "@/lib/media-url"
@@ -69,9 +69,6 @@ const navItems = [
 export function MobileNav() {
   const pathname = usePathname()
   const [menuOpen, setMenuOpen] = useState(false)
-  const [pending, startTransition] = useTransition()
-  const [pendingHref, setPendingHref] = useState<string | null>(null)
-  const router = useRouter()
   const { data: session } = useSession()
   const { isDark, toggle, mounted } = useTheme()
   const sheetRef = useRef<HTMLDivElement>(null)
@@ -92,16 +89,7 @@ export function MobileNav() {
     return () => document.removeEventListener("mousedown", handleClick)
   }, [menuOpen])
 
-  // Fecha ao navegar e limpa pending
-  useEffect(() => {
-    setMenuOpen(false)
-    setPendingHref(null)
-  }, [pathname])
-
-  function navigate(href: string) {
-    setPendingHref(href)
-    startTransition(() => { router.push(href) })
-  }
+  useEffect(() => { setMenuOpen(false) }, [pathname])
 
   return (
     <>
@@ -207,22 +195,19 @@ export function MobileNav() {
       <nav className="fixed bottom-0 left-0 right-0 z-50 flex h-16 items-center justify-around border-t border-border bg-background px-2 lg:hidden">
         {navItems.map((item) => {
           const active = pathname === item.href || pathname.startsWith(item.href + "/")
-          const isLoading = pendingHref === item.href && pending
           return (
-            <button
+            <Link
               key={item.href}
-              onClick={() => navigate(item.href)}
+              href={item.href}
+              prefetch={true}
               className={cn(
                 "flex flex-col items-center gap-1 rounded-lg px-3 py-1.5 transition-all",
-                active || isLoading ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-accent",
-                isLoading && "opacity-70"
+                active ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-accent"
               )}
             >
-              <span className={cn("transition-transform", isLoading && "scale-90")}>
-                {item.icon}
-              </span>
+              {item.icon}
               <span className="text-[10px] font-medium">{item.label}</span>
-            </button>
+            </Link>
           )
         })}
 
