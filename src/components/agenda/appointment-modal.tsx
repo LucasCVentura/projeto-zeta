@@ -120,13 +120,38 @@ export function AppointmentModal({ open, onClose, date, time }: Props) {
     }
   }
 
-  function selectPackage(pkg: ActivePackage) {
-    setSelectedPackageId(selectedPackageId === pkg.id ? null : pkg.id)
-    // auto-fill procedure from package
-    if (selectedPackageId !== pkg.id) {
-      const proc = procedures.find((p) => p.id === pkg.procedureId)
-      if (proc) { setSelectedProcedure(proc); setValue("procedureId", proc.id) }
-      else { setSelectedProcedure({ id: pkg.procedureId, name: pkg.procedureName, price: 0 }); setValue("procedureId", pkg.procedureId) }
+  async function selectPackage(pkg: ActivePackage) {
+    const isDeselecting = selectedPackageId === pkg.id
+    setSelectedPackageId(isDeselecting ? null : pkg.id)
+
+    if (isDeselecting) {
+      setValue("recurring", false)
+      setAiExplanation(null)
+      return
+    }
+
+    // auto-fill procedure
+    const proc = procedures.find((p) => p.id === pkg.procedureId)
+    if (proc) { setSelectedProcedure(proc); setValue("procedureId", proc.id) }
+    else { setSelectedProcedure({ id: pkg.procedureId, name: pkg.procedureName, price: 0 }); setValue("procedureId", pkg.procedureId) }
+
+    // auto-enable recurrence with remaining sessions
+    setValue("recurring", true)
+    setValue("recurrenceCount", pkg.sessionsRemaining)
+
+    // auto-trigger AI suggestion
+    if (selectedClient) {
+      setAiLoading(true)
+      setAiExplanation(null)
+      const result = await suggestRecurrenceAction(selectedClient.id)
+      setAiLoading(false)
+      if (result.success && result.frequency) {
+        setValue("frequency", result.frequency)
+        setValue("recurrenceCount", result.count ?? pkg.sessionsRemaining)
+        setAiExplanation(result.explanation ?? null)
+      } else {
+        setAiExplanation(null) // no data — let user pick manually, controls are already open
+      }
     }
   }
 
@@ -259,10 +284,16 @@ export function AppointmentModal({ open, onClose, date, time }: Props) {
                   </button>
                 ))}
               </div>
-              {selectedPackageId && (
+              {selectedPackageId && !aiLoading && (
                 <p className="text-xs text-primary">
                   Sessão será descontada do pacote ao concluir o atendimento.
                 </p>
+              )}
+              {selectedPackageId && aiLoading && (
+                <div className="flex items-center gap-2 text-xs text-primary">
+                  <Loader2 size={12} className="animate-spin" />
+                  Analisando histórico para sugerir datas...
+                </div>
               )}
             </div>
           )}
@@ -307,13 +338,16 @@ export function AppointmentModal({ open, onClose, date, time }: Props) {
           </div>
 
           {/* Recorrência */}
-          <div className="space-y-3 rounded-lg border border-border p-3">
+          <div className={cn("space-y-3 rounded-lg border p-3 transition-colors", selectedPackageId ? "border-primary/30 bg-primary/5" : "border-border")}>
             <button
               type="button"
               onClick={() => setValue("recurring", !recurring)}
               className="flex w-full items-center justify-between text-sm"
             >
-              <span className="font-medium">Repetir agendamento</span>
+              <span className="font-medium flex items-center gap-2">
+                {selectedPackageId ? <Package size={13} className="text-primary" /> : null}
+                {selectedPackageId ? "Agendar sessões do pacote" : "Repetir agendamento"}
+              </span>
               <div className={cn(
                 "relative h-6 w-10 shrink-0 rounded-full outline-none transition-colors",
                 recurring ? "bg-primary" : "bg-muted"
@@ -369,17 +403,14 @@ export function AppointmentModal({ open, onClose, date, time }: Props) {
                   </span>
                 </div>
 
-                {selectedClient && (
+                {selectedClient && !selectedPackageId && (
                   <button
                     type="button"
                     onClick={handleAiSuggest}
                     disabled={aiLoading}
                     className="flex items-center gap-1.5 text-xs text-primary hover:underline underline-offset-4 disabled:opacity-50"
                   >
-                    {aiLoading
-                      ? <Loader2 size={12} className="animate-spin" />
-                      : <Sparkles size={12} />
-                    }
+                    {aiLoading ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
                     {aiLoading ? "Analisando histórico..." : "Sugerir com IA"}
                   </button>
                 )}
@@ -389,6 +420,12 @@ export function AppointmentModal({ open, onClose, date, time }: Props) {
                     <Sparkles size={12} className="text-primary mt-0.5 shrink-0" />
                     <p className="text-xs text-muted-foreground leading-relaxed">{aiExplanation}</p>
                   </div>
+                )}
+
+                {selectedPackageId && !aiLoading && !aiExplanation && (
+                  <p className="text-xs text-muted-foreground">
+                    Sem histórico suficiente para sugestão automática. Ajuste o intervalo e confirme.
+                  </p>
                 )}
               </div>
             )}
