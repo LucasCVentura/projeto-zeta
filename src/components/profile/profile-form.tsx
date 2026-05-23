@@ -4,6 +4,7 @@ import { useState, useRef, useTransition } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
+import { useSession } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -29,6 +30,7 @@ function getInitials(name: string) {
 }
 
 export function ProfileForm({ user }: { user: User }) {
+  const { update: updateSession } = useSession()
   const [avatarPreview, setAvatarPreview] = useState<string | null>(user.image ? mediaUrl(user.image) + "?t=" + Date.now() : null)
   const [avatarError, setAvatarError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
@@ -67,9 +69,9 @@ export function ProfileForm({ user }: { user: User }) {
     startTransition(async () => {
       const result = await uploadAvatarAction(formData)
       if (result.success && result.imageUrl) {
-        // Add cache-buster so browser/CDN doesn't serve the old image
         const { mediaUrl: toUrl } = await import("@/lib/media-url")
         setAvatarPreview(toUrl(result.imageUrl) + "?t=" + Date.now())
+        await updateSession()
       } else if (!result.success) {
         setAvatarError(result.error ?? "Erro ao enviar foto.")
       }
@@ -81,6 +83,7 @@ export function ProfileForm({ user }: { user: User }) {
     startTransition(async () => {
       const result = await updateProfileAction(data)
       if (!result.success) { setError(result.error ?? "Erro ao salvar."); return }
+      await updateSession()
       setSuccess(true)
       setTimeout(() => setSuccess(false), 3000)
     })
