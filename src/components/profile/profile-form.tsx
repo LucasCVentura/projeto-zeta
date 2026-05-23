@@ -29,7 +29,7 @@ function getInitials(name: string) {
 }
 
 export function ProfileForm({ user }: { user: User }) {
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(user.image ? mediaUrl(user.image) : null)
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(user.image ? mediaUrl(user.image) + "?t=" + Date.now() : null)
   const [avatarError, setAvatarError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -51,6 +51,8 @@ export function ProfileForm({ user }: { user: User }) {
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
+    // Reset input so the same file can be selected again
+    e.target.value = ""
     if (!file) return
     if (file.size > 3 * 1024 * 1024) { setAvatarError("Máximo 3MB."); return }
     if (!file.type.startsWith("image/")) { setAvatarError("Formato inválido."); return }
@@ -63,7 +65,14 @@ export function ProfileForm({ user }: { user: User }) {
     const formData = new FormData()
     formData.append("avatar", file)
     startTransition(async () => {
-      await uploadAvatarAction(formData)
+      const result = await uploadAvatarAction(formData)
+      if (result.success && result.imageUrl) {
+        // Add cache-buster so browser/CDN doesn't serve the old image
+        const { mediaUrl: toUrl } = await import("@/lib/media-url")
+        setAvatarPreview(toUrl(result.imageUrl) + "?t=" + Date.now())
+      } else if (!result.success) {
+        setAvatarError(result.error ?? "Erro ao enviar foto.")
+      }
     })
   }
 
