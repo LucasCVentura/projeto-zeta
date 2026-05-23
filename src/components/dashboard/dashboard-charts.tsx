@@ -44,7 +44,7 @@ export function RevenueChart({ data }: { data: RevenuePoint[] }) {
             <XAxis dataKey="month" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
             <YAxis hide />
             <Tooltip
-              formatter={(v: number) => formatBRL(v)}
+              formatter={(v: unknown) => formatBRL(v as number)}
               contentStyle={{ fontSize: 12, borderRadius: 8, border: "1px solid var(--border)" }}
               cursor={{ fill: "var(--muted)", opacity: 0.4 }}
             />
@@ -120,7 +120,7 @@ export function StatusChart({ data }: { data: StatusPoint[] }) {
               ))}
             </Pie>
             <Tooltip
-              formatter={(v: number, name: string) => [v, name]}
+              formatter={(v, name) => [v, name] as [unknown, unknown]}
               contentStyle={{ fontSize: 12, borderRadius: 8, border: "1px solid var(--border)" }}
             />
             <Legend

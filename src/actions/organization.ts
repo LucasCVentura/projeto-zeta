@@ -35,7 +35,7 @@ export async function updateOrganizationAction(data: {
 }): Promise<ActionResult> {
   const { organizationId, role } = await requireSession()
 
-  if (role !== "owner" && role !== "admin") {
+  if (role !== "owner") {
     return { success: false, error: "Sem permissão." }
   }
 

@@ -7,8 +7,9 @@ type Props = { params: Promise<{ id: string }> }
 
 export default async function EditarClientePage({ params }: Props) {
   const { id } = await params
-  const client = await getClientAction(id)
-  if (!client) notFound()
+  const data = await getClientAction(id)
+  if (!data) notFound()
+  const { client } = data
 
   return (
     <div className="container-page max-w-2xl py-6">

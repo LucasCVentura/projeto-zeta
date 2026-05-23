@@ -92,7 +92,7 @@ export function ProcedureSuppliesPanel({ procedureId }: { procedureId: string })
       <div className="flex gap-2 items-end">
         <div className="flex-1 space-y-1">
           <Label className="text-xs">Insumo</Label>
-          <Select value={supplyId} onValueChange={setSupplyId}>
+          <Select value={supplyId} onValueChange={(v) => v && setSupplyId(v)}>
             <SelectTrigger className="w-full h-9">
               <SelectValue>
                 {supplies.find((s) => s.id === supplyId)?.name

@@ -12,7 +12,7 @@ type Appointment = {
   date: string
   startTime: string
   procedure: string | null
-  status: string
+  status: "waiting" | "confirmed" | "completed" | "missed" | "cancelled"
   notes: string | null
 }
 

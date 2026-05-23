@@ -106,7 +106,7 @@ export function ClientPackagesSection({ clientId, clientPackages: initial, avail
         <form onSubmit={handleAssign} className="rounded-lg border border-border p-3 space-y-3">
           <div className="space-y-1.5">
             <label className="text-xs text-muted-foreground">Pacote</label>
-            <Select value={selectedPkgId} onValueChange={setSelectedPkgId}>
+            <Select value={selectedPkgId} onValueChange={(v) => v && setSelectedPkgId(v)}>
               <SelectTrigger className="w-full">
                 <SelectValue>
                   {(() => { const p = activePackages.find((p) => p.id === selectedPkgId); return p ? `${p.name} — ${p.totalSessions} sessões · ${formatPrice(p.price)}` : "Selecione..." })()}

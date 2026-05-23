@@ -128,7 +128,7 @@ export function SuppliesView({ supplies: initial }: Props) {
               </div>
               <div className="space-y-2">
                 <Label>Unidade</Label>
-                <Select value={unit} onValueChange={setUnit}>
+                <Select value={unit} onValueChange={(v) => v && setUnit(v)}>
                   <SelectTrigger className="w-full">
                     <SelectValue>{unit}</SelectValue>
                   </SelectTrigger>
