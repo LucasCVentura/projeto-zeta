@@ -39,8 +39,7 @@ export async function updateProfileAction(data: {
     })
     .where(eq(users.id, userId))
 
-  revalidatePath("/perfil")
-  revalidatePath("/dashboard")
+  revalidatePath("/", "layout")
   return { success: true }
 }
 
@@ -59,7 +58,6 @@ export async function uploadAvatarAction(formData: FormData): Promise<ActionResu
   const imageUrl = await uploadToStorage(objectName, buffer, file.type)
   await db.update(users).set({ image: imageUrl, updatedAt: new Date() }).where(eq(users.id, userId))
 
-  revalidatePath("/perfil")
-  revalidatePath("/dashboard")
+  revalidatePath("/", "layout")
   return { success: true, imageUrl }
 }
