@@ -29,7 +29,7 @@ function maskPrice(value: string) {
 
 const schema = z.object({
   name: z.string().min(2, "Nome deve ter ao menos 2 caracteres"),
-  price: z.string().min(1, "Informe o valor"),
+  price: z.string().optional(),
 })
 
 type FormData = z.infer<typeof schema>
@@ -46,7 +46,7 @@ export function ProceduresList({ initialProcedures }: { initialProcedures: Proce
 
   async function onCreate(data: FormData) {
     setIsLoading(true)
-    const price = parseFloat(data.price.replace(/\./g, "").replace(",", "."))
+    const price = data.price ? parseFloat(data.price.replace(/\./g, "").replace(",", ".")) : 0
     const result = await createProcedureAction({ name: data.name, price })
     if (result.success) {
       const updated = await import("@/actions/procedures").then((m) => m.getProceduresAction())
@@ -82,7 +82,7 @@ export function ProceduresList({ initialProcedures }: { initialProcedures: Proce
               onCancelEdit={() => setEditingId(null)}
               onSave={async (data) => {
                 setIsLoading(true)
-                const price = parseFloat(data.price.replace(/\./g, "").replace(",", "."))
+                const price = data.price ? parseFloat(data.price.replace(/\./g, "").replace(",", ".")) : 0
                 await updateProcedureAction(proc.id, { name: data.name, price })
                 const updated = await import("@/actions/procedures").then((m) => m.getProceduresAction())
                 setItems(updated)
@@ -107,7 +107,7 @@ export function ProceduresList({ initialProcedures }: { initialProcedures: Proce
               {errors.name && <p className="text-destructive text-xs">{errors.name.message}</p>}
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="price">Valor (R$)</Label>
+              <Label htmlFor="price">Valor (R$) <span className="text-muted-foreground font-normal">— opcional</span></Label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">R$</span>
                 <Input
@@ -119,7 +119,6 @@ export function ProceduresList({ initialProcedures }: { initialProcedures: Proce
                   onChange={(e) => setValue("price", maskPrice(e.target.value))}
                 />
               </div>
-              {errors.price && <p className="text-destructive text-xs">{errors.price.message}</p>}
             </div>
           </div>
           <div className="flex gap-2">
@@ -202,7 +201,7 @@ function ProcedureRow({
       </div>
       <div className="flex items-center gap-3 shrink-0">
         <span className="text-sm font-semibold text-primary">
-          {formatPrice(procedure.price)}
+          {procedure.price > 0 ? formatPrice(procedure.price) : <span className="text-muted-foreground font-normal">A consultar</span>}
         </span>
         <button
           onClick={onEdit}
