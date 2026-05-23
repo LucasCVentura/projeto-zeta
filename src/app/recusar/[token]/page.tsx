@@ -1,7 +1,9 @@
 import { db } from "@/db"
-import { appointments, organizations } from "@/db/schema"
+import { appointments, organizations, clients, users } from "@/db/schema"
 import { eq } from "drizzle-orm"
 import { verifyAppointmentToken } from "@/lib/appointment-tokens"
+import { notifyOrganizationProfessionals } from "@/actions/notifications"
+import { sendWhatsApp } from "@/lib/whatsapp-client"
 import { XCircle, Phone } from "lucide-react"
 import { BonsaiIcon } from "@/components/ui/bonsai-icon"
 
@@ -19,7 +21,12 @@ export default async function RecusarPage({ params }: { params: Promise<{ token:
     .select({
       id: appointments.id,
       status: appointments.status,
+      date: appointments.date,
+      startTime: appointments.startTime,
+      procedure: appointments.procedure,
       organizationId: appointments.organizationId,
+      professionalId: appointments.professionalId,
+      clientId: appointments.clientId,
     })
     .from(appointments)
     .where(eq(appointments.id, parsed.appointmentId))
@@ -47,6 +54,45 @@ export default async function RecusarPage({ params }: { params: Promise<{ token:
     .update(appointments)
     .set({ status: "cancelled", updatedAt: new Date() })
     .where(eq(appointments.id, appt.id))
+
+  // Busca nome do cliente
+  const [clientData] = await db
+    .select({ name: clients.name })
+    .from(clients)
+    .where(eq(clients.id, appt.clientId))
+    .limit(1)
+
+  const [year, month, day] = appt.date.split("-")
+  const formattedDate = `${day}/${month}/${year}`
+  const clientName = clientData?.name ?? "Cliente"
+  const proc = appt.procedure ? ` — ${appt.procedure}` : ""
+  const title = `${clientName} recusou o agendamento`
+  const body = `${clientName} não poderá comparecer em ${formattedDate} às ${appt.startTime}${proc}. O horário foi liberado.`
+
+  // Notificação no sininho
+  try {
+    await notifyOrganizationProfessionals({
+      organizationId: appt.organizationId,
+      type: "appointment_cancelled",
+      title,
+      body,
+      href: "/agenda",
+    })
+  } catch { /* silencioso */ }
+
+  // WhatsApp para o profissional
+  try {
+    const [professional] = await db
+      .select({ phone: users.phone, whatsapp: users.whatsapp })
+      .from(users)
+      .where(eq(users.id, appt.professionalId))
+      .limit(1)
+
+    const profPhone = professional?.whatsapp ?? professional?.phone
+    if (profPhone) {
+      await sendWhatsApp(profPhone, `⚠️ *${title}*\n\n${body}`)
+    }
+  } catch { /* silencioso */ }
 
   return <ResultPage orgPhone={org?.phone ?? null} orgName={org?.name ?? null} error={null} />
 }

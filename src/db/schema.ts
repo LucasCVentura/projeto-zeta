@@ -555,3 +555,29 @@ export type Supply = typeof supplies.$inferSelect
 export type NewSupply = typeof supplies.$inferInsert
 export type ProcedureSupply = typeof procedureSupplies.$inferSelect
 export type PasswordResetToken = typeof passwordResetTokens.$inferSelect
+
+// ── notifications ─────────────────────────────────────────────────────────────
+
+export const notifications = pgTable("notifications", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organizations.id, { onDelete: "cascade" }),
+
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+
+  type: text("type").notNull(), // "appointment_cancelled" | "low_stock" | etc
+  title: text("title").notNull(),
+  body: text("body").notNull(),
+  read: boolean("read").notNull().default(false),
+  href: text("href"),
+
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+})
+
+export type Notification = typeof notifications.$inferSelect
