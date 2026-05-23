@@ -10,7 +10,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  // Calcula a data de amanhã
   const tomorrow = new Date()
   tomorrow.setDate(tomorrow.getDate() + 1)
   const tomorrowStr = tomorrow.toISOString().split("T")[0]
@@ -22,6 +21,7 @@ export async function GET(req: NextRequest) {
       clientName: clients.name,
       clientPhone: clients.phone,
       orgName: organizations.name,
+      orgAddress: organizations.address,
     })
     .from(appointments)
     .innerJoin(clients, eq(clients.id, appointments.clientId))
@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
     .where(
       and(
         eq(appointments.date, tomorrowStr),
-        eq(appointments.status, "waiting"),
+        eq(appointments.status, "confirmed"),
         isNotNull(clients.phone)
       )
     )
@@ -46,6 +46,7 @@ export async function GET(req: NextRequest) {
         startTime: row.startTime,
         procedure: row.procedure ?? undefined,
         orgName: row.orgName,
+        orgAddress: row.orgAddress,
       })
       sent++
     } catch {

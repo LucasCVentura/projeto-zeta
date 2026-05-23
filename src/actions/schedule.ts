@@ -170,7 +170,7 @@ export async function createAppointmentAction(data: {
     return { success: false, error: "Todos os horários selecionados já estão ocupados." }
   }
 
-  await db.insert(appointments).values(
+  const inserted = await db.insert(appointments).values(
     freeDates.map((date) => ({
       organizationId,
       professionalId: userId,
@@ -185,7 +185,7 @@ export async function createAppointmentAction(data: {
       status: "waiting" as const,
       createdById: userId,
     }))
-  )
+  ).returning({ id: appointments.id })
 
   revalidatePath("/agenda")
 
@@ -198,19 +198,21 @@ export async function createAppointmentAction(data: {
       .limit(1)
 
     const [org] = await db
-      .select({ name: organizations.name })
+      .select({ name: organizations.name, address: organizations.address })
       .from(organizations)
       .where(eq(organizations.id, organizationId))
       .limit(1)
 
-    if (clientData?.phone) {
+    if (clientData?.phone && inserted[0]?.id) {
       await sendAppointmentConfirmation({
+        appointmentId: inserted[0].id,
         clientPhone: clientData.phone,
         clientName: clientData.name,
         date: freeDates[0],
         startTime: data.startTime,
         procedure: data.procedure,
         orgName: org?.name ?? "Clínica",
+        orgAddress: org?.address,
       })
     }
   } catch {

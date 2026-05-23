@@ -1,26 +1,36 @@
 "use server"
 
 import { sendWhatsApp } from "@/lib/twilio"
+import { makeAppointmentToken } from "@/lib/appointment-tokens"
+
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? process.env.AUTH_URL ?? "https://app.kirasaas.com.br"
 
 export async function sendAppointmentConfirmation(params: {
+  appointmentId: string
   clientPhone: string
   clientName: string
   date: string       // "2026-05-23"
   startTime: string  // "14:30"
   procedure?: string
   orgName: string
+  orgAddress?: string | null
 }) {
-  const { clientPhone, clientName, date, startTime, procedure, orgName } = params
+  const { appointmentId, clientPhone, clientName, date, startTime, procedure, orgName, orgAddress } = params
   const [year, month, day] = date.split("-")
   const formattedDate = `${day}/${month}/${year}`
-  const proc = procedure ? ` — ${procedure}` : ""
+  const proc = procedure ? `\n🩺 Procedimento: ${procedure}` : ""
+  const addr = orgAddress ? `\n📍 Endereço: ${orgAddress}` : ""
+
+  const confirmToken = makeAppointmentToken(appointmentId, "confirm")
+  const cancelToken = makeAppointmentToken(appointmentId, "cancel")
 
   const body =
-    `Olá, ${clientName}! ✅\n\n` +
-    `Seu agendamento na *${orgName}* foi confirmado.\n\n` +
+    `Olá, ${clientName}! 👋\n\n` +
+    `Seu agendamento na *${orgName}* foi registrado. Por favor, confirme sua presença:\n\n` +
     `📅 Data: ${formattedDate}\n` +
-    `⏰ Horário: ${startTime}${proc}\n\n` +
-    `Em caso de dúvidas ou necessidade de reagendar, entre em contato conosco.`
+    `⏰ Horário: ${startTime}${proc}${addr}\n\n` +
+    `✅ *Confirmar presença:*\n${APP_URL}/confirmar/${confirmToken}\n\n` +
+    `❌ *Não poderei comparecer:*\n${APP_URL}/recusar/${cancelToken}`
 
   await sendWhatsApp(clientPhone, body)
 }
@@ -32,18 +42,20 @@ export async function sendAppointmentReminder(params: {
   startTime: string
   procedure?: string
   orgName: string
+  orgAddress?: string | null
 }) {
-  const { clientPhone, clientName, date, startTime, procedure, orgName } = params
+  const { clientPhone, clientName, date, startTime, procedure, orgName, orgAddress } = params
   const [year, month, day] = date.split("-")
   const formattedDate = `${day}/${month}/${year}`
-  const proc = procedure ? ` — ${procedure}` : ""
+  const proc = procedure ? `\n🩺 Procedimento: ${procedure}` : ""
+  const addr = orgAddress ? `\n📍 Endereço: ${orgAddress}` : ""
 
   const body =
     `Olá, ${clientName}! 🔔\n\n` +
     `Lembrete: você tem um agendamento *amanhã* na *${orgName}*.\n\n` +
     `📅 Data: ${formattedDate}\n` +
-    `⏰ Horário: ${startTime}${proc}\n\n` +
-    `Até amanhã! 😊`
+    `⏰ Horário: ${startTime}${proc}${addr}\n\n` +
+    `Te esperamos! 😊`
 
   await sendWhatsApp(clientPhone, body)
 }
