@@ -15,6 +15,8 @@ import { generateSlots } from "@/lib/schedule"
 import { revalidatePath } from "next/cache"
 import type { AppointmentStatus } from "@/db/schema"
 import type { ActionResult } from "./auth"
+import { sendAppointmentConfirmation } from "./whatsapp"
+import { organizations } from "@/db/schema"
 
 
 // ── Buscar slots do dia ───────────────────────────────────────────────────────
@@ -186,6 +188,35 @@ export async function createAppointmentAction(data: {
   )
 
   revalidatePath("/agenda")
+
+  // Envia confirmação WhatsApp para o primeiro agendamento (fire-and-forget)
+  try {
+    const [clientData] = await db
+      .select({ name: clients.name, phone: clients.phone })
+      .from(clients)
+      .where(eq(clients.id, data.clientId))
+      .limit(1)
+
+    const [org] = await db
+      .select({ name: organizations.name })
+      .from(organizations)
+      .where(eq(organizations.id, organizationId))
+      .limit(1)
+
+    if (clientData?.phone) {
+      await sendAppointmentConfirmation({
+        clientPhone: clientData.phone,
+        clientName: clientData.name,
+        date: freeDates[0],
+        startTime: data.startTime,
+        procedure: data.procedure,
+        orgName: org?.name ?? "Clínica",
+      })
+    }
+  } catch {
+    // Falha silenciosa — não bloqueia o agendamento
+  }
+
   return { success: true, skipped }
 }
 

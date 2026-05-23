@@ -1,12 +1,13 @@
 "use server"
 
 import { db } from "@/db"
-import { transactions, appointments, clientPackages, packages, supplies, procedureSupplies } from "@/db/schema"
+import { transactions, appointments, clientPackages, packages, supplies, procedureSupplies, clients, organizations } from "@/db/schema"
 import { eq, and, gte, lte, sum, sql } from "drizzle-orm"
 import { requireSession } from "@/lib/session"
 import { can } from "@/lib/permissions"
 import { revalidatePath } from "next/cache"
 import type { ActionResult } from "./auth"
+import { sendPostConsultationMessage } from "./whatsapp"
 
 export async function completeAppointmentWithRevenueAction(data: {
   appointmentId: string
@@ -20,11 +21,12 @@ export async function completeAppointmentWithRevenueAction(data: {
     return { success: false, error: "Sem permissão." }
   }
 
-  // Busca o agendamento para pegar procedureId e clientPackageId
+  // Busca o agendamento para pegar procedureId, clientPackageId e clientId
   const [appt] = await db
     .select({
       procedureId: appointments.procedureId,
       clientPackageId: appointments.clientPackageId,
+      clientId: appointments.clientId,
     })
     .from(appointments)
     .where(and(eq(appointments.id, data.appointmentId), eq(appointments.organizationId, organizationId)))
@@ -93,6 +95,34 @@ export async function completeAppointmentWithRevenueAction(data: {
   revalidatePath("/agenda")
   revalidatePath("/dashboard")
   revalidatePath("/estoque")
+
+  // Envia mensagem pós-consulta WhatsApp (fire-and-forget)
+  try {
+    if (appt?.clientId) {
+      const [clientData] = await db
+        .select({ name: clients.name, phone: clients.phone })
+        .from(clients)
+        .where(eq(clients.id, appt.clientId))
+        .limit(1)
+
+      const [org] = await db
+        .select({ name: organizations.name })
+        .from(organizations)
+        .where(eq(organizations.id, organizationId))
+        .limit(1)
+
+      if (clientData?.phone) {
+        await sendPostConsultationMessage({
+          clientPhone: clientData.phone,
+          clientName: clientData.name,
+          orgName: org?.name ?? "Clínica",
+        })
+      }
+    }
+  } catch {
+    // Falha silenciosa
+  }
+
   return { success: true }
 }
 
