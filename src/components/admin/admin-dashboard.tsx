@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react"
 import { extendTrialAction, cancelOrgAction, adminChatAction } from "@/actions/admin"
-import { Send, Loader2, Trophy, TrendingUp, Users, DollarSign, ChevronDown, ChevronUp, Sprout, Rocket, Gem, Coins, Star, Activity } from "lucide-react"
+import { Send, Loader2, Trophy, TrendingUp, Users, DollarSign, ChevronDown, ChevronUp, Sprout, Rocket, Gem, Coins, Star, Activity, MessageSquare } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -34,6 +34,20 @@ type Metrics = {
 
 type ChatMessage = { role: "user" | "assistant"; content: string }
 
+type FeedbackItem = {
+  id: string
+  content: string
+  createdAt: Date
+  orgName: string | null
+  userName: string | null
+}
+
+type FeedbackSummary = {
+  summary: string
+  feedbackCount: number
+  generatedAt: Date
+} | null
+
 const GOALS = [
   { label: "Primeiros clientes", target: 10, icon: Sprout, metric: (m: Metrics) => m.totalOrgs },
   { label: "50 clínicas", target: 50, icon: Rocket, metric: (m: Metrics) => m.totalOrgs },
@@ -60,7 +74,15 @@ function statusLabel(status: string) {
   return status
 }
 
-export function AdminDashboard({ metrics }: { metrics: Metrics }) {
+export function AdminDashboard({
+  metrics,
+  feedbacks,
+  feedbackSummary,
+}: {
+  metrics: Metrics
+  feedbacks: FeedbackItem[]
+  feedbackSummary: FeedbackSummary
+}) {
   const [orgs, setOrgs] = useState(metrics.orgs)
   const [expandedOrg, setExpandedOrg] = useState<string | null>(null)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
@@ -131,6 +153,7 @@ export function AdminDashboard({ metrics }: { metrics: Metrics }) {
             <TabsTrigger value="overview">Visão Geral</TabsTrigger>
             <TabsTrigger value="clinicas">Clínicas ({orgs.length})</TabsTrigger>
             <TabsTrigger value="growth" className="flex items-center gap-1.5"><TrendingUp size={13} />Growth</TabsTrigger>
+            <TabsTrigger value="feedback" className="flex items-center gap-1.5"><MessageSquare size={13} />Feedback {feedbacks.length > 0 && <span className="ml-0.5 text-[10px] bg-primary/15 text-primary rounded-full px-1.5 py-0.5 font-medium">{feedbacks.length}</span>}</TabsTrigger>
           </TabsList>
 
           {/* Aba: Visão Geral */}
@@ -322,6 +345,48 @@ export function AdminDashboard({ metrics }: { metrics: Metrics }) {
               </div>
             </div>
           </TabsContent>
+          {/* Aba: Feedback */}
+          <TabsContent value="feedback" className="space-y-6">
+            {/* Resumo da IA */}
+            <div className="rounded-xl border border-border bg-card p-5 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Activity size={15} className="text-primary" />
+                  <h2 className="font-semibold text-sm">Resumo da IA</h2>
+                </div>
+                {feedbackSummary && (
+                  <span className="text-[11px] text-muted-foreground">
+                    Gerado em {new Date(feedbackSummary.generatedAt).toLocaleDateString("pt-BR")} · {feedbackSummary.feedbackCount} feedbacks
+                  </span>
+                )}
+              </div>
+              {feedbackSummary ? (
+                <p className="text-sm leading-relaxed whitespace-pre-wrap text-foreground">{feedbackSummary.summary}</p>
+              ) : (
+                <p className="text-sm text-muted-foreground">Nenhum resumo gerado ainda. O cron roda toda segunda-feira às 9h.</p>
+              )}
+            </div>
+
+            {/* Lista de feedbacks brutos */}
+            <div className="space-y-2">
+              <h2 className="font-semibold text-sm text-muted-foreground">Feedbacks recebidos ({feedbacks.length})</h2>
+              {feedbacks.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Nenhum feedback recebido ainda.</p>
+              ) : (
+                <div className="rounded-xl border border-border overflow-hidden divide-y divide-border">
+                  {feedbacks.map((fb) => (
+                    <div key={fb.id} className="px-4 py-3 space-y-1">
+                      <p className="text-sm">{fb.content}</p>
+                      <p className="text-[11px] text-muted-foreground">
+                        {fb.orgName ?? "—"} · {fb.userName ?? "—"} · {new Date(fb.createdAt).toLocaleDateString("pt-BR")}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </TabsContent>
+
         </Tabs>
 
       </div>

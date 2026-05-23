@@ -582,3 +582,38 @@ export const notifications = pgTable("notifications", {
 })
 
 export type Notification = typeof notifications.$inferSelect
+
+// ── user_feedback ──────────────────────────────────────────────────────────────
+
+export const userFeedback = pgTable("user_feedback", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organizations.id, { onDelete: "cascade" }),
+
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+})
+
+export type UserFeedback = typeof userFeedback.$inferSelect
+
+// ── feedback_summaries ─────────────────────────────────────────────────────────
+
+export const feedbackSummaries = pgTable("feedback_summaries", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+
+  summary: text("summary").notNull(),
+  feedbackCount: integer("feedback_count").notNull(),
+  generatedAt: timestamp("generated_at").notNull().defaultNow(),
+})
+
+export type FeedbackSummary = typeof feedbackSummaries.$inferSelect
