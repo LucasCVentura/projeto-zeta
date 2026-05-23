@@ -85,7 +85,7 @@ export default function PrivacidadePage() {
             <ul>
               <li><strong>Stripe</strong> — processamento de pagamentos</li>
               <li><strong>Supabase (PostgreSQL)</strong> — armazenamento de dados em nuvem</li>
-              <li><strong>Google Cloud Storage</strong> — armazenamento de imagens</li>
+              <li><strong>Supabase Storage</strong> — armazenamento de imagens</li>
               <li><strong>Groq / Meta Llama</strong> — recursos de IA como apoio complementar à organização de evolução e relatórios (imagens processadas sem armazenamento permanente)</li>
               <li><strong>Twilio / Gupshup</strong> — envio de notificações via WhatsApp (número de telefone dos clientes finais compartilhado apenas para fins de entrega da mensagem)</li>
               <li><strong>Vercel</strong> — hospedagem da aplicação, métricas agregadas de acesso e Speed Insights/performance, sem cookies de rastreamento</li>
@@ -136,7 +136,7 @@ export default function PrivacidadePage() {
           </Section>
 
           <Section title="9. Transferência Internacional">
-            <p>Alguns de nossos fornecedores (Stripe, Google Cloud, Vercel, Groq) operam fora do Brasil. Essas transferências ocorrem com base em cláusulas contratuais padrão e garantias equivalentes às exigidas pela LGPD (art. 33).</p>
+            <p>Alguns de nossos fornecedores (Stripe, Supabase, Vercel, Groq) operam fora do Brasil. Essas transferências ocorrem com base em cláusulas contratuais padrão e garantias equivalentes às exigidas pela LGPD (art. 33).</p>
           </Section>
 
           <Section title="10. Alterações nesta Política">

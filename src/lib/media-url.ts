@@ -13,10 +13,5 @@ export function mediaUrl(url: string | null | undefined): string {
   // URL já pública (supabase ou outra)
   if (url.startsWith("https://")) return url
 
-  // Legacy GCS — redireciona pela API route
-  if (url.startsWith("gcs://") || url.includes("storage.googleapis.com")) {
-    return `/api/media?url=${encodeURIComponent(url)}`
-  }
-
   return url
 }
