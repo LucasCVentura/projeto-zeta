@@ -40,7 +40,7 @@ export function EditAppointmentModal({ open, onClose, appointmentId, currentProc
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
 
-      <div className="relative w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl bg-background border border-border shadow-xl flex flex-col max-h-[80dvh] overflow-hidden">
+      <div className="relative w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl bg-background border border-border shadow-xl flex flex-col max-h-[80dvh] overflow-hidden mb-16 sm:mb-0">
         {/* Header */}
         <div className="flex items-center justify-between px-5 pt-5 pb-3 shrink-0">
           <h3 className="font-heading text-base font-semibold">Editar agendamento</h3>
