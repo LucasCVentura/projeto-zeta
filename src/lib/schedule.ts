@@ -6,7 +6,9 @@ export type TimeSlot = {
   appointmentId?: string
   clientName?: string
   procedure?: string
+  procedureId?: string | null
   procedurePrice?: number // centavos
+  notes?: string | null
   status?: Appointment["status"]
   isBlocked?: boolean
   blockReason?: string

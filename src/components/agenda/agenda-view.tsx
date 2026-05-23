@@ -9,15 +9,19 @@ import { AppointmentModal } from "./appointment-modal"
 import { BlockDrawer } from "./block-drawer"
 import { CompleteAppointmentModal } from "./complete-appointment-modal"
 import { updateAppointmentStatusAction, cancelAppointmentAction, getDaySlots } from "@/actions/schedule"
+import { EditAppointmentModal } from "./edit-appointment-modal"
 import Link from "next/link"
 import type { TimeSlot } from "@/lib/schedule"
 import type { AppointmentStatus } from "@/db/schema"
+
+type Procedure = { id: string; name: string; price: number | null }
 
 type Props = {
   initialDate: string
   slots: TimeSlot[]
   hasConfig: boolean
   slotDuration: number
+  procedures: Procedure[]
 }
 
 const STATUS_OPTIONS: { value: AppointmentStatus; label: string }[] = [
@@ -57,7 +61,7 @@ function getWeekDays(dateStr: string) {
 
 const DAY_LABELS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"]
 
-export function AgendaView({ initialDate, slots: initialSlots, hasConfig, slotDuration }: Props) {
+export function AgendaView({ initialDate, slots: initialSlots, hasConfig, slotDuration, procedures }: Props) {
   const router = useRouter()
   const [date, setDate] = useState(initialDate)
   const [slots, setSlots] = useState(initialSlots)
@@ -74,6 +78,12 @@ export function AgendaView({ initialDate, slots: initialSlots, hasConfig, slotDu
     procedure?: string
     procedurePrice?: number
   }>({ open: false, appointmentId: "", clientName: "" })
+  const [editModal, setEditModal] = useState<{
+    open: boolean
+    appointmentId: string
+    procedureId?: string | null
+    notes?: string | null
+  }>({ open: false, appointmentId: "" })
   const [isPending, startTransition] = useTransition()
 
   const weekDays = getWeekDays(date)
@@ -229,6 +239,12 @@ export function AgendaView({ initialDate, slots: initialSlots, hasConfig, slotDu
               onToggle={() => setActiveSlot(activeSlot === slot.time ? null : slot.time)}
               onBook={() => setAppointmentDrawer({ open: true, time: slot.time })}
               onStatusChange={(status) => handleStatusChange(slot, status)}
+              onEdit={() => slot.appointmentId && setEditModal({
+                open: true,
+                appointmentId: slot.appointmentId,
+                procedureId: slot.procedureId,
+                notes: slot.notes,
+              })}
               isPending={isPending}
             />
           ))}
@@ -267,6 +283,18 @@ export function AgendaView({ initialDate, slots: initialSlots, hasConfig, slotDu
         procedure={completeModal.procedure}
         procedurePrice={completeModal.procedurePrice}
       />
+
+      <EditAppointmentModal
+        open={editModal.open}
+        onClose={() => {
+          setEditModal((m) => ({ ...m, open: false }))
+          startTransition(() => refreshSlots(date))
+        }}
+        appointmentId={editModal.appointmentId}
+        currentProcedureId={editModal.procedureId}
+        currentNotes={editModal.notes}
+        procedures={procedures}
+      />
     </>
   )
 }
@@ -280,6 +308,7 @@ function SlotCard({
   onToggle,
   onBook,
   onStatusChange,
+  onEdit,
   isPending,
 }: {
   slot: TimeSlot
@@ -288,6 +317,7 @@ function SlotCard({
   onToggle: () => void
   onBook: () => void
   onStatusChange: (status: AppointmentStatus) => void
+  onEdit: () => void
   isPending: boolean
 }) {
   if (slot.isBlocked) {
@@ -357,14 +387,26 @@ function SlotCard({
       {/* Ações expandidas */}
       {isActive && slot.appointmentId && (
         <div className="border-t border-border px-4 py-3 space-y-3">
-          {slot.status === "confirmed" && (
-            <Link
-              href={`/consulta/${slot.appointmentId}`}
-              className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+          <div className="flex gap-2">
+            <button
+              onClick={onEdit}
+              className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-accent transition-colors"
             >
-              Iniciar atendimento
-            </Link>
-          )}
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+              </svg>
+              Editar
+            </button>
+            {slot.status === "confirmed" && (
+              <Link
+                href={`/consulta/${slot.appointmentId}`}
+                className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+              >
+                Iniciar atendimento
+              </Link>
+            )}
+          </div>
           <p className="text-xs font-medium text-muted-foreground">Alterar status</p>
           <div className="flex flex-wrap gap-2">
             {STATUS_OPTIONS.filter((o) => o.value !== slot.status).map((opt) => (

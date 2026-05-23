@@ -1,4 +1,4 @@
-import { getDaySlots } from "@/actions/schedule"
+import { getDaySlots, getProceduresForBookingAction } from "@/actions/schedule"
 import { AgendaView } from "@/components/agenda/agenda-view"
 import { requireSession } from "@/lib/session"
 import { db } from "@/db"
@@ -27,7 +27,10 @@ export default async function AgendaPage({ searchParams }: Props) {
     )
     .limit(1)
 
-  const { slots, hasConfig } = await getDaySlots(date)
+  const [{ slots, hasConfig }, procedures] = await Promise.all([
+    getDaySlots(date),
+    getProceduresForBookingAction(),
+  ])
 
   return (
     <div className="container-page py-6 space-y-6">
@@ -51,6 +54,7 @@ export default async function AgendaPage({ searchParams }: Props) {
         slots={slots}
         hasConfig={hasConfig}
         slotDuration={config?.slotDuration ?? 60}
+        procedures={procedures}
       />
     </div>
   )

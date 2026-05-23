@@ -52,6 +52,8 @@ export async function getDaySlots(date: string) {
       startTime: appointments.startTime,
       endTime: appointments.endTime,
       procedure: appointments.procedure,
+      procedureId: appointments.procedureId,
+      notes: appointments.notes,
       status: appointments.status,
       clientName: clients.name,
       procedurePrice: procedures.price,
@@ -208,6 +210,50 @@ export async function updateAppointmentStatusAction(
         eq(appointments.organizationId, organizationId)
       )
     )
+
+  revalidatePath("/agenda")
+  return { success: true }
+}
+
+// ── Editar agendamento ────────────────────────────────────────────────────────
+
+export async function updateAppointmentAction(
+  appointmentId: string,
+  data: { procedureId?: string | null; procedure?: string | null; notes?: string | null }
+): Promise<ActionResult> {
+  const { organizationId, role } = await requireSession()
+
+  if (!can(role, "schedule:update")) {
+    return { success: false, error: "Sem permissão." }
+  }
+
+  const [appt] = await db
+    .select({ id: appointments.id })
+    .from(appointments)
+    .where(and(eq(appointments.id, appointmentId), eq(appointments.organizationId, organizationId)))
+    .limit(1)
+
+  if (!appt) return { success: false, error: "Agendamento não encontrado." }
+
+  let procedureName = data.procedure ?? null
+  if (data.procedureId) {
+    const [proc] = await db
+      .select({ name: procedures.name, price: procedures.price })
+      .from(procedures)
+      .where(and(eq(procedures.id, data.procedureId), eq(procedures.organizationId, organizationId)))
+      .limit(1)
+    if (proc) procedureName = proc.name
+  }
+
+  await db
+    .update(appointments)
+    .set({
+      procedureId: data.procedureId ?? null,
+      procedure: procedureName,
+      notes: data.notes ?? null,
+      updatedAt: new Date(),
+    })
+    .where(eq(appointments.id, appointmentId))
 
   revalidatePath("/agenda")
   return { success: true }
