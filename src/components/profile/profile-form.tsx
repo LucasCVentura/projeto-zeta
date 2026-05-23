@@ -69,8 +69,10 @@ export function ProfileForm({ user }: { user: User }) {
     startTransition(async () => {
       const result = await uploadAvatarAction(formData)
       if (result.success && result.imageUrl) {
+        const ts = Date.now()
         const { mediaUrl: toUrl } = await import("@/lib/media-url")
-        setAvatarPreview(toUrl(result.imageUrl) + "?t=" + Date.now())
+        setAvatarPreview(toUrl(result.imageUrl) + "?t=" + ts)
+        window.dispatchEvent(new CustomEvent("avatar-updated", { detail: ts }))
         await updateSession()
       } else if (!result.success) {
         setAvatarError(result.error ?? "Erro ao enviar foto.")

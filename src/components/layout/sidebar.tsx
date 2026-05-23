@@ -157,6 +157,7 @@ function UserMenu() {
   const image = session?.user?.image
   const initials = name.split(" ").slice(0, 2).map((n: string) => n[0]).join("").toUpperCase()
   const [open, setOpen] = useState(false)
+  const [avatarTs, setAvatarTs] = useState("")
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -167,6 +168,14 @@ function UserMenu() {
     return () => document.removeEventListener("mousedown", handleClick)
   }, [])
 
+  useEffect(() => {
+    function handleAvatarUpdate(e: Event) {
+      setAvatarTs(String((e as CustomEvent).detail))
+    }
+    window.addEventListener("avatar-updated", handleAvatarUpdate)
+    return () => window.removeEventListener("avatar-updated", handleAvatarUpdate)
+  }, [])
+
   return (
     <div ref={ref} className="relative">
       <button
@@ -175,7 +184,7 @@ function UserMenu() {
       >
         <div className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/15 text-sm font-semibold text-primary overflow-hidden">
           {image ? (
-            <Image src={mediaUrl(image)} alt={name} fill className="object-cover" sizes="32px" unoptimized />
+            <Image src={mediaUrl(image) + (avatarTs ? `?t=${avatarTs}` : "")} alt={name} fill className="object-cover" sizes="32px" unoptimized />
           ) : initials}
         </div>
         <div className="min-w-0 flex-1 text-left">
