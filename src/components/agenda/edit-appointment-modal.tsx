@@ -40,9 +40,9 @@ export function EditAppointmentModal({ open, onClose, appointmentId, currentProc
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
 
-      <div className="relative w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl bg-background border border-border shadow-xl">
+      <div className="relative w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl bg-background border border-border shadow-xl flex flex-col max-h-[80dvh] overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 pt-5 pb-3">
+        <div className="flex items-center justify-between px-5 pt-5 pb-3 shrink-0">
           <h3 className="font-heading text-base font-semibold">Editar agendamento</h3>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
             <X size={18} />
@@ -50,7 +50,7 @@ export function EditAppointmentModal({ open, onClose, appointmentId, currentProc
         </div>
 
         {/* Conteúdo com scroll */}
-        <div className="overflow-y-auto px-5 space-y-5" style={{ maxHeight: "50vh" }}>
+        <div className="flex-1 min-h-0 overflow-y-auto px-5 space-y-5">
           {error && <p className="text-sm text-destructive">{error}</p>}
 
           {/* Procedimento */}
@@ -107,7 +107,7 @@ export function EditAppointmentModal({ open, onClose, appointmentId, currentProc
         </div>
 
         {/* Footer — sempre visível */}
-        <div className="flex gap-3 px-5 py-4 border-t border-border">
+        <div className="flex gap-3 px-5 py-4 border-t border-border shrink-0">
           <button
             type="button"
             onClick={onClose}
