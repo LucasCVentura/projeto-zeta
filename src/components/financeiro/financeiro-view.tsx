@@ -54,13 +54,15 @@ export function FinanceiroView() {
   }
 
   function nextMonth() {
-    const isCurrentMonth = year === now.getFullYear() && month === now.getMonth() + 1
+    const nowBRT = new Date(new Date().toLocaleString("en-CA", { timeZone: "America/Sao_Paulo", hour12: false }))
+    const isCurrentMonth = year === nowBRT.getFullYear() && month === nowBRT.getMonth() + 1
     if (isCurrentMonth) return
     if (month === 12) { setMonth(1); setYear((y) => y + 1) }
     else setMonth((m) => m + 1)
   }
 
-  const isCurrentMonth = year === now.getFullYear() && month === now.getMonth() + 1
+  const nowBRT = new Date(new Date().toLocaleString("en-CA", { timeZone: "America/Sao_Paulo", hour12: false }))
+  const isCurrentMonth = year === nowBRT.getFullYear() && month === nowBRT.getMonth() + 1
 
   return (
     <div className="space-y-4">
