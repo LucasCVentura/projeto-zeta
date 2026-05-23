@@ -36,16 +36,13 @@ export function EmailBase({
                             alignItems: "center",
                             gap: 8,
                           }}>
-                            <div style={{
-                              width: 32, height: 32,
-                              borderRadius: "50%",
-                              backgroundColor: "#b06070",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                            }}>
-                              <span style={{ color: "#fff", fontSize: 16, lineHeight: 1 }}>🌿</span>
-                            </div>
+                            <img
+                              src="https://kiraclinic.com.br/brand/kira-bonsai-mark.png"
+                              alt="Kira"
+                              width={32}
+                              height={32}
+                              style={{ display: "block" }}
+                            />
                             <span style={{ fontSize: 18, fontWeight: 700, color: "#1a1014", letterSpacing: "-0.3px" }}>
                               Kira
                             </span>
