@@ -1,4 +1,4 @@
-import { BonsaiIcon } from "@/components/ui/bonsai-icon"
+import { KiraMark } from "@/components/ui/kira-mark"
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -7,8 +7,8 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       <div className="flex min-h-screen flex-col justify-center px-6 py-12 lg:order-2 lg:px-12">
         {/* Mobile logo */}
         <div className="mb-10 flex items-center gap-2.5 lg:hidden">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary">
-            <SparkleIcon className="text-primary-foreground" />
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-primary/10">
+            <SparkleIcon />
           </div>
           <span className="text-lg font-semibold tracking-tight">Kira</span>
         </div>
@@ -23,8 +23,8 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         <div className="absolute left-1/2 top-1/2 h-80 w-80 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/5" />
 
         <div className="relative z-10 flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20">
-            <SparkleIcon className="text-white" />
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/95">
+            <SparkleIcon />
           </div>
           <span className="text-lg font-semibold tracking-tight text-white">Kira</span>
         </div>
@@ -63,8 +63,8 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
   )
 }
 
-function SparkleIcon({ className }: { className?: string }) {
-  return <BonsaiIcon size={16} className={className} />
+function SparkleIcon() {
+  return <KiraMark size={23} />
 }
 
 function CheckIcon() {

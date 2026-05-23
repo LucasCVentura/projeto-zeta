@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { createCheckoutSessionAction } from "@/actions/subscription"
-import { BonsaiIcon } from "@/components/ui/bonsai-icon"
+import { KiraMark } from "@/components/ui/kira-mark"
 import { Suspense } from "react"
 
 const features = [
@@ -44,8 +44,8 @@ function AssinarContent() {
 
         {/* Logo */}
         <div className="flex items-center justify-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary">
-            <BonsaiIcon size={14} className="text-primary-foreground" />
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-primary/10">
+            <KiraMark size={25} />
           </div>
           <span className="text-xl font-semibold tracking-tight">Kira</span>
         </div>

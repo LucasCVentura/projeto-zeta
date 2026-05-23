@@ -3,7 +3,7 @@ import { appointments, organizations } from "@/db/schema"
 import { eq, and } from "drizzle-orm"
 import { verifyAppointmentToken } from "@/lib/appointment-tokens"
 import { CheckCircle2, XCircle } from "lucide-react"
-import { BonsaiIcon } from "@/components/ui/bonsai-icon"
+import { KiraMark } from "@/components/ui/kira-mark"
 
 export const metadata = { title: "Confirmar agendamento — Kira" }
 
@@ -65,8 +65,8 @@ function ResultPage({ ok, message }: { ok: boolean; message: string }) {
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center px-5">
       <div className="flex flex-col items-center gap-5 max-w-sm text-center">
-        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary">
-          <BonsaiIcon size={16} className="text-primary-foreground" />
+        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-primary/10">
+          <KiraMark size={23} />
         </div>
         {ok
           ? <CheckCircle2 size={48} className="text-green-500" />

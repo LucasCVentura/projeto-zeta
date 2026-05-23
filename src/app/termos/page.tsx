@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { BonsaiIcon } from "@/components/ui/bonsai-icon"
+import { KiraMark } from "@/components/ui/kira-mark"
 import { ArrowLeft } from "lucide-react"
 
 export const metadata = { title: "Termos de Uso — Kira" }
@@ -15,8 +15,8 @@ export default function TermosPage() {
             <ArrowLeft size={14} /> Voltar
           </Link>
           <div className="flex items-center gap-2.5">
-            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary">
-              <BonsaiIcon size={14} className="text-primary-foreground" />
+            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-primary/10">
+              <KiraMark size={20} />
             </div>
             <span className="font-semibold">Kira</span>
           </div>
@@ -32,7 +32,7 @@ export default function TermosPage() {
         <div className="prose prose-sm max-w-none space-y-8 text-foreground">
 
           <Section title="1. Aceitação dos Termos">
-            <p>Estes Termos de Uso regulam a relação entre a plataforma Kira ("Kira", "nós") e o usuário ("você", "Usuário") ao acessar ou usar nossos serviços. Ao se cadastrar ou utilizar qualquer funcionalidade da plataforma, você declara ter lido, compreendido e concordado com estes termos.</p>
+            <p>Estes Termos de Uso regulam a relação entre a plataforma Kira (&quot;Kira&quot;, &quot;nós&quot;) e o usuário (&quot;você&quot;, &quot;Usuário&quot;) ao acessar ou usar nossos serviços. Ao se cadastrar ou utilizar qualquer funcionalidade da plataforma, você declara ter lido, compreendido e concordado com estes termos.</p>
             <p>Caso não concorde com qualquer disposição, você não deve utilizar o serviço.</p>
           </Section>
 

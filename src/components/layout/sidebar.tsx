@@ -6,7 +6,7 @@ import { useSession, signOut } from "next-auth/react"
 import { cn } from "@/lib/utils"
 import { useTheme } from "@/hooks/use-theme"
 import { mediaUrl } from "@/lib/media-url"
-import { BonsaiIcon } from "@/components/ui/bonsai-icon"
+import { KiraMark } from "@/components/ui/kira-mark"
 import Image from "next/image"
 import { useState, useRef, useEffect } from "react"
 
@@ -85,8 +85,8 @@ export function Sidebar() {
     <aside className="flex h-full w-60 flex-col border-r border-border bg-sidebar">
       {/* Logo */}
       <div className="flex h-16 items-center gap-2.5 border-b border-border px-5">
-        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary">
-          <BonsaiIcon size={14} className="text-primary-foreground" />
+        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-primary/10">
+          <KiraMark size={20} />
         </div>
         <span className="font-semibold tracking-tight">Kira</span>
       </div>

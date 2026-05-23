@@ -5,7 +5,7 @@ import { verifyAppointmentToken } from "@/lib/appointment-tokens"
 import { notifyOrganizationProfessionals } from "@/actions/notifications"
 import { sendWhatsApp } from "@/lib/whatsapp-client"
 import { XCircle, Phone } from "lucide-react"
-import { BonsaiIcon } from "@/components/ui/bonsai-icon"
+import { KiraMark } from "@/components/ui/kira-mark"
 
 export const metadata = { title: "Recusar agendamento — Kira" }
 
@@ -101,8 +101,8 @@ function ResultPage({ orgPhone, orgName, error }: { orgPhone: string | null; org
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center px-5">
       <div className="flex flex-col items-center gap-5 max-w-sm text-center">
-        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary">
-          <BonsaiIcon size={16} className="text-primary-foreground" />
+        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-primary/10">
+          <KiraMark size={23} />
         </div>
         <XCircle size={48} className="text-destructive" />
         {error ? (

@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { BonsaiIcon } from "@/components/ui/bonsai-icon"
+import { KiraMark } from "@/components/ui/kira-mark"
 import { ArrowLeft } from "lucide-react"
 
 export const metadata = { title: "Política de Privacidade — Kira" }
@@ -15,8 +15,8 @@ export default function PrivacidadePage() {
             <ArrowLeft size={14} /> Voltar
           </Link>
           <div className="flex items-center gap-2.5">
-            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary">
-              <BonsaiIcon size={14} className="text-primary-foreground" />
+            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-primary/10">
+              <KiraMark size={20} />
             </div>
             <span className="font-semibold">Kira</span>
           </div>
@@ -117,7 +117,7 @@ export default function PrivacidadePage() {
               <li>Revogar consentimento a qualquer momento</li>
               <li>Solicitar a exclusão completa da sua conta e dados</li>
             </ul>
-            <p>Para exercer qualquer direito, envie um e-mail para <strong>contato@send.kiraclinic.com.br</strong> com o assunto "Direitos LGPD". Responderemos em até 15 dias úteis.</p>
+            <p>Para exercer qualquer direito, envie um e-mail para <strong>contato@send.kiraclinic.com.br</strong> com o assunto &quot;Direitos LGPD&quot;. Responderemos em até 15 dias úteis.</p>
           </Section>
 
           <Section title="8. Segurança">
