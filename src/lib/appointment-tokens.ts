@@ -28,3 +28,31 @@ export function verifyAppointmentToken(token: string): { appointmentId: string; 
     return null
   }
 }
+
+// ── Batch token (para pacotes com múltiplas sessões) ──────────────────────────
+
+function signBatch(ids: string[]): string {
+  return createHmac("sha256", SECRET)
+    .update(`batch:${ids.sort().join(",")}`)
+    .digest("hex")
+    .slice(0, 32)
+}
+
+export function makeBatchConfirmToken(appointmentIds: string[]): string {
+  const sig = signBatch(appointmentIds)
+  const payload = JSON.stringify({ ids: appointmentIds, sig })
+  return Buffer.from(payload).toString("base64url")
+}
+
+export function verifyBatchConfirmToken(token: string): { appointmentIds: string[] } | null {
+  try {
+    const decoded = Buffer.from(token, "base64url").toString("utf8")
+    const { ids, sig } = JSON.parse(decoded) as { ids: string[]; sig: string }
+    if (!Array.isArray(ids) || ids.length === 0) return null
+    const expected = signBatch(ids)
+    if (sig !== expected) return null
+    return { appointmentIds: ids }
+  } catch {
+    return null
+  }
+}

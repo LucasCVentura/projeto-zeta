@@ -1,7 +1,7 @@
 "use server"
 
 import { sendWhatsApp } from "@/lib/whatsapp-client"
-import { makeAppointmentToken } from "@/lib/appointment-tokens"
+import { makeAppointmentToken, makeBatchConfirmToken } from "@/lib/appointment-tokens"
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? process.env.AUTH_URL ?? "https://app.kirasaas.com.br"
 
@@ -56,6 +56,38 @@ export async function sendAppointmentReminder(params: {
     `📅 Data: ${formattedDate}\n` +
     `⏰ Horário: ${startTime}${proc}${addr}\n\n` +
     `Te esperamos! 😊`
+
+  await sendWhatsApp(clientPhone, body)
+}
+
+export async function sendPackageScheduleConfirmation(params: {
+  appointmentIds: string[]
+  clientPhone: string
+  clientName: string
+  packageName: string
+  procedureName: string
+  orgName: string
+  orgAddress?: string | null
+  sessions: { date: string; startTime: string }[]
+}) {
+  const { appointmentIds, clientPhone, clientName, packageName, procedureName, orgName, orgAddress, sessions } = params
+
+  const sessionList = sessions
+    .map((s, i) => {
+      const [year, month, day] = s.date.split("-")
+      return `  ${i + 1}. ${day}/${month}/${year} às ${s.startTime}`
+    })
+    .join("\n")
+
+  const addr = orgAddress ? `\n📍 ${orgAddress}` : ""
+  const confirmToken = makeBatchConfirmToken(appointmentIds)
+
+  const body =
+    `Olá, ${clientName}! 📅\n\n` +
+    `Suas sessões de *${procedureName}* (${packageName}) foram agendadas na *${orgName}*:\n\n` +
+    `${sessionList}${addr}\n\n` +
+    `Por favor, confirme todas as sessões:\n` +
+    `✅ ${APP_URL}/confirmar-sessoes/${confirmToken}`
 
   await sendWhatsApp(clientPhone, body)
 }

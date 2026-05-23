@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { createAppointmentAction } from "@/actions/schedule"
 import { suggestRecurrenceAction } from "@/actions/ai"
+import { sendPackageScheduleConfirmation } from "@/actions/whatsapp"
 import { Sparkles, Loader2, CalendarDays } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -13,11 +14,15 @@ type Props = {
   open: boolean
   onClose: () => void
   clientId: string
+  clientPhone?: string
+  clientName?: string
   clientPackageId: string
   packageName: string
   procedureId: string
   procedureName: string
   sessionsRemaining: number
+  orgName: string
+  orgAddress?: string
 }
 
 const FREQUENCY_OPTIONS = [
@@ -29,8 +34,8 @@ const FREQUENCY_OPTIONS = [
 type Frequency = "weekly" | "biweekly" | "monthly"
 
 export function SchedulePackageModal({
-  open, onClose, clientId, clientPackageId, packageName,
-  procedureId, procedureName, sessionsRemaining,
+  open, onClose, clientId, clientPhone, clientName = "", clientPackageId, packageName,
+  procedureId, procedureName, sessionsRemaining, orgName, orgAddress,
 }: Props) {
   const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" })
 
@@ -73,6 +78,33 @@ export function SchedulePackageModal({
     })
     setLoading(false)
     if (!result.success) { setError(result.error ?? "Erro ao agendar."); return }
+
+    // Envia WhatsApp com todas as sessões se cliente tiver telefone
+    if (clientPhone && result.appointmentIds && result.appointmentIds.length > 0) {
+      const intervalDays = frequency === "weekly" ? 7 : frequency === "biweekly" ? 14 : 30
+      const sessions = result.appointmentIds.map((_, i) => {
+        const d = new Date(date + "T12:00:00")
+        if (frequency === "monthly") {
+          d.setMonth(d.getMonth() + i)
+        } else {
+          d.setDate(d.getDate() + intervalDays * i)
+        }
+        return { date: d.toISOString().split("T")[0], startTime: time }
+      })
+      try {
+        await sendPackageScheduleConfirmation({
+          appointmentIds: result.appointmentIds,
+          clientPhone,
+          clientName,
+          packageName,
+          procedureName,
+          orgName,
+          orgAddress,
+          sessions,
+        })
+      } catch { /* silencioso */ }
+    }
+
     setSuccess(true)
     setTimeout(() => { setSuccess(false); onClose() }, 1500)
   }

@@ -97,7 +97,7 @@ export async function createAppointmentAction(data: {
   clientPackageId?: string
   notes?: string
   recurrence?: { frequency: "weekly" | "biweekly" | "monthly"; count: number }
-}): Promise<ActionResult & { skipped?: number }> {
+}): Promise<ActionResult & { skipped?: number; appointmentIds?: string[] }> {
   const { userId, organizationId, role } = await requireSession()
 
   if (!can(role, "schedule:create")) {
@@ -219,7 +219,7 @@ export async function createAppointmentAction(data: {
     // Falha silenciosa — não bloqueia o agendamento
   }
 
-  return { success: true, skipped }
+  return { success: true, skipped, appointmentIds: inserted.map((r) => r.id) }
 }
 
 // ── Atualizar status ──────────────────────────────────────────────────────────

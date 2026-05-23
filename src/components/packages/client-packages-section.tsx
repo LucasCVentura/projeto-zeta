@@ -32,15 +32,19 @@ type AvailablePkg = {
 
 type Props = {
   clientId: string
+  clientPhone?: string
+  clientName?: string
   clientPackages: ClientPkg[]
   availablePackages: AvailablePkg[]
+  orgName: string
+  orgAddress?: string
 }
 
 function formatPrice(cents: number) {
   return (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
 }
 
-export function ClientPackagesSection({ clientId, clientPackages: initial, availablePackages }: Props) {
+export function ClientPackagesSection({ clientId, clientPhone, clientName, clientPackages: initial, availablePackages, orgName, orgAddress }: Props) {
   const [packages, setPackages] = useState(initial)
   const [showAssign, setShowAssign] = useState(false)
   const [schedulingPkg, setSchedulingPkg] = useState<ClientPkg | null>(null)
@@ -81,11 +85,15 @@ export function ClientPackagesSection({ clientId, clientPackages: initial, avail
         open={!!schedulingPkg}
         onClose={() => setSchedulingPkg(null)}
         clientId={clientId}
+        clientPhone={clientPhone}
+        clientName={clientName}
         clientPackageId={schedulingPkg.id}
         packageName={schedulingPkg.packageName}
         procedureId={schedulingPkg.procedureId}
         procedureName={schedulingPkg.procedureName}
         sessionsRemaining={schedulingPkg.sessionsRemaining}
+        orgName={orgName}
+        orgAddress={orgAddress}
       />
     )}
     <div className="surface space-y-4">

@@ -1,8 +1,8 @@
 import { notFound } from "next/navigation"
 import Link from "next/link"
 import { getClientAction } from "@/actions/clients"
-import { getClientPackagesAction } from "@/actions/packages"
-import { getPackagesAction } from "@/actions/packages"
+import { getClientPackagesAction, getPackagesAction } from "@/actions/packages"
+import { getOrganizationAction } from "@/actions/organization"
 import { ClientPackagesSection } from "@/components/packages/client-packages-section"
 import { ClientHistory } from "@/components/clients/client-history"
 import { ArrowLeft, Phone, Mail, CalendarDays, Pencil, Images } from "lucide-react"
@@ -28,10 +28,11 @@ function getInitials(name: string) {
 
 export default async function ClientePerfilPage({ params }: Props) {
   const { id } = await params
-  const [data, clientPackages, allPackages] = await Promise.all([
+  const [data, clientPackages, allPackages, org] = await Promise.all([
     getClientAction(id),
     getClientPackagesAction(id),
     getPackagesAction(),
+    getOrganizationAction(),
   ])
   if (!data) notFound()
 
@@ -138,8 +139,12 @@ export default async function ClientePerfilPage({ params }: Props) {
       {/* Pacotes */}
       <ClientPackagesSection
         clientId={id}
+        clientPhone={client.phone ?? undefined}
+        clientName={client.name}
         clientPackages={clientPackages}
         availablePackages={allPackages}
+        orgName={org?.name ?? ""}
+        orgAddress={org?.address ?? undefined}
       />
 
       {/* Histórico de atendimentos */}
