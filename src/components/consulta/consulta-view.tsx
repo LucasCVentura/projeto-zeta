@@ -7,6 +7,7 @@ import { uploadClientPhotoAction, getClientPhotosAction, deleteClientPhotoAction
 import { PhotoComparison, CompareButton } from "@/components/photos/photo-comparison"
 import { CompleteAppointmentModal } from "@/components/agenda/complete-appointment-modal"
 import { ArrowLeft, Camera, CheckCircle2, Save, Images, RotateCcw, Check, Trash2 } from "lucide-react"
+import { StatusBadge } from "@/components/agenda/status-badge"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { mediaUrl } from "@/lib/media-url"
@@ -59,7 +60,7 @@ export function ConsultaView({ appointment, allClientPhotos: initialPhotos }: Pr
   const cameraRef = useRef<HTMLInputElement>(null)
   const uploadRef = useRef<HTMLInputElement>(null)
   const isCompleted = appointment.status === "completed"
-  const canComplete = appointment.status === "waiting" || appointment.status === "confirmed"
+  const canComplete = !["completed", "cancelled", "missed"].includes(appointment.status)
 
   const sessionPhotos = allPhotos.filter((p) => sessionPhotoIds.includes(p.id))
   const previousPhotos = allPhotos.filter((p) => !sessionPhotoIds.includes(p.id))
@@ -247,9 +248,10 @@ export function ConsultaView({ appointment, allClientPhotos: initialPhotos }: Pr
                 </span>
               )}
             </div>
-            <div className="text-right shrink-0">
+            <div className="text-right shrink-0 space-y-1">
               <p className="text-sm font-semibold">{formatTime(appointment.startTime)}</p>
               <p className="text-xs text-muted-foreground capitalize">{formatDate(appointment.date)}</p>
+              <StatusBadge status={appointment.status as "waiting" | "confirmed" | "completed" | "missed" | "cancelled"} />
             </div>
           </div>
         </div>
