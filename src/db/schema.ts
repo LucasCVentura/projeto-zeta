@@ -319,6 +319,7 @@ export const packages = pgTable("packages", {
   description: text("description"),
   totalSessions: integer("total_sessions").notNull().default(4),
   price: integer("price").notNull().default(0), // centavos
+  cost: integer("cost").notNull().default(0),   // custo de insumos, centavos
   active: boolean("active").notNull().default(true),
 
   createdAt: timestamp("created_at").defaultNow().notNull(),

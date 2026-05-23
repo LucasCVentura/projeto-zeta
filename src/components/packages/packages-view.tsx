@@ -15,6 +15,7 @@ type PackageRow = {
   description: string | null
   totalSessions: number
   price: number
+  cost: number
   active: boolean
   procedureId: string
   procedureName: string
@@ -46,6 +47,7 @@ export function PackagesView({ packages: initialPackages, procedures }: Props) {
   const [procedureId, setProcedureId] = useState("")
   const [totalSessions, setTotalSessions] = useState(4)
   const [priceRaw, setPriceRaw] = useState("")
+  const [costRaw, setCostRaw] = useState("")
 
   function openNew() {
     setEditing(null)
@@ -54,6 +56,7 @@ export function PackagesView({ packages: initialPackages, procedures }: Props) {
     setProcedureId(procedures[0]?.id ?? "")
     setTotalSessions(4)
     setPriceRaw("")
+    setCostRaw("")
     setShowForm(true)
   }
 
@@ -64,6 +67,7 @@ export function PackagesView({ packages: initialPackages, procedures }: Props) {
     setProcedureId(pkg.procedureId)
     setTotalSessions(pkg.totalSessions)
     setPriceRaw((pkg.price / 100).toFixed(2).replace(".", ","))
+    setCostRaw(pkg.cost > 0 ? (pkg.cost / 100).toFixed(2).replace(".", ",") : "")
     setShowForm(true)
   }
 
@@ -77,22 +81,23 @@ export function PackagesView({ packages: initialPackages, procedures }: Props) {
     if (!name.trim() || !procedureId) return
     setLoading(true)
     const price = parsePriceCents(priceRaw)
+    const cost = parsePriceCents(costRaw)
 
     if (editing) {
-      await updatePackageAction(editing.id, { name, description, totalSessions, price, active: editing.active })
+      await updatePackageAction(editing.id, { name, description, totalSessions, price, cost, active: editing.active })
     } else {
-      await createPackageAction({ name, description, procedureId, totalSessions, price })
+      await createPackageAction({ name, description, procedureId, totalSessions, price, cost })
     }
 
     const proc = procedures.find((p) => p.id === procedureId)!
     if (editing) {
       setPackages((prev) => prev.map((p) =>
-        p.id === editing.id ? { ...p, name, description: description || null, totalSessions, price } : p
+        p.id === editing.id ? { ...p, name, description: description || null, totalSessions, price, cost } : p
       ))
     } else {
       setPackages((prev) => [...prev, {
         id: crypto.randomUUID(), name, description: description || null,
-        totalSessions, price, active: true, procedureId, procedureName: proc.name,
+        totalSessions, price, cost, active: true, procedureId, procedureName: proc.name,
       }])
     }
     setLoading(false)
@@ -161,6 +166,11 @@ export function PackagesView({ packages: initialPackages, procedures }: Props) {
               </div>
 
               <div className="space-y-2">
+                <Label>Custo do pacote (R$) <span className="text-muted-foreground">(opcional)</span></Label>
+                <Input value={costRaw} onChange={(e) => setCostRaw(e.target.value)} placeholder="0,00" />
+              </div>
+
+              <div className="space-y-2 col-span-2">
                 <Label>Descrição <span className="text-muted-foreground">(opcional)</span></Label>
                 <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Detalhe do pacote..." />
               </div>
@@ -196,6 +206,9 @@ export function PackagesView({ packages: initialPackages, procedures }: Props) {
                 <p className="font-medium truncate">{pkg.name}</p>
                 <p className="text-xs text-muted-foreground">
                   {pkg.procedureName} · {pkg.totalSessions} sessões · {formatPrice(pkg.price)}
+                  {pkg.cost > 0 && (
+                    <span className="text-orange-500"> · custo {formatPrice(pkg.cost)} · lucro {formatPrice(pkg.price - pkg.cost)}</span>
+                  )}
                 </p>
               </div>
               <div className="flex items-center gap-1 shrink-0">

@@ -1,7 +1,7 @@
 "use server"
 
 import { db } from "@/db"
-import { transactions, appointments, clientPackages, supplies, procedureSupplies } from "@/db/schema"
+import { transactions, appointments, clientPackages, packages, supplies, procedureSupplies } from "@/db/schema"
 import { eq, and, gte, lte, sum, sql } from "drizzle-orm"
 import { requireSession } from "@/lib/session"
 import { can } from "@/lib/permissions"
@@ -133,6 +133,7 @@ export async function getTransactionsAction(year: number, month: number) {
       date: transactions.date,
       appointmentId: transactions.appointmentId,
       procedureId: appointments.procedureId,
+      clientPackageId: appointments.clientPackageId,
     })
     .from(transactions)
     .leftJoin(appointments, eq(appointments.id, transactions.appointmentId))
@@ -146,11 +147,36 @@ export async function getTransactionsAction(year: number, month: number) {
     )
     .orderBy(transactions.date)
 
-  // Calculate material cost per transaction using procedure_supplies
-  const procedureIds = [...new Set(rows.map((r) => r.procedureId).filter(Boolean) as string[])]
+  // For appointments linked to a client package, use package.cost / totalSessions as cost per session.
+  // For standalone appointments, fall back to procedure_supplies calculation.
+  const clientPackageIds = [...new Set(rows.map((r) => r.clientPackageId).filter(Boolean) as string[])]
+  const packageCostMap = new Map<string, number>() // clientPackageId → cost per session in cents
 
-  const costMap = new Map<string, number>() // procedureId → cost in cents
-  if (procedureIds.length > 0) {
+  if (clientPackageIds.length > 0) {
+    const pkgRows = await db
+      .select({
+        clientPackageId: clientPackages.id,
+        cost: packages.cost,
+        totalSessions: packages.totalSessions,
+      })
+      .from(clientPackages)
+      .innerJoin(packages, eq(packages.id, clientPackages.packageId))
+      .where(eq(clientPackages.organizationId, organizationId))
+
+    for (const pr of pkgRows) {
+      if (pr.cost > 0 && pr.totalSessions > 0) {
+        packageCostMap.set(pr.clientPackageId, Math.round(pr.cost / pr.totalSessions))
+      }
+    }
+  }
+
+  // Fallback: procedure_supplies cost for non-package appointments
+  const standaloneProcedureIds = [...new Set(
+    rows.filter((r) => !r.clientPackageId).map((r) => r.procedureId).filter(Boolean) as string[]
+  )]
+  const supplyCostMap = new Map<string, number>() // procedureId → cost in cents
+
+  if (standaloneProcedureIds.length > 0) {
     const costRows = await db
       .select({
         procedureId: procedureSupplies.procedureId,
@@ -159,26 +185,23 @@ export async function getTransactionsAction(year: number, month: number) {
       })
       .from(procedureSupplies)
       .innerJoin(supplies, eq(supplies.id, procedureSupplies.supplyId))
-      .where(
-        and(
-          eq(supplies.organizationId, organizationId),
-        )
-      )
+      .where(eq(supplies.organizationId, organizationId))
 
     for (const cr of costRows) {
-      const prev = costMap.get(cr.procedureId) ?? 0
-      costMap.set(cr.procedureId, prev + Math.round(Number(cr.quantityPerSession) * cr.costPerUnit))
+      const prev = supplyCostMap.get(cr.procedureId) ?? 0
+      supplyCostMap.set(cr.procedureId, prev + Math.round(Number(cr.quantityPerSession) * cr.costPerUnit))
     }
   }
 
-  const enriched = rows.map((r) => ({
-    id: r.id,
-    amount: r.amount,
-    description: r.description,
-    date: r.date,
-    appointmentId: r.appointmentId,
-    cost: r.procedureId ? (costMap.get(r.procedureId) ?? 0) : 0,
-  }))
+  const enriched = rows.map((r) => {
+    let cost = 0
+    if (r.clientPackageId && packageCostMap.has(r.clientPackageId)) {
+      cost = packageCostMap.get(r.clientPackageId)!
+    } else if (r.procedureId) {
+      cost = supplyCostMap.get(r.procedureId) ?? 0
+    }
+    return { id: r.id, amount: r.amount, description: r.description, date: r.date, appointmentId: r.appointmentId, cost }
+  })
 
   const total = enriched.reduce((acc, r) => acc + r.amount, 0)
   const totalCost = enriched.reduce((acc, r) => acc + r.cost, 0)

@@ -18,6 +18,7 @@ export async function getPackagesAction() {
       description: packages.description,
       totalSessions: packages.totalSessions,
       price: packages.price,
+      cost: packages.cost,
       active: packages.active,
       procedureId: packages.procedureId,
       procedureName: procedures.name,
@@ -34,6 +35,7 @@ export async function createPackageAction(data: {
   procedureId: string
   totalSessions: number
   price: number
+  cost?: number
 }): Promise<ActionResult> {
   const { organizationId } = await requireSession()
   await db.insert(packages).values({
@@ -43,6 +45,7 @@ export async function createPackageAction(data: {
     description: data.description || null,
     totalSessions: data.totalSessions,
     price: data.price,
+    cost: data.cost ?? 0,
   })
   revalidatePath("/configuracoes/pacotes")
   return { success: true }
@@ -53,12 +56,13 @@ export async function updatePackageAction(id: string, data: {
   description?: string
   totalSessions: number
   price: number
+  cost?: number
   active: boolean
 }): Promise<ActionResult> {
   const { organizationId } = await requireSession()
   await db
     .update(packages)
-    .set({ ...data, description: data.description || null, updatedAt: new Date() })
+    .set({ ...data, cost: data.cost ?? 0, description: data.description || null, updatedAt: new Date() })
     .where(and(eq(packages.id, id), eq(packages.organizationId, organizationId)))
   revalidatePath("/configuracoes/pacotes")
   return { success: true }
