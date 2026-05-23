@@ -38,11 +38,11 @@ export function HelpPage() {
           Tem alguma dúvida, problema ou precisa de ajuda? Entre em contato diretamente pelo e-mail abaixo — respondemos em até 24 horas úteis.
         </p>
         <a
-          href="mailto:suporte@kiraclinic.com.br"
+          href="mailto:kiragestao@gmail.com"
           className="inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline"
         >
           <Mail size={14} />
-          suporte@kiraclinic.com.br
+          kiragestao@gmail.com
         </a>
       </div>
 
