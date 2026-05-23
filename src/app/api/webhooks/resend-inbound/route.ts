@@ -10,11 +10,31 @@ export async function POST(req: NextRequest) {
 
   const payload = await req.json()
 
-  const from = payload.from ?? payload.headers?.from ?? "desconhecido"
-  const subject = payload.subject ?? "(sem assunto)"
-  const body = payload.text ?? payload.html ?? ""
+  if (payload.type !== "email.received") {
+    return NextResponse.json({ ok: true })
+  }
 
-  await db.insert(inboundEmails).values({ from, subject, body })
+  const { email_id, from, subject } = payload.data
+
+  // Busca o corpo completo do email via API do Resend
+  let body = ""
+  try {
+    const res = await fetch(`https://api.resend.com/inbound-emails/${email_id}`, {
+      headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}` },
+    })
+    if (res.ok) {
+      const data = await res.json()
+      body = data.text ?? data.html ?? ""
+    }
+  } catch (err) {
+    console.error("[inbound] failed to fetch email body:", err)
+  }
+
+  await db.insert(inboundEmails).values({
+    from: from ?? "desconhecido",
+    subject: subject ?? "(sem assunto)",
+    body,
+  })
 
   return NextResponse.json({ ok: true })
 }
