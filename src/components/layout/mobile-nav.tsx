@@ -1,9 +1,9 @@
 "use client"
 
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { useSession, signOut } from "next-auth/react"
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useTransition } from "react"
 import { cn } from "@/lib/utils"
 import { useTheme } from "@/hooks/use-theme"
 import { mediaUrl } from "@/lib/media-url"
@@ -69,6 +69,9 @@ const navItems = [
 export function MobileNav() {
   const pathname = usePathname()
   const [menuOpen, setMenuOpen] = useState(false)
+  const [pending, startTransition] = useTransition()
+  const [pendingHref, setPendingHref] = useState<string | null>(null)
+  const router = useRouter()
   const { data: session } = useSession()
   const { isDark, toggle, mounted } = useTheme()
   const sheetRef = useRef<HTMLDivElement>(null)
@@ -89,8 +92,16 @@ export function MobileNav() {
     return () => document.removeEventListener("mousedown", handleClick)
   }, [menuOpen])
 
-  // Fecha ao navegar
-  useEffect(() => { setMenuOpen(false) }, [pathname])
+  // Fecha ao navegar e limpa pending
+  useEffect(() => {
+    setMenuOpen(false)
+    setPendingHref(null)
+  }, [pathname])
+
+  function navigate(href: string) {
+    setPendingHref(href)
+    startTransition(() => { router.push(href) })
+  }
 
   return (
     <>
@@ -142,8 +153,8 @@ export function MobileNav() {
             className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm hover:bg-accent transition-colors"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+              <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
               <circle cx="12" cy="12" r="3" />
-              <path d="M12 2v2m0 16v2M4.22 4.22l1.42 1.42m12.72 12.72 1.42 1.42M2 12h2m16 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
             </svg>
             Configurações
           </Link>
@@ -196,18 +207,22 @@ export function MobileNav() {
       <nav className="fixed bottom-0 left-0 right-0 z-50 flex h-16 items-center justify-around border-t border-border bg-background px-2 lg:hidden">
         {navItems.map((item) => {
           const active = pathname === item.href || pathname.startsWith(item.href + "/")
+          const isLoading = pendingHref === item.href && pending
           return (
-            <Link
+            <button
               key={item.href}
-              href={item.href}
+              onClick={() => navigate(item.href)}
               className={cn(
-                "flex flex-col items-center gap-1 rounded-lg px-3 py-1.5 transition-colors",
-                active ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                "flex flex-col items-center gap-1 rounded-lg px-3 py-1.5 transition-all",
+                active || isLoading ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-accent",
+                isLoading && "opacity-70"
               )}
             >
-              {item.icon}
+              <span className={cn("transition-transform", isLoading && "scale-90")}>
+                {item.icon}
+              </span>
               <span className="text-[10px] font-medium">{item.label}</span>
-            </Link>
+            </button>
           )
         })}
 
