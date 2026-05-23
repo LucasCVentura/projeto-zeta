@@ -81,7 +81,7 @@ export default async function RecusarPage({ params }: { params: Promise<{ token:
   } catch { /* silencioso */ }
 
   // WhatsApp para o profissional
-  try {
+  if (process.env.WHATSAPP_ENABLED === "true") try {
     const [professional] = await db
       .select({ phone: users.phone, whatsapp: users.whatsapp })
       .from(users)

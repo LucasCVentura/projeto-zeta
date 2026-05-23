@@ -36,21 +36,23 @@ export async function GET(req: NextRequest) {
 
   let sent = 0
 
-  for (const row of rows) {
-    if (!row.clientPhone) continue
-    try {
-      await sendAppointmentReminder({
-        clientPhone: row.clientPhone,
-        clientName: row.clientName,
-        date: tomorrowStr,
-        startTime: row.startTime,
-        procedure: row.procedure ?? undefined,
-        orgName: row.orgName,
-        orgAddress: row.orgAddress,
-      })
-      sent++
-    } catch {
-      // log silencioso por cliente — não bloqueia os demais
+  if (process.env.WHATSAPP_ENABLED === "true") {
+    for (const row of rows) {
+      if (!row.clientPhone) continue
+      try {
+        await sendAppointmentReminder({
+          clientPhone: row.clientPhone,
+          clientName: row.clientName,
+          date: tomorrowStr,
+          startTime: row.startTime,
+          procedure: row.procedure ?? undefined,
+          orgName: row.orgName,
+          orgAddress: row.orgAddress,
+        })
+        sent++
+      } catch {
+        // log silencioso por cliente — não bloqueia os demais
+      }
     }
   }
 

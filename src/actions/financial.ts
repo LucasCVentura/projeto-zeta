@@ -97,7 +97,7 @@ export async function completeAppointmentWithRevenueAction(data: {
   revalidatePath("/estoque")
 
   // Envia mensagem pós-consulta WhatsApp (fire-and-forget)
-  try {
+  if (process.env.WHATSAPP_ENABLED === "true") try {
     if (appt?.clientId) {
       const [clientData] = await db
         .select({ name: clients.name, phone: clients.phone })

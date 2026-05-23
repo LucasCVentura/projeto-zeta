@@ -80,7 +80,7 @@ export function SchedulePackageModal({
     if (!result.success) { setError(result.error ?? "Erro ao agendar."); return }
 
     // Envia WhatsApp com todas as sessões se cliente tiver telefone
-    if (clientPhone && result.appointmentIds && result.appointmentIds.length > 0) {
+    if (process.env.NEXT_PUBLIC_WHATSAPP_ENABLED === "true" && clientPhone && result.appointmentIds && result.appointmentIds.length > 0) {
       const intervalDays = frequency === "weekly" ? 7 : frequency === "biweekly" ? 14 : 30
       const sessions = result.appointmentIds.map((_, i) => {
         const d = new Date(date + "T12:00:00")

@@ -190,7 +190,7 @@ export async function createAppointmentAction(data: {
   revalidatePath("/agenda")
 
   // Envia confirmação WhatsApp para o primeiro agendamento (fire-and-forget)
-  try {
+  if (process.env.WHATSAPP_ENABLED === "true") try {
     const [clientData] = await db
       .select({ name: clients.name, phone: clients.phone })
       .from(clients)
