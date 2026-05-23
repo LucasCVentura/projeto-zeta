@@ -28,8 +28,8 @@ const features = [
     icon: (
       <BonsaiIcon size={20} />
     ),
-    title: "IA para evolução",
-    description: "Análise automática de fotos antes e depois, com relatórios de evolução gerados por IA.",
+    title: "IA como apoio",
+    description: "Apoio para organizar observações, comparar evolução visual e gerar relatórios complementares.",
   },
   {
     icon: (
@@ -80,6 +80,29 @@ const audiences = [
   "Profissionais autônomas",
 ]
 
+const solutionLinks = [
+  {
+    href: "/sistema-para-biomedica-esteta",
+    title: "Sistema para biomédica esteta",
+    description: "Agenda, evolução, fotos, prontuários, financeiro e pacotes para a rotina da biomédica esteta.",
+  },
+  {
+    href: "/sistema-para-clinica-de-estetica",
+    title: "Sistema para clínica de estética",
+    description: "Uma visão organizada para clínica, equipe, atendimentos, clientes, estoque e receita.",
+  },
+  {
+    href: "/prontuario-estetico-digital",
+    title: "Prontuário estético digital",
+    description: "Histórico da cliente, procedimentos, fotos de antes e depois e evolução em um só lugar.",
+  },
+  {
+    href: "/agenda-para-estetica",
+    title: "Agenda para estética",
+    description: "Organize horários, retornos, status de atendimento e rotina diária sem depender só do WhatsApp.",
+  },
+]
+
 const steps = [
   { number: "01", title: "Crie sua conta", description: "Cadastro em menos de 2 minutos, sem cartão de crédito." },
   { number: "02", title: "Configure sua clínica", description: "Adicione procedimentos, horários e preferências da sua rotina." },
@@ -88,25 +111,11 @@ const steps = [
 
 const testimonials = [
   {
-    quote: "Antes eu anotava muita coisa no WhatsApp e acabava perdendo histórico. Com o Kira, consigo ver agenda, dados da cliente e evolução em um lugar só.",
-    name: "Marina Alves",
+    quote: "O Kira me ajudou a organizar agenda, clientes e fotos de evolução sem depender de WhatsApp e anotações soltas. Além dos recursos com IA como apoio na organização da evolução, que me ajudam a ganhar tempo!",
+    name: "Nathalia Fialho",
     role: "Biomédica esteta",
-    location: "São Paulo, SP",
-    initials: "MA",
-  },
-  {
-    quote: "O que mais me ajudou foi organizar os retornos e os pacotes de sessões. Ficou muito mais fácil acompanhar quem já fez cada atendimento.",
-    name: "Camila Rocha",
-    role: "Esteticista",
-    location: "Belo Horizonte, MG",
-    initials: "CR",
-  },
-  {
-    quote: "Eu queria algo simples, bonito e que funcionasse no celular. O Kira deixou minha rotina mais profissional sem eu precisar depender de planilha.",
-    name: "Juliana Mendes",
-    role: "Profissional da estética",
-    location: "Curitiba, PR",
-    initials: "JM",
+    credential: "CRBM-RJ 07488",
+    initials: "NF",
   },
 ]
 
@@ -374,6 +383,43 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ── Solution links ── */}
+      <section className="px-5 py-20">
+        <div className="mx-auto max-w-6xl">
+          <div className="mb-10 max-w-2xl space-y-3">
+            <p className="text-sm font-medium text-primary">Soluções por rotina</p>
+            <h2 className="font-heading text-3xl font-bold sm:text-4xl">
+              Encontre o Kira pelo problema que você quer resolver
+            </h2>
+            <p className="text-muted-foreground leading-relaxed">
+              Páginas específicas para entender como o Kira se encaixa em diferentes buscas e necessidades da estética e beleza.
+            </p>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            {solutionLinks.map((solution) => (
+              <Link
+                key={solution.href}
+                href={solution.href}
+                className="group rounded-2xl border border-border bg-card p-5 transition-all hover:border-primary/30 hover:shadow-md hover:shadow-primary/5"
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <h3 className="font-semibold group-hover:text-primary transition-colors">{solution.title}</h3>
+                    <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{solution.description}</p>
+                  </div>
+                  <span className="mt-1 text-primary transition-transform group-hover:translate-x-1">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M5 12h14M12 5l7 7-7 7" />
+                    </svg>
+                  </span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ── How it works ── */}
       <section className="px-5 py-24">
         <div className="mx-auto max-w-4xl">
@@ -410,24 +456,24 @@ export default function LandingPage() {
               </h2>
             </div>
             <p className="text-muted-foreground leading-relaxed lg:max-w-xl">
-              Espaço reservado para depoimentos reais das primeiras usuárias. Por enquanto, estes textos estão como exemplo para manter a seção pronta para a campanha.
+              Depoimentos reais das primeiras profissionais usando o Kira para organizar atendimentos, evolução de clientes e rotina da clínica.
             </p>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="mx-auto grid max-w-3xl gap-4">
             {testimonials.map((testimonial) => (
-              <figure key={testimonial.name} className="flex h-full flex-col justify-between rounded-2xl border border-border bg-card p-6 shadow-sm shadow-primary/5">
-                <blockquote className="text-sm leading-relaxed text-foreground">
+              <figure key={testimonial.name} className="rounded-3xl border border-primary/20 bg-card p-8 text-center shadow-xl shadow-primary/10">
+                <blockquote className="text-lg leading-relaxed text-foreground sm:text-xl">
                   “{testimonial.quote}”
                 </blockquote>
-                <figcaption className="mt-6 flex items-center gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+                <figcaption className="mt-8 flex flex-col items-center gap-3">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
                     {testimonial.initials}
                   </div>
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold">{testimonial.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {testimonial.role} · {testimonial.location}
+                    <p className="font-semibold">{testimonial.name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {testimonial.role} · {testimonial.credential}
                     </p>
                   </div>
                 </figcaption>
@@ -462,7 +508,7 @@ export default function LandingPage() {
               {[
                 "Agenda e gestão de horários",
                 "Clientes e prontuários ilimitados",
-                "Fotos com análise por IA",
+                "Fotos com apoio de IA",
                 "Controle financeiro completo",
                 "Gestão de estoque e insumos",
                 "Pacotes de sessões",
@@ -539,18 +585,29 @@ export default function LandingPage() {
 
       {/* ── Footer ── */}
       <footer className="border-t border-border px-5 py-10">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 sm:flex-row">
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-primary/10">
-              <KiraMark size={28} />
+        <div className="mx-auto grid max-w-6xl gap-8 sm:grid-cols-[1fr_auto]">
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-primary/10">
+                <KiraMark size={28} />
+              </div>
+              <span className="text-sm font-semibold">Kira</span>
             </div>
-            <span className="text-sm font-semibold">Kira</span>
+            <p className="text-xs text-muted-foreground">© {currentYear} Kira. Todos os direitos reservados.</p>
           </div>
-          <p className="text-xs text-muted-foreground">© {currentYear} Kira. Todos os direitos reservados.</p>
-          <div className="flex gap-5 text-xs text-muted-foreground">
-            <Link href="/termos" className="hover:text-foreground transition-colors">Termos de Uso</Link>
-            <Link href="/privacidade" className="hover:text-foreground transition-colors">Privacidade</Link>
-            <Link href="/login" className="hover:text-foreground transition-colors">Entrar</Link>
+
+          <div className="grid gap-4 text-xs text-muted-foreground sm:grid-cols-2">
+            <div className="flex flex-col gap-2">
+              <Link href="/sistema-para-biomedica-esteta" className="hover:text-foreground transition-colors">Sistema para biomédica esteta</Link>
+              <Link href="/sistema-para-clinica-de-estetica" className="hover:text-foreground transition-colors">Sistema para clínica de estética</Link>
+              <Link href="/prontuario-estetico-digital" className="hover:text-foreground transition-colors">Prontuário estético digital</Link>
+              <Link href="/agenda-para-estetica" className="hover:text-foreground transition-colors">Agenda para estética</Link>
+            </div>
+            <div className="flex flex-col gap-2 sm:items-end">
+              <Link href="/termos" className="hover:text-foreground transition-colors">Termos de Uso</Link>
+              <Link href="/privacidade" className="hover:text-foreground transition-colors">Privacidade</Link>
+              <Link href="/login" className="hover:text-foreground transition-colors">Entrar</Link>
+            </div>
           </div>
         </div>
       </footer>

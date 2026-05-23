@@ -37,11 +37,11 @@ export default function TermosPage() {
           </Section>
 
           <Section title="2. Descrição do Serviço">
-            <p>O Kira é uma plataforma de gestão voltada para profissionais da estética e biomédicos estetas, oferecendo funcionalidades como:</p>
+            <p>O Kira é uma plataforma de gestão voltada para profissionais da estética, beleza e biomédicos estetas, oferecendo funcionalidades como:</p>
             <ul>
               <li>Gerenciamento de agenda e agendamentos</li>
               <li>Cadastro e prontuário de clientes</li>
-              <li>Registro fotográfico e análise por inteligência artificial</li>
+              <li>Registro fotográfico e recursos de inteligência artificial como apoio complementar à organização da evolução</li>
               <li>Controle financeiro e de estoque</li>
               <li>Gestão de pacotes de sessões</li>
               <li>Envio de notificações automáticas via WhatsApp para os clientes finais</li>
@@ -86,29 +86,34 @@ export default function TermosPage() {
             <p>Você declara ter obtido as autorizações necessárias dos seus clientes para o registro e tratamento de seus dados pessoais, incluindo dados sensíveis como imagens e informações de saúde estética.</p>
           </Section>
 
-          <Section title="9. Propriedade Intelectual">
+          <Section title="9. Recursos de Inteligência Artificial">
+            <p>Os recursos de inteligência artificial do Kira são ferramentas de apoio à organização, comparação visual e geração de relatórios complementares. Eles não substituem avaliação, diagnóstico, prescrição, conduta profissional ou responsabilidade técnica do Usuário.</p>
+            <p>O Usuário é responsável por revisar qualquer conteúdo gerado com apoio de IA antes de utilizá-lo em sua rotina profissional ou compartilhá-lo com clientes finais.</p>
+          </Section>
+
+          <Section title="10. Propriedade Intelectual">
             <p>Todo o conteúdo da plataforma Kira — incluindo código, design, marcas, logotipos e textos — é de propriedade exclusiva do Kira ou de seus licenciadores. É proibida qualquer reprodução, distribuição ou uso não autorizado.</p>
             <p>Os dados inseridos pelo Usuário permanecem de propriedade do Usuário, que pode solicitar sua exportação ou exclusão a qualquer momento.</p>
           </Section>
 
-          <Section title="10. Disponibilidade e Limitação de Responsabilidade">
+          <Section title="11. Disponibilidade e Limitação de Responsabilidade">
             <p>O Kira envida esforços para manter o serviço disponível 24/7, mas não garante disponibilidade ininterrupta. Eventos de manutenção, falhas técnicas ou situações de força maior podem causar indisponibilidades temporárias.</p>
             <p>O Kira não se responsabiliza por danos indiretos, perda de dados, perda de receita ou quaisquer danos decorrentes do uso ou impossibilidade de uso da plataforma, na máxima extensão permitida pela lei.</p>
           </Section>
 
-          <Section title="11. Modificações nos Termos">
+          <Section title="12. Modificações nos Termos">
             <p>O Kira pode atualizar estes termos a qualquer momento. Notificaremos você por e-mail ou por aviso na plataforma com pelo menos 7 (sete) dias de antecedência para alterações relevantes. O uso continuado do serviço após a vigência das alterações implica aceitação dos novos termos.</p>
           </Section>
 
-          <Section title="12. Rescisão">
+          <Section title="13. Rescisão">
             <p>Você pode encerrar sua conta a qualquer momento. O Kira pode suspender ou encerrar seu acesso em caso de violação destes termos, sem prejuízo de outras medidas cabíveis.</p>
           </Section>
 
-          <Section title="13. Lei Aplicável e Foro">
+          <Section title="14. Lei Aplicável e Foro">
             <p>Estes termos são regidos pelas leis da República Federativa do Brasil. Para dirimir quaisquer controvérsias, fica eleito o foro da comarca de domicílio do Usuário, conforme o Código de Defesa do Consumidor.</p>
           </Section>
 
-          <Section title="14. Contato">
+          <Section title="15. Contato">
             <p>Dúvidas sobre estes termos podem ser enviadas para: <strong>contato@send.kiraclinic.com.br</strong></p>
           </Section>
         </div>

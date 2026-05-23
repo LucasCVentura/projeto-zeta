@@ -57,6 +57,7 @@ export default function PrivacidadePage() {
             <ul>
               <li>Logs de acesso (endereço IP, navegador, data/hora)</li>
               <li>Dados de sessão para autenticação</li>
+              <li>Métricas agregadas de acesso e performance da aplicação, sem uso de cookies de rastreamento</li>
             </ul>
           </Section>
 
@@ -85,9 +86,9 @@ export default function PrivacidadePage() {
               <li><strong>Stripe</strong> — processamento de pagamentos</li>
               <li><strong>Supabase (PostgreSQL)</strong> — armazenamento de dados em nuvem</li>
               <li><strong>Google Cloud Storage</strong> — armazenamento de imagens</li>
-              <li><strong>Groq / Meta Llama</strong> — análise de imagens por IA (imagens processadas sem armazenamento permanente)</li>
+              <li><strong>Groq / Meta Llama</strong> — recursos de IA como apoio complementar à organização de evolução e relatórios (imagens processadas sem armazenamento permanente)</li>
               <li><strong>Twilio / Gupshup</strong> — envio de notificações via WhatsApp (número de telefone dos clientes finais compartilhado apenas para fins de entrega da mensagem)</li>
-              <li><strong>Vercel</strong> — hospedagem da aplicação</li>
+              <li><strong>Vercel</strong> — hospedagem da aplicação, métricas agregadas de acesso e Speed Insights/performance, sem cookies de rastreamento</li>
             </ul>
             <p>Todos os fornecedores estão sujeitos a acordos de processamento de dados compatíveis com a LGPD.</p>
           </Section>
@@ -96,8 +97,9 @@ export default function PrivacidadePage() {
             <p>O Kira utiliza <strong>exclusivamente cookies essenciais</strong> para o funcionamento da plataforma:</p>
             <ul>
               <li><strong>Cookie de sessão</strong> — mantém você autenticado durante o uso. Expira em 30 dias ou ao sair da conta.</li>
+              <li><strong>Armazenamento local</strong> — registra preferências essenciais, como aceite do aviso de cookies e tema visual.</li>
             </ul>
-            <p>Não utilizamos cookies de rastreamento, publicidade ou análise de comportamento de terceiros.</p>
+            <p>Não utilizamos cookies de rastreamento, publicidade ou análise comportamental de terceiros. As métricas de acesso e performance usadas pelo Kira são agregadas e não dependem de cookies de rastreamento.</p>
           </Section>
 
           <Section title="6. Retenção de Dados">
