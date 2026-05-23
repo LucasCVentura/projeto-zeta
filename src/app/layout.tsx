@@ -19,9 +19,9 @@ export const metadata: Metadata = {
   title: "Kira — Gestão para Estética",
   description: "Plataforma de gestão para profissionais da estética e biomédicos estetas.",
   icons: {
-    icon: "/brand/kira-bonsai-512.png",
-    shortcut: "/brand/kira-bonsai-512.png",
-    apple: "/brand/kira-bonsai-512.png",
+    icon: "/icon.png",
+    shortcut: "/favicon.ico",
+    apple: "/apple-icon.png",
   },
 };
 

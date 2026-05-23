@@ -79,7 +79,7 @@ export default function LandingPage() {
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5">
           <div className="flex items-center gap-2.5">
             <div className="flex h-7 w-7 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-primary/10">
-              <KiraMark size={20} />
+              <KiraMark size={24} />
             </div>
             <span className="font-semibold tracking-tight">Kira</span>
           </div>
@@ -373,7 +373,7 @@ export default function LandingPage() {
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 sm:flex-row">
           <div className="flex items-center gap-2">
             <div className="flex h-6 w-6 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-primary/10">
-              <KiraMark size={17} />
+              <KiraMark size={21} />
             </div>
             <span className="text-sm font-semibold">Kira</span>
           </div>

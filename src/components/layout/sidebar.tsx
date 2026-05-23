@@ -86,7 +86,7 @@ export function Sidebar() {
       {/* Logo */}
       <div className="flex h-16 items-center gap-2.5 border-b border-border px-5">
         <div className="flex h-7 w-7 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-primary/10">
-          <KiraMark size={20} />
+          <KiraMark size={24} />
         </div>
         <span className="font-semibold tracking-tight">Kira</span>
       </div>

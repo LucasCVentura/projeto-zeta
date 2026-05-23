@@ -3,7 +3,7 @@ import Image from "next/image"
 export function KiraMark({ size = 16, className }: { size?: number; className?: string }) {
   return (
     <Image
-      src="/brand/kira-bonsai-512.png"
+      src="/brand/kira-bonsai-mark.png"
       alt=""
       aria-hidden="true"
       width={size}
