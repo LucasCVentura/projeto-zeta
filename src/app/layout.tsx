@@ -3,6 +3,7 @@ import { Plus_Jakarta_Sans, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import { CookieBanner } from "@/components/cookie-banner";
 import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 const jakarta = Plus_Jakarta_Sans({
   variable: "--font-sans",
@@ -44,6 +45,7 @@ export default function RootLayout({
         {children}
         <CookieBanner />
         <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );
