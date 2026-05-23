@@ -5,7 +5,7 @@ import { ArrowLeft } from "lucide-react"
 export const metadata = { title: "Política de Privacidade — Kira" }
 
 export default function PrivacidadePage() {
-  const updated = "21 de maio de 2025"
+  const updated = "23 de maio de 2026"
 
   return (
     <div className="min-h-screen bg-background">
@@ -47,11 +47,12 @@ export default function PrivacidadePage() {
             </ul>
             <p className="mt-2"><strong>Dados dos clientes finais (inseridos por você):</strong></p>
             <ul>
-              <li>Nome, telefone, data de nascimento</li>
+              <li>Nome, telefone/WhatsApp, data de nascimento</li>
               <li>Histórico de procedimentos e anotações clínicas</li>
               <li>Fotografias de evolução</li>
               <li>Informações de anamnese</li>
             </ul>
+            <p className="mt-2">O número de telefone/WhatsApp dos clientes finais é utilizado para o envio de notificações automáticas de agendamento (confirmação, lembrete e pós-consulta), sempre mediante responsabilidade do Usuário em obter o consentimento do cliente.</p>
             <p className="mt-2"><strong>Dados de uso:</strong></p>
             <ul>
               <li>Logs de acesso (endereço IP, navegador, data/hora)</li>
@@ -70,6 +71,7 @@ export default function PrivacidadePage() {
               <tbody>
                 <tr><td>Prestação do serviço contratado</td><td>Execução de contrato (art. 7º, V)</td></tr>
                 <tr><td>Cobrança e processamento de pagamentos</td><td>Execução de contrato (art. 7º, V)</td></tr>
+                <tr><td>Envio de notificações via WhatsApp para clientes finais</td><td>Execução de contrato / Consentimento (art. 7º, V e I)</td></tr>
                 <tr><td>Comunicados sobre o serviço</td><td>Legítimo interesse (art. 7º, IX)</td></tr>
                 <tr><td>Cumprimento de obrigações legais</td><td>Obrigação legal (art. 7º, II)</td></tr>
                 <tr><td>Segurança e prevenção a fraudes</td><td>Legítimo interesse (art. 7º, IX)</td></tr>
@@ -81,9 +83,10 @@ export default function PrivacidadePage() {
             <p>Não vendemos nem compartilhamos seus dados pessoais com terceiros para fins comerciais. Compartilhamos dados apenas com:</p>
             <ul>
               <li><strong>Stripe</strong> — processamento de pagamentos</li>
-              <li><strong>Neon (PostgreSQL)</strong> — armazenamento de dados em nuvem</li>
+              <li><strong>Supabase (PostgreSQL)</strong> — armazenamento de dados em nuvem</li>
               <li><strong>Google Cloud Storage</strong> — armazenamento de imagens</li>
               <li><strong>Groq / Meta Llama</strong> — análise de imagens por IA (imagens processadas sem armazenamento permanente)</li>
+              <li><strong>Twilio / Gupshup</strong> — envio de notificações via WhatsApp (número de telefone dos clientes finais compartilhado apenas para fins de entrega da mensagem)</li>
               <li><strong>Vercel</strong> — hospedagem da aplicação</li>
             </ul>
             <p>Todos os fornecedores estão sujeitos a acordos de processamento de dados compatíveis com a LGPD.</p>

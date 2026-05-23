@@ -5,7 +5,7 @@ import { ArrowLeft } from "lucide-react"
 export const metadata = { title: "Termos de Uso — Kira" }
 
 export default function TermosPage() {
-  const updated = "21 de maio de 2025"
+  const updated = "23 de maio de 2026"
 
   return (
     <div className="min-h-screen bg-background">
@@ -44,6 +44,7 @@ export default function TermosPage() {
               <li>Registro fotográfico e análise por inteligência artificial</li>
               <li>Controle financeiro e de estoque</li>
               <li>Gestão de pacotes de sessões</li>
+              <li>Envio de notificações automáticas via WhatsApp para os clientes finais</li>
             </ul>
           </Section>
 
@@ -69,34 +70,45 @@ export default function TermosPage() {
             </ul>
           </Section>
 
-          <Section title="6. Dados dos Clientes Finais">
+          <Section title="6. Notificações via WhatsApp">
+            <p>A plataforma Kira envia mensagens automáticas via WhatsApp para os clientes finais cadastrados pelo Usuário, incluindo:</p>
+            <ul>
+              <li>Confirmação de agendamento (com links para confirmar ou recusar presença)</li>
+              <li>Lembrete de consulta 24 horas antes do horário agendado</li>
+              <li>Mensagem de agradecimento pós-consulta</li>
+            </ul>
+            <p>O Usuário é inteiramente responsável por obter o consentimento expresso dos seus clientes finais para o recebimento dessas mensagens antes de cadastrá-los na plataforma, conforme exigido pela LGPD e pelas políticas de uso do WhatsApp Business.</p>
+            <p>O Kira não se responsabiliza pelo uso indevido das funcionalidades de envio de mensagens, nem por bloqueios ou penalidades decorrentes do envio de mensagens sem consentimento.</p>
+          </Section>
+
+          <Section title="8. Dados dos Clientes Finais">
             <p>Ao cadastrar dados de seus clientes na plataforma, você assume a responsabilidade como controlador dos dados pessoais, conforme a Lei Geral de Proteção de Dados (LGPD — Lei nº 13.709/2018). O Kira atua como operador de dados em nome do Usuário.</p>
             <p>Você declara ter obtido as autorizações necessárias dos seus clientes para o registro e tratamento de seus dados pessoais, incluindo dados sensíveis como imagens e informações de saúde estética.</p>
           </Section>
 
-          <Section title="7. Propriedade Intelectual">
+          <Section title="9. Propriedade Intelectual">
             <p>Todo o conteúdo da plataforma Kira — incluindo código, design, marcas, logotipos e textos — é de propriedade exclusiva do Kira ou de seus licenciadores. É proibida qualquer reprodução, distribuição ou uso não autorizado.</p>
             <p>Os dados inseridos pelo Usuário permanecem de propriedade do Usuário, que pode solicitar sua exportação ou exclusão a qualquer momento.</p>
           </Section>
 
-          <Section title="8. Disponibilidade e Limitação de Responsabilidade">
+          <Section title="10. Disponibilidade e Limitação de Responsabilidade">
             <p>O Kira envida esforços para manter o serviço disponível 24/7, mas não garante disponibilidade ininterrupta. Eventos de manutenção, falhas técnicas ou situações de força maior podem causar indisponibilidades temporárias.</p>
             <p>O Kira não se responsabiliza por danos indiretos, perda de dados, perda de receita ou quaisquer danos decorrentes do uso ou impossibilidade de uso da plataforma, na máxima extensão permitida pela lei.</p>
           </Section>
 
-          <Section title="9. Modificações nos Termos">
+          <Section title="11. Modificações nos Termos">
             <p>O Kira pode atualizar estes termos a qualquer momento. Notificaremos você por e-mail ou por aviso na plataforma com pelo menos 7 (sete) dias de antecedência para alterações relevantes. O uso continuado do serviço após a vigência das alterações implica aceitação dos novos termos.</p>
           </Section>
 
-          <Section title="10. Rescisão">
+          <Section title="12. Rescisão">
             <p>Você pode encerrar sua conta a qualquer momento. O Kira pode suspender ou encerrar seu acesso em caso de violação destes termos, sem prejuízo de outras medidas cabíveis.</p>
           </Section>
 
-          <Section title="11. Lei Aplicável e Foro">
+          <Section title="13. Lei Aplicável e Foro">
             <p>Estes termos são regidos pelas leis da República Federativa do Brasil. Para dirimir quaisquer controvérsias, fica eleito o foro da comarca de domicílio do Usuário, conforme o Código de Defesa do Consumidor.</p>
           </Section>
 
-          <Section title="12. Contato">
+          <Section title="14. Contato">
             <p>Dúvidas sobre estes termos podem ser enviadas para: <strong>contato@send.kiraclinic.com.br</strong></p>
           </Section>
         </div>
