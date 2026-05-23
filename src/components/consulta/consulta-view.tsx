@@ -59,6 +59,7 @@ export function ConsultaView({ appointment, allClientPhotos: initialPhotos }: Pr
   const cameraRef = useRef<HTMLInputElement>(null)
   const uploadRef = useRef<HTMLInputElement>(null)
   const isCompleted = appointment.status === "completed"
+  const canComplete = appointment.status === "waiting" || appointment.status === "confirmed"
 
   const sessionPhotos = allPhotos.filter((p) => sessionPhotoIds.includes(p.id))
   const previousPhotos = allPhotos.filter((p) => !sessionPhotoIds.includes(p.id))
@@ -225,7 +226,7 @@ export function ConsultaView({ appointment, allClientPhotos: initialPhotos }: Pr
         procedurePrice={appointment.procedurePrice ?? undefined}
       />
 
-      <div className={cn("container-page max-w-xl py-6 space-y-6", !isCompleted && "pb-32")}>
+      <div className={cn("container-page max-w-xl py-6 space-y-6", canComplete && "pb-32")}>
         {/* Header */}
         <div className="flex items-start justify-between gap-4">
           <Link
@@ -397,7 +398,7 @@ export function ConsultaView({ appointment, allClientPhotos: initialPhotos }: Pr
       </div>
 
       {/* Footer fixo */}
-      {!isCompleted && (
+      {canComplete && (
         <div className="fixed bottom-0 left-0 right-0 border-t border-border bg-background/95 backdrop-blur px-4 py-3 lg:left-60">
           <Button
             onClick={() => setCompleteModal(true)}

@@ -5,12 +5,13 @@ import { db } from "@/db"
 import { scheduleConfig } from "@/db/schema"
 import { eq, and } from "drizzle-orm"
 import Link from "next/link"
+import { todayBRT } from "@/lib/date"
 
 type Props = { searchParams: Promise<{ data?: string }> }
 
 export default async function AgendaPage({ searchParams }: Props) {
   const params = await searchParams
-  const today = new Date().toISOString().split("T")[0]
+  const today = todayBRT()
   const date = params.data ?? today
 
   const { userId, organizationId } = await requireSession()

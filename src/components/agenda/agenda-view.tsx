@@ -33,10 +33,14 @@ function formatDate(dateStr: string) {
   })
 }
 
+function toDateStr(d: Date) {
+  return d.toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" })
+}
+
 function addDays(dateStr: string, days: number) {
   const d = new Date(dateStr + "T12:00:00")
   d.setDate(d.getDate() + days)
-  return d.toISOString().split("T")[0]
+  return toDateStr(d)
 }
 
 function getWeekDays(dateStr: string) {
@@ -47,7 +51,7 @@ function getWeekDays(dateStr: string) {
   return Array.from({ length: 7 }, (_, i) => {
     const curr = new Date(monday)
     curr.setDate(monday.getDate() + i)
-    return curr.toISOString().split("T")[0]
+    return toDateStr(curr)
   })
 }
 
@@ -73,8 +77,9 @@ export function AgendaView({ initialDate, slots: initialSlots, hasConfig, slotDu
   const [isPending, startTransition] = useTransition()
 
   const weekDays = getWeekDays(date)
-  const today = new Date().toISOString().split("T")[0]
-  const nowMinutes = new Date().getHours() * 60 + new Date().getMinutes()
+  const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" })
+  const nowBRT = new Date(new Date().toLocaleString("en-CA", { timeZone: "America/Sao_Paulo", hour12: false }))
+  const nowMinutes = nowBRT.getHours() * 60 + nowBRT.getMinutes()
 
   function isSlotPast(slotTime: string) {
     if (date < today) return true

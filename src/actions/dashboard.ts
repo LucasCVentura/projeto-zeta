@@ -4,12 +4,13 @@ import { db } from "@/db"
 import { appointments, clients, transactions } from "@/db/schema"
 import { eq, and, gte, lte, sum, count, sql, isNotNull } from "drizzle-orm"
 import { requireSession } from "@/lib/session"
+import { todayBRT, nowBRT } from "@/lib/date"
 
 export async function getDashboardDataAction() {
   const { userId, organizationId } = await requireSession()
 
-  const today = new Date().toISOString().split("T")[0]
-  const now = new Date()
+  const today = todayBRT()
+  const now = nowBRT()
   const year = now.getFullYear()
   const month = now.getMonth() + 1
   const monthStart = `${year}-${String(month).padStart(2, "0")}-01`
@@ -82,7 +83,7 @@ export async function getDashboardDataAction() {
 
   // Receita dos últimos 6 meses
   const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1)
-  const sixMonthsAgoStr = sixMonthsAgo.toISOString().split("T")[0]
+  const sixMonthsAgoStr = sixMonthsAgo.toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" })
 
   const revenueByMonth = await db
     .select({

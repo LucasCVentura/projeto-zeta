@@ -4,6 +4,7 @@ import { db } from "@/db"
 import { clientPhotos, clients, procedures } from "@/db/schema"
 import { eq, and, desc } from "drizzle-orm"
 import { requireSession } from "@/lib/session"
+import { todayBRT } from "@/lib/date"
 import { revalidatePath } from "next/cache"
 import { uploadToGCS, deleteFromGCS, gcsUrlToObjectName } from "@/lib/gcs"
 import type { ActionResult } from "./auth"
@@ -40,7 +41,7 @@ export async function uploadClientPhotoAction(
   const file = formData.get("photo") as File | null
   const procedureId = formData.get("procedureId") as string | null
   const notes = formData.get("notes") as string | null
-  const takenAt = (formData.get("takenAt") as string) || new Date().toISOString().split("T")[0]
+  const takenAt = (formData.get("takenAt") as string) || todayBRT()
 
   if (!file || file.size === 0) return { success: false, error: "Nenhuma foto enviada." }
   if (file.size > 10 * 1024 * 1024) return { success: false, error: "Imagem muito grande. Máximo 10MB." }

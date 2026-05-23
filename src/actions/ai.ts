@@ -5,6 +5,7 @@ import { db } from "@/db"
 import { appointments, clientPhotos } from "@/db/schema"
 import { eq, and, desc } from "drizzle-orm"
 import { requireSession } from "@/lib/session"
+import { todayBRT } from "@/lib/date"
 async function photoToBase64(url: string): Promise<string | null> {
   try {
     if (url.startsWith("gcs://")) {
@@ -135,7 +136,7 @@ export async function suggestNextAppointmentAction(clientId: string): Promise<{
     })
     .join("\n")
 
-  const today = new Date().toISOString().split("T")[0]
+  const today = todayBRT()
   const groq = new Groq({ apiKey })
 
   const chat = await groq.chat.completions.create({

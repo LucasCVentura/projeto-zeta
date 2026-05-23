@@ -2,7 +2,12 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { useSession, signOut } from "next-auth/react"
+import { useState, useEffect, useRef } from "react"
 import { cn } from "@/lib/utils"
+import { useTheme } from "@/hooks/use-theme"
+import { mediaUrl } from "@/lib/media-url"
+import Image from "next/image"
 
 const navItems = [
   {
@@ -59,38 +64,167 @@ const navItems = [
       </svg>
     ),
   },
-  {
-    label: "Mais",
-    href: "/configuracoes",
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
-        <circle cx="12" cy="12" r="1" /><circle cx="19" cy="12" r="1" /><circle cx="5" cy="12" r="1" />
-      </svg>
-    ),
-  },
 ]
 
 export function MobileNav() {
   const pathname = usePathname()
+  const [menuOpen, setMenuOpen] = useState(false)
+  const { data: session } = useSession()
+  const { isDark, toggle, mounted } = useTheme()
+  const sheetRef = useRef<HTMLDivElement>(null)
+
+  const name = session?.user?.name ?? "Minha conta"
+  const image = session?.user?.image
+  const initials = name.split(" ").slice(0, 2).map((n: string) => n[0]).join("").toUpperCase()
+
+  const maisActive = pathname.startsWith("/configuracoes") || pathname.startsWith("/perfil")
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (sheetRef.current && !sheetRef.current.contains(e.target as Node)) {
+        setMenuOpen(false)
+      }
+    }
+    if (menuOpen) document.addEventListener("mousedown", handleClick)
+    return () => document.removeEventListener("mousedown", handleClick)
+  }, [menuOpen])
+
+  // Fecha ao navegar
+  useEffect(() => { setMenuOpen(false) }, [pathname])
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 flex h-16 items-center justify-around border-t border-border bg-background px-2 lg:hidden">
-      {navItems.map((item) => {
-        const active = pathname === item.href || pathname.startsWith(item.href + "/")
-        return (
+    <>
+      {/* Bottom sheet overlay */}
+      {menuOpen && (
+        <div className="fixed inset-0 z-40 bg-black/40 lg:hidden" onClick={() => setMenuOpen(false)} />
+      )}
+
+      {/* Bottom sheet */}
+      <div
+        ref={sheetRef}
+        className={cn(
+          "fixed bottom-16 left-0 right-0 z-50 rounded-t-2xl border-t border-border bg-background shadow-xl transition-transform duration-200 lg:hidden",
+          menuOpen ? "translate-y-0" : "translate-y-full pointer-events-none"
+        )}
+      >
+        {/* Handle */}
+        <div className="flex justify-center pt-3 pb-1">
+          <div className="h-1 w-10 rounded-full bg-border" />
+        </div>
+
+        {/* User info */}
+        <div className="flex items-center gap-3 px-5 py-4 border-b border-border">
+          <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/15 text-sm font-semibold text-primary overflow-hidden">
+            {image ? (
+              <Image src={mediaUrl(image)} alt={name} fill className="object-cover" sizes="40px" unoptimized />
+            ) : initials}
+          </div>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-medium">{name}</p>
+            <p className="truncate text-xs text-muted-foreground">{session?.user?.email ?? "Minha conta"}</p>
+          </div>
+        </div>
+
+        {/* Menu items */}
+        <div className="p-3 space-y-1">
           <Link
-            key={item.href}
-            href={item.href}
-            className={cn(
-              "flex flex-col items-center gap-1 rounded-lg px-3 py-1.5 transition-colors touch-target",
-              active ? "text-primary" : "text-muted-foreground"
-            )}
+            href="/perfil"
+            className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm hover:bg-accent transition-colors"
           >
-            {item.icon}
-            <span className="text-[10px] font-medium">{item.label}</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+              <circle cx="12" cy="8" r="4" /><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
+            </svg>
+            Ver perfil
           </Link>
-        )
-      })}
-    </nav>
+
+          <Link
+            href="/configuracoes"
+            className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm hover:bg-accent transition-colors"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+              <circle cx="12" cy="12" r="3" />
+              <path d="M12 2v2m0 16v2M4.22 4.22l1.42 1.42m12.72 12.72 1.42 1.42M2 12h2m16 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+            </svg>
+            Configurações
+          </Link>
+
+          <button
+            onClick={toggle}
+            suppressHydrationWarning
+            className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm hover:bg-accent transition-colors"
+          >
+            {!mounted ? (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+                <circle cx="12" cy="12" r="5" />
+              </svg>
+            ) : isDark ? (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+                <circle cx="12" cy="12" r="5" />
+                <line x1="12" y1="1" x2="12" y2="3" /><line x1="12" y1="21" x2="12" y2="23" />
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" /><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+                <line x1="1" y1="12" x2="3" y2="12" /><line x1="21" y1="12" x2="23" y2="12" />
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" /><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+              </svg>
+            ) : (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+              </svg>
+            )}
+            {mounted ? (isDark ? "Modo claro" : "Modo escuro") : "Modo escuro"}
+          </button>
+
+          <div className="border-t border-border my-1" />
+
+          <button
+            onClick={() => signOut({ callbackUrl: "/login" })}
+            className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm text-destructive hover:bg-destructive/10 transition-colors"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+            Sair
+          </button>
+        </div>
+
+        {/* Safe area spacing */}
+        <div className="h-2" />
+      </div>
+
+      {/* Nav bar */}
+      <nav className="fixed bottom-0 left-0 right-0 z-50 flex h-16 items-center justify-around border-t border-border bg-background px-2 lg:hidden">
+        {navItems.map((item) => {
+          const active = pathname === item.href || pathname.startsWith(item.href + "/")
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(
+                "flex flex-col items-center gap-1 rounded-lg px-3 py-1.5 transition-colors",
+                active ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-accent"
+              )}
+            >
+              {item.icon}
+              <span className="text-[10px] font-medium">{item.label}</span>
+            </Link>
+          )
+        })}
+
+        {/* Mais button */}
+        <button
+          onClick={() => setMenuOpen((v) => !v)}
+          className={cn(
+            "flex flex-col items-center gap-1 rounded-lg px-3 py-1.5 transition-colors",
+            menuOpen || maisActive ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-accent"
+          )}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+            <circle cx="12" cy="12" r="1" /><circle cx="19" cy="12" r="1" /><circle cx="5" cy="12" r="1" />
+          </svg>
+          <span className="text-[10px] font-medium">Mais</span>
+        </button>
+      </nav>
+    </>
   )
 }
