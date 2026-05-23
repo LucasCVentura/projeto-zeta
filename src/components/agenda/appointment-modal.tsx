@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { createAppointmentAction, getClientsAction, getProceduresForBookingAction } from "@/actions/schedule"
 import { suggestRecurrenceAction } from "@/actions/ai"
-import { getActiveClientPackagesForProcedureAction } from "@/actions/packages"
+import { getClientPackagesAction } from "@/actions/packages"
 import { Search, User, ChevronDown, X, Sparkles, Loader2, Package } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -31,7 +31,7 @@ const schema = z.object({
 type FormData = z.infer<typeof schema>
 type Client = { id: string; name: string; phone: string | null }
 type Procedure = { id: string; name: string; price: number }
-type ActivePackage = { id: string; packageName: string; sessionsUsed: number; totalSessions: number; sessionsRemaining: number }
+type ActivePackage = { id: string; packageName: string; sessionsUsed: number; totalSessions: number; sessionsRemaining: number; procedureId: string; procedureName: string }
 
 const FREQUENCY_OPTIONS = [
   { value: "weekly", label: "Semanal" },
@@ -99,22 +99,34 @@ export function AppointmentModal({ open, onClose, date, time }: Props) {
     (c.phone ?? "").includes(clientSearch)
   )
 
-  function selectClient(client: Client) {
+  async function selectClient(client: Client) {
     setSelectedClient(client)
     setValue("clientId", client.id)
     setClientPickerOpen(false)
     setClientSearch("")
+    setSelectedPackageId(null)
+    const pkgs = await getClientPackagesAction(client.id)
+    setActivePackages((pkgs as ActivePackage[]).filter((p) => p.sessionsRemaining > 0))
   }
 
   async function selectProcedure(proc: Procedure) {
     setSelectedProcedure(proc)
     setValue("procedureId", proc.id)
     setProcedurePickerOpen(false)
-    setSelectedPackageId(null)
-    setActivePackages([])
-    if (selectedClient) {
-      const pkgs = await getActiveClientPackagesForProcedureAction(selectedClient.id, proc.id)
-      setActivePackages(pkgs as ActivePackage[])
+    // keep selectedPackageId if it matches this procedure
+    if (selectedPackageId) {
+      const pkg = activePackages.find((p) => p.id === selectedPackageId)
+      if (pkg && pkg.procedureId !== proc.id) setSelectedPackageId(null)
+    }
+  }
+
+  function selectPackage(pkg: ActivePackage) {
+    setSelectedPackageId(selectedPackageId === pkg.id ? null : pkg.id)
+    // auto-fill procedure from package
+    if (selectedPackageId !== pkg.id) {
+      const proc = procedures.find((p) => p.id === pkg.procedureId)
+      if (proc) { setSelectedProcedure(proc); setValue("procedureId", proc.id) }
+      else { setSelectedProcedure({ id: pkg.procedureId, name: pkg.procedureName, price: 0 }); setValue("procedureId", pkg.procedureId) }
     }
   }
 
@@ -194,7 +206,7 @@ export function AppointmentModal({ open, onClose, date, time }: Props) {
               placeholder="Selecionar cliente..."
               isOpen={clientPickerOpen}
               onToggle={() => setClientPickerOpen((v) => !v)}
-              onClear={() => { setSelectedClient(null); setValue("clientId", "") }}
+              onClear={() => { setSelectedClient(null); setValue("clientId", ""); setActivePackages([]); setSelectedPackageId(null) }}
             />
             {clientPickerOpen && (
               <PickerDropdown
@@ -217,12 +229,50 @@ export function AppointmentModal({ open, onClose, date, time }: Props) {
             {errors.clientId && <p className="text-destructive text-xs">{errors.clientId.message}</p>}
           </div>
 
+          {/* Pacotes ativos do cliente */}
+          {activePackages.length > 0 && (
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1.5">
+                <Package size={13} className="text-primary" />
+                Usar sessão de pacote
+              </Label>
+              <div className="space-y-1.5">
+                {activePackages.map((pkg) => (
+                  <button
+                    key={pkg.id}
+                    type="button"
+                    onClick={() => selectPackage(pkg)}
+                    className={cn(
+                      "flex w-full items-center justify-between rounded-lg border px-3 py-2.5 text-sm transition-colors",
+                      selectedPackageId === pkg.id
+                        ? "border-primary bg-primary/5 text-primary"
+                        : "border-border hover:border-primary/40"
+                    )}
+                  >
+                    <div className="text-left">
+                      <p className="font-medium">{pkg.packageName}</p>
+                      <p className={cn("text-xs", selectedPackageId === pkg.id ? "text-primary/70" : "text-muted-foreground")}>{pkg.procedureName}</p>
+                    </div>
+                    <span className={cn("text-xs shrink-0", selectedPackageId === pkg.id ? "text-primary" : "text-muted-foreground")}>
+                      {pkg.sessionsRemaining} restante{pkg.sessionsRemaining !== 1 ? "s" : ""}
+                    </span>
+                  </button>
+                ))}
+              </div>
+              {selectedPackageId && (
+                <p className="text-xs text-primary">
+                  Sessão será descontada do pacote ao concluir o atendimento.
+                </p>
+              )}
+            </div>
+          )}
+
           {/* Procedimento */}
           <div className="space-y-2">
             <Label>Procedimento <span className="text-muted-foreground">(opcional)</span></Label>
             <PickerButton
               selected={selectedProcedure
-                ? { label: selectedProcedure.name, sub: formatPrice(selectedProcedure.price) }
+                ? { label: selectedProcedure.name, sub: selectedProcedure.price > 0 ? formatPrice(selectedProcedure.price) : undefined }
                 : null}
               placeholder="Selecionar procedimento..."
               isOpen={procedurePickerOpen}
@@ -242,48 +292,13 @@ export function AppointmentModal({ open, onClose, date, time }: Props) {
                   <PickerItem
                     key={p.id}
                     label={p.name}
-                    sub={formatPrice(p.price)}
+                    sub={p.price > 0 ? formatPrice(p.price) : undefined}
                     onClick={() => selectProcedure(p)}
                   />
                 ))}
               </PickerDropdown>
             )}
           </div>
-
-          {/* Pacotes ativos do cliente para este procedimento */}
-          {activePackages.length > 0 && (
-            <div className="space-y-2">
-              <Label className="flex items-center gap-1.5">
-                <Package size={13} className="text-primary" />
-                Usar sessão de pacote
-              </Label>
-              <div className="space-y-1.5">
-                {activePackages.map((pkg) => (
-                  <button
-                    key={pkg.id}
-                    type="button"
-                    onClick={() => setSelectedPackageId(selectedPackageId === pkg.id ? null : pkg.id)}
-                    className={cn(
-                      "flex w-full items-center justify-between rounded-lg border px-3 py-2.5 text-sm transition-colors",
-                      selectedPackageId === pkg.id
-                        ? "border-primary bg-primary/5 text-primary"
-                        : "border-border hover:border-primary/40"
-                    )}
-                  >
-                    <span className="font-medium">{pkg.packageName}</span>
-                    <span className={cn("text-xs", selectedPackageId === pkg.id ? "text-primary" : "text-muted-foreground")}>
-                      {pkg.sessionsRemaining} sessão{pkg.sessionsRemaining !== 1 ? "ões" : ""} restante{pkg.sessionsRemaining !== 1 ? "s" : ""}
-                    </span>
-                  </button>
-                ))}
-              </div>
-              {selectedPackageId && (
-                <p className="text-xs text-primary">
-                  Sessão será descontada do pacote ao concluir o atendimento.
-                </p>
-              )}
-            </div>
-          )}
 
           {/* Observações */}
           <div className="space-y-2">
