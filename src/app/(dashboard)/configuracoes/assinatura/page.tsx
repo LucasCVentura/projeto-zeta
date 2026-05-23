@@ -8,7 +8,8 @@ import { BillingPortalButton } from "@/components/subscription/billing-portal-bu
 import { CheckCircle2, Clock, XCircle, CreditCard, ArrowLeft } from "lucide-react"
 import Link from "next/link"
 
-function fmt(date: number) {
+function fmt(date: number | null | undefined) {
+  if (!date) return "—"
   return new Date(date * 1000).toLocaleDateString("pt-BR", { day: "numeric", month: "long", year: "numeric" })
 }
 
