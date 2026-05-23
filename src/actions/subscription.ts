@@ -1,15 +1,14 @@
 "use server"
 
-import { redirect } from "next/navigation"
 import { db } from "@/db"
 import { organizations } from "@/db/schema"
 import { eq } from "drizzle-orm"
 import { requireSession } from "@/lib/session"
 import { stripe, PRICE_ID } from "@/lib/stripe"
 
-type ActionResult = { error: string }
+type ActionResult = { error: string } | { url: string }
 
-export async function createCheckoutSessionAction(): Promise<ActionResult | void> {
+export async function createCheckoutSessionAction(): Promise<ActionResult> {
   const { organizationId } = await requireSession()
 
   const [org] = await db
@@ -48,10 +47,10 @@ export async function createCheckoutSessionAction(): Promise<ActionResult | void
 
   if (!session.url) return { error: "Erro ao iniciar sessão de pagamento. Tente novamente." }
 
-  redirect(session.url)
+  return { url: session.url }
 }
 
-export async function createBillingPortalAction(): Promise<ActionResult | void> {
+export async function createBillingPortalAction(): Promise<ActionResult> {
   const { organizationId } = await requireSession()
 
   const [org] = await db
@@ -71,5 +70,5 @@ export async function createBillingPortalAction(): Promise<ActionResult | void> 
 
   if (!session.url) return { error: "Erro ao abrir portal de pagamento. Tente novamente." }
 
-  redirect(session.url)
+  return { url: session.url }
 }

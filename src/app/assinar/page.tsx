@@ -30,10 +30,12 @@ function AssinarContent() {
     setLoading(true)
     setSubscribeError(null)
     const result = await createCheckoutSessionAction()
-    if (result?.error) {
+    if ("error" in result) {
       setSubscribeError(result.error)
       setLoading(false)
+      return
     }
+    window.location.href = result.url
   }
 
   return (

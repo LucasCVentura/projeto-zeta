@@ -11,10 +11,12 @@ export function BillingPortalButton() {
     setLoading(true)
     setError(null)
     const result = await createBillingPortalAction()
-    if (result?.error) {
+    if ("error" in result) {
       setError(result.error)
       setLoading(false)
+      return
     }
+    window.location.href = result.url
   }
 
   return (
