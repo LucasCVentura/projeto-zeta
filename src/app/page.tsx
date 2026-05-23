@@ -83,23 +83,23 @@ const audiences = [
 const solutionLinks = [
   {
     href: "/sistema-para-biomedica-esteta",
-    title: "Sistema para biomédica esteta",
-    description: "Agenda, evolução, fotos, prontuários, financeiro e pacotes para a rotina da biomédica esteta.",
+    title: "Para biomédicas estetas",
+    description: "Organize agenda, clientes, fotos de evolução, pacotes e financeiro em uma rotina mais leve.",
   },
   {
     href: "/sistema-para-clinica-de-estetica",
-    title: "Sistema para clínica de estética",
-    description: "Uma visão organizada para clínica, equipe, atendimentos, clientes, estoque e receita.",
+    title: "Para clínicas de estética",
+    description: "Tenha uma visão mais clara dos atendimentos, equipe, estoque, receita e histórico das clientes.",
   },
   {
     href: "/prontuario-estetico-digital",
-    title: "Prontuário estético digital",
-    description: "Histórico da cliente, procedimentos, fotos de antes e depois e evolução em um só lugar.",
+    title: "Para prontuários e evolução",
+    description: "Mantenha registros, fotos de antes e depois e informações importantes sempre fáceis de encontrar.",
   },
   {
     href: "/agenda-para-estetica",
-    title: "Agenda para estética",
-    description: "Organize horários, retornos, status de atendimento e rotina diária sem depender só do WhatsApp.",
+    title: "Para agenda e retornos",
+    description: "Veja seus horários, acompanhe status dos atendimentos e reduza informações perdidas no WhatsApp.",
   },
 ]
 
@@ -383,16 +383,16 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── Solution links ── */}
+      {/* ── Use cases ── */}
       <section className="px-5 py-20">
         <div className="mx-auto max-w-6xl">
           <div className="mb-10 max-w-2xl space-y-3">
-            <p className="text-sm font-medium text-primary">Soluções por rotina</p>
+            <p className="text-sm font-medium text-primary">Para diferentes rotinas</p>
             <h2 className="font-heading text-3xl font-bold sm:text-4xl">
-              Encontre o Kira pelo problema que você quer resolver
+              O Kira se adapta ao seu jeito de atender
             </h2>
             <p className="text-muted-foreground leading-relaxed">
-              Páginas específicas para entender como o Kira se encaixa em diferentes buscas e necessidades da estética e beleza.
+              Seja em uma clínica de estética, no atendimento autônomo ou acompanhando evolução de clientes, o Kira ajuda a manter sua rotina mais organizada e profissional.
             </p>
           </div>
 
