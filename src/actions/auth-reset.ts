@@ -28,7 +28,8 @@ export async function requestPasswordResetAction(email: string): Promise<ActionR
 
   try {
     const { sendResetPasswordEmail } = await import("@/lib/email")
-    await sendResetPasswordEmail(user.email, user.name ?? "usuário", token)
+    const result = await sendResetPasswordEmail(user.email, user.name ?? "usuário", token)
+    console.log("[reset-password] Resend result:", JSON.stringify(result))
   } catch (err) {
     console.error("[reset-password] Resend error:", err)
     await db.delete(passwordResetTokens).where(eq(passwordResetTokens.token, token))

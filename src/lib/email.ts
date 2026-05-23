@@ -37,12 +37,15 @@ export async function sendTrialExpiredEmail(to: string, name: string) {
 
 export async function sendResetPasswordEmail(to: string, name: string, token: string) {
   const resetUrl = `${APP_URL}/reset-password?token=${token}`
-  await resend.emails.send({
+  const result = await resend.emails.send({
     from: FROM_EMAIL,
     to,
     subject: "Redefinição de senha — Kira",
     react: createElement(ResetPasswordEmail, { name, resetUrl }),
   })
+  console.log("[sendResetPasswordEmail] from:", FROM_EMAIL, "to:", to, "result:", JSON.stringify(result))
+  if (result.error) throw new Error(result.error.message)
+  return result
 }
 
 export async function sendSubscriptionActiveEmail(to: string, name: string) {
