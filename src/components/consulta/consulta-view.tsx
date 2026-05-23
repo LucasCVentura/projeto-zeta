@@ -251,7 +251,7 @@ export function ConsultaView({ appointment, allClientPhotos: initialPhotos }: Pr
             <div className="text-right shrink-0 space-y-1">
               <p className="text-sm font-semibold">{formatTime(appointment.startTime)}</p>
               <p className="text-xs text-muted-foreground capitalize">{formatDate(appointment.date)}</p>
-              <StatusBadge status={appointment.status as "waiting" | "confirmed" | "completed" | "missed" | "cancelled"} />
+              {appointment.status && <StatusBadge status={appointment.status as "waiting" | "confirmed" | "completed" | "missed" | "cancelled"} />}
             </div>
           </div>
         </div>

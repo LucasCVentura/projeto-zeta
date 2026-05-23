@@ -10,7 +10,9 @@ const config: Record<AppointmentStatus, { label: string; className: string }> = 
 }
 
 export function StatusBadge({ status }: { status: AppointmentStatus }) {
-  const { label, className } = config[status]
+  const entry = config[status]
+  if (!entry) return null
+  const { label, className } = entry
   return (
     <span className={cn("inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium", className)}>
       {label}
