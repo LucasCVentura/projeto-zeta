@@ -7,6 +7,16 @@ export function todayBRT(): string {
 
 /** Returns current Date object adjusted to America/Sao_Paulo */
 export function nowBRT(): Date {
-  const str = new Date().toLocaleString("en-CA", { timeZone: TZ, hour12: false })
-  return new Date(str)
+  const now = new Date()
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: TZ,
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", second: "2-digit",
+    hour12: false,
+  }).formatToParts(now)
+  const get = (t: string) => parts.find(p => p.type === t)?.value ?? "0"
+  return new Date(
+    parseInt(get("year")), parseInt(get("month")) - 1, parseInt(get("day")),
+    parseInt(get("hour")), parseInt(get("minute")), parseInt(get("second"))
+  )
 }

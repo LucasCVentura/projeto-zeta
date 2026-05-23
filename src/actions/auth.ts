@@ -15,12 +15,13 @@ export type ActionResult =
 export async function registerAction(data: {
   name: string
   email: string
-  profession: "esteticista" | "biomedico"
+  profession: "esteticista" | "biomedico" | "outro"
+  professionSegment?: string
   cpf: string
   phone: string
   whatsapp?: string
   birthDate: string
-  professionalDocument: string
+  professionalDocument?: string
   professionalDocumentType: string
   clinicName?: string
   instagram?: string
@@ -65,11 +66,12 @@ export async function registerAction(data: {
       name: data.name,
       email: data.email,
       profession: data.profession,
+      professionSegment: data.professionSegment || null,
       cpf: data.cpf,
       phone: data.phone,
       whatsapp: data.whatsapp || null,
       birthDate: data.birthDate,
-      professionalDocument: data.professionalDocument,
+      professionalDocument: data.professionalDocument || null,
       professionalDocumentType: data.professionalDocumentType,
       instagram: data.instagram ? data.instagram.replace(/^@/, "") : null,
       password: hashedPassword,

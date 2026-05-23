@@ -29,9 +29,18 @@ function getInitials(name: string) {
   return name.split(" ").slice(0, 2).map((n) => n[0]).join("").toUpperCase()
 }
 
+const professionSegmentLabels: Record<string, string> = {
+  designer_cilios: "Designer de cílios",
+  manicure_nail_designer: "Manicure / Nail designer",
+  micropigmentadora: "Micropigmentadora",
+  cabeleireira: "Cabeleireira",
+  massoterapeuta: "Massoterapeuta",
+  outro_beleza: "Outro segmento de beleza",
+}
+
 export function ProfileForm({ user }: { user: User }) {
   const { update: updateSession } = useSession()
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(user.image ? mediaUrl(user.image) + "?t=" + Date.now() : null)
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(user.image ? mediaUrl(user.image) : null)
   const [avatarError, setAvatarError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -91,7 +100,12 @@ export function ProfileForm({ user }: { user: User }) {
     })
   }
 
-  const professionLabel = user.profession === "biomedico" ? "Biomédico(a)" : "Esteticista"
+  const professionLabel =
+    user.profession === "biomedico"
+      ? "Biomédico(a)"
+      : user.profession === "esteticista"
+        ? "Esteticista"
+        : professionSegmentLabels[user.professionSegment ?? ""] ?? "Outro segmento"
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">

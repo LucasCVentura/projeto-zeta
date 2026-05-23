@@ -31,11 +31,11 @@ function formatDate(dateStr: string) {
 
 export function FinanceiroView() {
   const [year, setYear] = useState(() => {
-    const now = new Date(new Date().toLocaleString("en-CA", { timeZone: "America/Sao_Paulo", hour12: false }))
+    const now = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }))
     return now.getFullYear()
   })
   const [month, setMonth] = useState(() => {
-    const now = new Date(new Date().toLocaleString("en-CA", { timeZone: "America/Sao_Paulo", hour12: false }))
+    const now = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }))
     return now.getMonth() + 1
   })
   const [data, setData] = useState<{ rows: Transaction[]; total: number; totalCost: number } | null>(null)
@@ -55,14 +55,14 @@ export function FinanceiroView() {
   }
 
   function nextMonth() {
-    const nowBRT = new Date(new Date().toLocaleString("en-CA", { timeZone: "America/Sao_Paulo", hour12: false }))
+    const nowBRT = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }))
     const isCurrentMonth = year === nowBRT.getFullYear() && month === nowBRT.getMonth() + 1
     if (isCurrentMonth) return
     if (month === 12) { setMonth(1); setYear((y) => y + 1) }
     else setMonth((m) => m + 1)
   }
 
-  const nowBRT = new Date(new Date().toLocaleString("en-CA", { timeZone: "America/Sao_Paulo", hour12: false }))
+  const nowBRT = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }))
   const isCurrentMonth = year === nowBRT.getFullYear() && month === nowBRT.getMonth() + 1
 
   return (

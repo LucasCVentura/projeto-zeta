@@ -46,7 +46,8 @@ const schema = z
     // step 1
     name: z.string().min(2, "Nome deve ter ao menos 2 caracteres"),
     email: z.string().email("E-mail inválido"),
-    profession: z.enum(["esteticista", "biomedico"], { error: "Selecione sua profissão" }),
+    profession: z.enum(["esteticista", "biomedico", "outro"], { error: "Selecione sua profissão" }),
+    professionSegment: z.string().optional(),
     birthDate: z.string().min(1, "Informe sua data de nascimento"),
 
     // step 2
@@ -56,7 +57,7 @@ const schema = z
       .min(14, "Telefone inválido")
       .max(15, "Telefone inválido"),
     whatsapp: z.string().optional(),
-    professionalDocument: z.string().min(2, "Informe o número do documento"),
+    professionalDocument: z.string().optional(),
     clinicName: z.string().optional(),
     instagram: z.string().optional(),
 
@@ -72,18 +73,45 @@ const schema = z
     path: ["confirmPassword"],
     message: "As senhas não coincidem",
   })
+  .superRefine((d, ctx) => {
+    if (d.profession !== "outro" && (!d.professionalDocument || d.professionalDocument.trim().length < 2)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["professionalDocument"],
+        message: "Informe o número do documento",
+      })
+    }
+    if (d.profession === "outro" && !d.professionSegment) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["professionSegment"],
+        message: "Selecione seu segmento",
+      })
+    }
+  })
 
 type FormData = z.infer<typeof schema>
 
 const professions = [
   { value: "esteticista", label: "Esteticista" },
   { value: "biomedico", label: "Biomédico(a) Esteta" },
+  { value: "outro", label: "Outro segmento" },
 ]
 
 const docTypeByProfession: Record<string, string> = {
   biomedico: "CRBM",
   esteticista: "Registro Profissional",
+  outro: "Documento profissional",
 }
+
+const otherSegments = [
+  { value: "designer_cilios", label: "Designer de cílios" },
+  { value: "manicure_nail_designer", label: "Manicure / Nail designer" },
+  { value: "micropigmentadora", label: "Micropigmentadora" },
+  { value: "cabeleireira", label: "Cabeleireira" },
+  { value: "massoterapeuta", label: "Massoterapeuta" },
+  { value: "outro_beleza", label: "Outro segmento de beleza" },
+]
 
 // ── component ───────────────────────────────────────────────────────────────
 export default function RegisterPage() {
@@ -103,6 +131,7 @@ export default function RegisterPage() {
   } = useForm<FormData>({ resolver: zodResolver(schema) })
 
   const selectedProfession = watch("profession")
+  const selectedSegment = watch("professionSegment")
   const password = watch("password") ?? ""
   const docType = docTypeByProfession[selectedProfession] ?? "Documento"
 
@@ -132,11 +161,12 @@ export default function RegisterPage() {
       name: data.name,
       email: data.email,
       profession: data.profession,
+      professionSegment: data.profession === "outro" ? data.professionSegment : undefined,
       cpf: data.cpf.replace(/\D/g, ""),
       phone: data.phone,
       whatsapp: data.whatsapp || undefined,
       birthDate: data.birthDate,
-      professionalDocument: data.professionalDocument,
+      professionalDocument: data.professionalDocument || undefined,
       professionalDocumentType: docType,
       clinicName: data.clinicName || undefined,
       instagram: data.instagram || undefined,
@@ -206,12 +236,15 @@ export default function RegisterPage() {
 
             <div className="space-y-2">
               <Label>Profissão</Label>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid gap-3 sm:grid-cols-3">
                 {professions.map((p) => (
                   <button
                     key={p.value}
                     type="button"
-                    onClick={() => setValue("profession", p.value as "esteticista" | "biomedico")}
+                    onClick={() => {
+                      setValue("profession", p.value as "esteticista" | "biomedico" | "outro")
+                      if (p.value !== "outro") setValue("professionSegment", undefined)
+                    }}
                     className={`relative flex flex-col items-start gap-1 rounded-xl border p-4 text-left transition-all
                       ${selectedProfession === p.value
                         ? "border-primary bg-primary/5 shadow-sm"
@@ -231,10 +264,32 @@ export default function RegisterPage() {
               {errors.profession && <p className="text-destructive text-xs">{errors.profession.message}</p>}
             </div>
 
+            {selectedProfession === "outro" && (
+              <div className="space-y-2">
+                <Label>Qual segmento?</Label>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {otherSegments.map((segment) => (
+                    <button
+                      key={segment.value}
+                      type="button"
+                      onClick={() => setValue("professionSegment", segment.value, { shouldValidate: true })}
+                      className={`rounded-xl border px-3 py-2.5 text-left text-sm transition-all
+                        ${selectedSegment === segment.value
+                          ? "border-primary bg-primary/5 text-foreground shadow-sm"
+                          : "border-border text-muted-foreground hover:border-primary/40 hover:bg-muted/50"}`}
+                    >
+                      {segment.label}
+                    </button>
+                  ))}
+                </div>
+                {errors.professionSegment && <p className="text-destructive text-xs">{errors.professionSegment.message}</p>}
+              </div>
+            )}
+
             <Button
               type="button"
               className="w-full"
-              onClick={() => next(["name", "email", "birthDate", "profession"], 2)}
+              onClick={() => next(["name", "email", "birthDate", "profession", "professionSegment"], 2)}
             >
               Continuar
             </Button>
@@ -297,13 +352,20 @@ export default function RegisterPage() {
                 placeholder={
                   selectedProfession === "biomedico"
                     ? "Número do CRBM"
-                    : "Número do registro / diploma"
+                    : selectedProfession === "esteticista"
+                      ? "Número do registro / diploma"
+                      : "Registro, certificado ou deixe em branco"
                 }
                 {...register("professionalDocument")}
               />
               {selectedProfession === "esteticista" && (
                 <p className="text-xs text-muted-foreground">
                   Esteticistas podem informar número de diploma, certificado ou registro estadual.
+                </p>
+              )}
+              {selectedProfession === "outro" && (
+                <p className="text-xs text-muted-foreground">
+                  Para outros segmentos da beleza, este campo é opcional.
                 </p>
               )}
               {errors.professionalDocument && (

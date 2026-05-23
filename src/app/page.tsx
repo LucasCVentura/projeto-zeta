@@ -64,16 +64,76 @@ const features = [
   },
 ]
 
+const painPoints = [
+  "Clientes espalhadas entre WhatsApp, agenda e caderno",
+  "Fotos de antes e depois perdidas na galeria do celular",
+  "Pacotes de sessões difíceis de acompanhar",
+  "Receita do mês sem clareza até fechar as contas",
+]
+
+const audiences = [
+  "Biomédicas estetas",
+  "Esteticistas",
+  "Clínicas de estética",
+  "Designers de cílios",
+  "Manicures e nail designers",
+  "Profissionais autônomas",
+]
+
 const steps = [
   { number: "01", title: "Crie sua conta", description: "Cadastro em menos de 2 minutos, sem cartão de crédito." },
   { number: "02", title: "Configure sua clínica", description: "Adicione procedimentos, horários e preferências da sua rotina." },
   { number: "03", title: "Comece a atender", description: "Agenda, prontuários e financeiro prontos para usar no primeiro dia." },
 ]
 
+const testimonials = [
+  {
+    quote: "Antes eu anotava muita coisa no WhatsApp e acabava perdendo histórico. Com o Kira, consigo ver agenda, dados da cliente e evolução em um lugar só.",
+    name: "Marina Alves",
+    role: "Biomédica esteta",
+    location: "São Paulo, SP",
+    initials: "MA",
+  },
+  {
+    quote: "O que mais me ajudou foi organizar os retornos e os pacotes de sessões. Ficou muito mais fácil acompanhar quem já fez cada atendimento.",
+    name: "Camila Rocha",
+    role: "Esteticista",
+    location: "Belo Horizonte, MG",
+    initials: "CR",
+  },
+  {
+    quote: "Eu queria algo simples, bonito e que funcionasse no celular. O Kira deixou minha rotina mais profissional sem eu precisar depender de planilha.",
+    name: "Juliana Mendes",
+    role: "Profissional da estética",
+    location: "Curitiba, PR",
+    initials: "JM",
+  },
+]
+
+const faqs = [
+  {
+    question: "O Kira serve só para biomédica esteta?",
+    answer: "Não. O foco principal do Kira é estética, biomédicas estetas e clínicas de estética, mas profissionais da beleza como designers de cílios, manicures, nail designers e autônomas também podem usar para organizar agenda, clientes, fotos, pacotes e financeiro.",
+  },
+  {
+    question: "Preciso de cartão para testar?",
+    answer: "Não. Você pode começar com 7 dias grátis, sem cartão de crédito, e testar o sistema antes de assinar.",
+  },
+  {
+    question: "Consigo usar pelo celular?",
+    answer: "Sim. A interface é responsiva para você acessar agenda, clientes e informações importantes pelo celular durante a rotina de atendimento.",
+  },
+  {
+    question: "O Kira substitui planilha e anotações soltas?",
+    answer: "A ideia é justamente centralizar a gestão da clínica em um lugar só: agenda, prontuários, fotos, financeiro, estoque e pacotes de sessões.",
+  },
+]
+
+const currentYear = 2026
+
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
-
       {/* ── Nav ── */}
       <header className="fixed top-0 inset-x-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5">
@@ -113,17 +173,17 @@ export default function LandingPage() {
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-60" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
             </span>
-            Plataforma para profissionais da estética
+            Sistema para estética, beleza e biomédicas estetas
           </div>
 
           <h1 className="font-heading text-4xl font-bold leading-tight tracking-tight sm:text-5xl lg:text-6xl">
-            Gerencie sua clínica
+            Sistema de gestão para
             <br />
-            <span className="text-primary">com elegância</span>
+            <span className="text-primary">clínicas de estética</span>
           </h1>
 
           <p className="mx-auto max-w-xl text-base text-muted-foreground sm:text-lg leading-relaxed">
-            Agenda, prontuários, fotos com análise por IA, financeiro e estoque — tudo em uma plataforma pensada para esteticistas e biomédicos estetas.
+            Organize agenda, clientes, prontuários, fotos de antes e depois, financeiro, estoque e pacotes de sessões em uma plataforma feita para estética e beleza.
           </p>
 
           <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
@@ -145,7 +205,7 @@ export default function LandingPage() {
           </div>
 
           <p className="text-xs text-muted-foreground">
-            Sem cartão de crédito no teste · Cancele quando quiser
+            7 dias grátis · Sem cartão de crédito · Suporte por WhatsApp
           </p>
         </div>
 
@@ -237,14 +297,42 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ── Pain points ── */}
+      <section className="px-5 py-20">
+        <div className="mx-auto grid max-w-6xl gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
+          <div className="space-y-4">
+            <p className="text-sm font-medium text-primary">Para sair da bagunça operacional</p>
+            <h2 className="font-heading text-3xl font-bold sm:text-4xl">
+              Menos WhatsApp perdido. Mais controle da sua clínica.
+            </h2>
+            <p className="text-muted-foreground leading-relaxed">
+              O Kira ajuda profissionais da estética e da beleza a trocar planilhas, anotações soltas e fotos perdidas por uma rotina mais organizada, profissional e fácil de acompanhar.
+            </p>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            {painPoints.map((point) => (
+              <div key={point} className="rounded-2xl border border-border bg-card p-5">
+                <div className="mb-3 flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M20 6 9 17l-5-5" />
+                  </svg>
+                </div>
+                <p className="text-sm font-medium leading-relaxed">{point}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ── Features ── */}
       <section className="px-5 py-24">
         <div className="mx-auto max-w-6xl">
           <div className="mb-16 text-center space-y-3">
             <p className="text-sm font-medium text-primary">Funcionalidades</p>
-            <h2 className="font-heading text-3xl font-bold sm:text-4xl">Tudo que você precisa</h2>
+            <h2 className="font-heading text-3xl font-bold sm:text-4xl">Tudo que sua clínica precisa para funcionar melhor</h2>
             <p className="mx-auto max-w-md text-muted-foreground">
-              Desenvolvido especificamente para a rotina de quem trabalha com estética e procedimentos.
+              Desenvolvido para a rotina de atendimentos, retornos, evolução de procedimentos e gestão financeira.
             </p>
           </div>
 
@@ -265,8 +353,29 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ── Audience ── */}
+      <section className="px-5 py-20 bg-primary/3">
+        <div className="mx-auto max-w-6xl">
+          <div className="grid gap-8 lg:grid-cols-[1fr_1.2fr] lg:items-center">
+            <div className="space-y-3">
+              <p className="text-sm font-medium text-primary">Feito para estética e beleza</p>
+              <h2 className="font-heading text-3xl font-bold sm:text-4xl">
+                O foco é estética, mas a rotina organizada serve para outros segmentos da beleza
+              </h2>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {audiences.map((audience) => (
+                <div key={audience} className="rounded-2xl border border-border bg-card px-5 py-4 text-sm font-medium">
+                  {audience}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ── How it works ── */}
-      <section className="px-5 py-24 bg-primary/3">
+      <section className="px-5 py-24">
         <div className="mx-auto max-w-4xl">
           <div className="mb-16 text-center space-y-3">
             <p className="text-sm font-medium text-primary">Como funciona</p>
@@ -285,6 +394,44 @@ export default function LandingPage() {
                 <h3 className="font-semibold">{s.title}</h3>
                 <p className="text-sm text-muted-foreground">{s.description}</p>
               </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Testimonials ── */}
+      <section className="px-5 py-24 bg-primary/3">
+        <div className="mx-auto max-w-6xl">
+          <div className="mb-12 grid gap-4 lg:grid-cols-[0.9fr_1.1fr] lg:items-end">
+            <div className="space-y-3">
+              <p className="text-sm font-medium text-primary">Feedbacks de uso</p>
+              <h2 className="font-heading text-3xl font-bold sm:text-4xl">
+                Profissionais organizando a rotina com o Kira
+              </h2>
+            </div>
+            <p className="text-muted-foreground leading-relaxed lg:max-w-xl">
+              Espaço reservado para depoimentos reais das primeiras usuárias. Por enquanto, estes textos estão como exemplo para manter a seção pronta para a campanha.
+            </p>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-3">
+            {testimonials.map((testimonial) => (
+              <figure key={testimonial.name} className="flex h-full flex-col justify-between rounded-2xl border border-border bg-card p-6 shadow-sm shadow-primary/5">
+                <blockquote className="text-sm leading-relaxed text-foreground">
+                  “{testimonial.quote}”
+                </blockquote>
+                <figcaption className="mt-6 flex items-center gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+                    {testimonial.initials}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold">{testimonial.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {testimonial.role} · {testimonial.location}
+                    </p>
+                  </div>
+                </figcaption>
+              </figure>
             ))}
           </div>
         </div>
@@ -343,6 +490,28 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ── FAQ ── */}
+      <section className="px-5 py-24 bg-primary/3">
+        <div className="mx-auto max-w-3xl">
+          <div className="mb-10 text-center space-y-3">
+            <p className="text-sm font-medium text-primary">Dúvidas frequentes</p>
+            <h2 className="font-heading text-3xl font-bold sm:text-4xl">Antes de começar</h2>
+          </div>
+
+          <div className="space-y-3">
+            {faqs.map((faq) => (
+              <details key={faq.question} className="group rounded-2xl border border-border bg-card p-5">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-medium">
+                  {faq.question}
+                  <span className="text-primary transition-transform group-open:rotate-45">+</span>
+                </summary>
+                <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{faq.answer}</p>
+              </details>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ── CTA final ── */}
       <section className="px-5 py-24">
         <div className="relative mx-auto max-w-4xl overflow-hidden rounded-3xl bg-primary px-8 py-16 text-center">
@@ -353,7 +522,7 @@ export default function LandingPage() {
               Pronta para transformar<br />sua clínica?
             </h2>
             <p className="mx-auto max-w-sm text-primary-foreground/70">
-              Junte-se a profissionais que já gerenciam sua clínica com mais organização e menos estresse.
+              Junte-se a profissionais que já gerenciam atendimentos, clientes e rotina com mais organização e menos estresse.
             </p>
             <Link
               href="/register"
@@ -377,7 +546,7 @@ export default function LandingPage() {
             </div>
             <span className="text-sm font-semibold">Kira</span>
           </div>
-          <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} Kira. Todos os direitos reservados.</p>
+          <p className="text-xs text-muted-foreground">© {currentYear} Kira. Todos os direitos reservados.</p>
           <div className="flex gap-5 text-xs text-muted-foreground">
             <Link href="/termos" className="hover:text-foreground transition-colors">Termos de Uso</Link>
             <Link href="/privacidade" className="hover:text-foreground transition-colors">Privacidade</Link>

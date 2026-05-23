@@ -29,52 +29,95 @@ function formatBRL(cents: number) {
   return (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
 }
 
+function EmptyChart({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex min-h-56 items-center justify-center rounded-lg border border-dashed border-border bg-muted/20 px-4 text-center text-sm text-muted-foreground">
+      {children}
+    </div>
+  )
+}
+
 export function RevenueChart({ data }: { data: RevenuePoint[] }) {
   const hasData = data.some((d) => d.total > 0)
+  const total = data.reduce((sum, d) => sum + d.total, 0)
+  const bestMonth = data.reduce((best, item) => item.total > best.total ? item : best, data[0] ?? { month: "-", total: 0 })
+
   return (
-    <div className="surface space-y-4">
-      <p className="text-sm font-medium">Receita — últimos 6 meses</p>
-      {!hasData ? (
-        <div className="flex items-center justify-center h-40 text-sm text-muted-foreground">
-          Nenhuma receita registrada ainda.
+    <section className="rounded-xl border border-border bg-card p-4 sm:p-5">
+      <div className="mb-4 flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-sm font-semibold">Receita</h2>
+          <p className="text-xs text-muted-foreground">Últimos 6 meses</p>
         </div>
+        <div className="text-right">
+          <p className="text-lg font-bold tabular-nums">{formatBRL(total)}</p>
+          <p className="text-xs text-muted-foreground">total no período</p>
+        </div>
+      </div>
+
+      {!hasData ? (
+        <EmptyChart>Nenhuma receita registrada ainda.</EmptyChart>
       ) : (
-        <ResponsiveContainer width="100%" height={180}>
-          <BarChart data={data} barSize={28}>
-            <XAxis dataKey="month" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
+        <div className="h-60">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={data} barSize={32} margin={{ top: 8, right: 4, left: 4, bottom: 0 }}>
+              <XAxis
+                dataKey="month"
+                tick={{ fontSize: 12, fill: "var(--muted-foreground)" }}
+                axisLine={false}
+                tickLine={false}
+                dy={8}
+              />
             <YAxis hide />
             <Tooltip
               formatter={(v: unknown) => formatBRL(v as number)}
-              contentStyle={{ fontSize: 12, borderRadius: 8, border: "1px solid var(--border)" }}
+              contentStyle={{ fontSize: 12, borderRadius: 8, border: "1px solid var(--border)", background: "var(--card)" }}
               cursor={{ fill: "var(--muted)", opacity: 0.4 }}
             />
-            <Bar dataKey="total" fill="var(--primary)" radius={[6, 6, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
+              <Bar dataKey="total" fill="var(--primary)" radius={[8, 8, 2, 2]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
       )}
-    </div>
+
+      {hasData && (
+        <div className="mt-4 rounded-lg bg-muted/35 px-3 py-2 text-xs text-muted-foreground">
+          Melhor mês: <span className="font-medium text-foreground">{bestMonth.month}</span> com{" "}
+          <span className="font-medium text-foreground">{formatBRL(bestMonth.total)}</span>
+        </div>
+      )}
+    </section>
   )
 }
 
 export function ProceduresChart({ data }: { data: ProcedurePoint[] }) {
   const hasData = data.length > 0
   const max = Math.max(...data.map((d) => d.count), 1)
+  const total = data.reduce((sum, d) => sum + d.count, 0)
+
   return (
-    <div className="surface space-y-4">
-      <p className="text-sm font-medium">Procedimentos mais realizados</p>
-      {!hasData ? (
-        <div className="flex items-center justify-center h-40 text-sm text-muted-foreground">
-          Nenhum procedimento registrado ainda.
+    <section className="rounded-xl border border-border bg-card p-4 sm:p-5">
+      <div className="mb-4 flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-sm font-semibold">Procedimentos mais realizados</h2>
+          <p className="text-xs text-muted-foreground">Últimos 6 meses</p>
         </div>
+        <div className="rounded-lg bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+          {total} registro{total === 1 ? "" : "s"}
+        </div>
+      </div>
+
+      {!hasData ? (
+        <EmptyChart>Nenhum procedimento registrado ainda.</EmptyChart>
       ) : (
         <div className="space-y-3">
           {data.map((p) => (
-            <div key={p.name} className="space-y-1">
-              <div className="flex items-center justify-between text-xs">
-                <span className="truncate max-w-[75%]">{p.name}</span>
-                <span className="text-muted-foreground tabular-nums">{p.count}x</span>
+            <div key={p.name} className="rounded-lg border border-border/70 bg-background px-3 py-3">
+              <div className="mb-2 flex items-center justify-between gap-3 text-sm">
+                <span className="truncate font-medium">{p.name}</span>
+                <span className="shrink-0 text-xs text-muted-foreground tabular-nums">{p.count}x</span>
               </div>
-              <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+              <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
                 <div
                   className="h-full rounded-full bg-primary transition-all"
                   style={{ width: `${(p.count / max) * 100}%` }}
@@ -84,7 +127,7 @@ export function ProceduresChart({ data }: { data: ProcedurePoint[] }) {
           ))}
         </div>
       )}
-    </div>
+    </section>
   )
 }
 
@@ -95,42 +138,69 @@ export function StatusChart({ data }: { data: StatusPoint[] }) {
     value: d.count,
     color: STATUS_COLORS[d.status] ?? "#a0948e",
   }))
+  const total = chartData.reduce((sum, item) => sum + item.value, 0)
 
   return (
-    <div className="surface space-y-4">
-      <p className="text-sm font-medium">Atendimentos por status — este mês</p>
-      {!hasData ? (
-        <div className="flex items-center justify-center h-40 text-sm text-muted-foreground">
-          Nenhum atendimento este mês.
+    <section className="rounded-xl border border-border bg-card p-4 sm:p-5">
+      <div className="mb-4 flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-sm font-semibold">Atendimentos por status</h2>
+          <p className="text-xs text-muted-foreground">Este mês</p>
         </div>
+        <div className="text-right">
+          <p className="text-lg font-bold tabular-nums">{total}</p>
+          <p className="text-xs text-muted-foreground">atendimentos</p>
+        </div>
+      </div>
+
+      {!hasData ? (
+        <EmptyChart>Nenhum atendimento este mês.</EmptyChart>
       ) : (
-        <ResponsiveContainer width="100%" height={200}>
-          <PieChart>
-            <Pie
-              data={chartData}
-              cx="50%"
-              cy="45%"
-              innerRadius={50}
-              outerRadius={75}
-              paddingAngle={3}
-              dataKey="value"
-            >
-              {chartData.map((entry, i) => (
-                <Cell key={i} fill={entry.color} />
-              ))}
-            </Pie>
-            <Tooltip
-              formatter={(v, name) => [v, name] as [unknown, unknown]}
-              contentStyle={{ fontSize: 12, borderRadius: 8, border: "1px solid var(--border)" }}
-            />
-            <Legend
-              iconType="circle"
-              iconSize={8}
-              formatter={(value) => <span style={{ fontSize: 12 }}>{value}</span>}
-            />
-          </PieChart>
-        </ResponsiveContainer>
+        <div className="grid min-h-60 gap-4 sm:grid-cols-[220px_1fr] sm:items-center">
+          <div className="relative h-52">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={chartData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={56}
+                  outerRadius={82}
+                  paddingAngle={3}
+                  dataKey="value"
+                  stroke="var(--card)"
+                  strokeWidth={2}
+                >
+                  {chartData.map((entry, i) => (
+                    <Cell key={i} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  formatter={(value, name) => [String(value), String(name)]}
+                  contentStyle={{ fontSize: 12, borderRadius: 8, border: "1px solid var(--border)", background: "var(--card)" }}
+                />
+                <Legend wrapperStyle={{ display: "none" }} />
+              </PieChart>
+            </ResponsiveContainer>
+            <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+              <span className="text-2xl font-bold tabular-nums">{total}</span>
+              <span className="text-[11px] text-muted-foreground">total</span>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            {chartData.map((item) => (
+              <div key={item.name} className="flex items-center justify-between gap-3 rounded-lg bg-muted/35 px-3 py-2 text-sm">
+                <div className="flex min-w-0 items-center gap-2">
+                  <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: item.color }} />
+                  <span className="truncate">{item.name}</span>
+                </div>
+                <span className="text-xs font-medium text-muted-foreground tabular-nums">{item.value}</span>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
-    </div>
+    </section>
   )
 }

@@ -69,12 +69,25 @@ export default async function DashboardPage() {
         ))}
       </div>
 
-      {/* Gráficos */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <RevenueChart data={data.revenueChart} />
-        <StatusChart data={data.statusCounts} />
-      </div>
-      <ProceduresChart data={data.topProcedures} />
+      {/* Visão da clínica */}
+      <section className="space-y-3">
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h2 className="font-heading text-xl font-semibold">Visão da clínica</h2>
+            <p className="text-sm text-muted-foreground">Receita, atendimentos e procedimentos em um só lugar.</p>
+          </div>
+          <Link href="/financeiro" className="text-xs font-medium text-primary hover:underline underline-offset-4">
+            Ver financeiro
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.05fr_0.95fr]">
+          <RevenueChart data={data.revenueChart} />
+          <StatusChart data={data.statusCounts} />
+        </div>
+
+        <ProceduresChart data={data.topProcedures} />
+      </section>
 
       {/* Atendimentos de hoje */}
       <div className="surface space-y-4">
