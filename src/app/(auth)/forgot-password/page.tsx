@@ -16,7 +16,12 @@ export default function ForgotPasswordPage() {
     e.preventDefault()
     if (!email) return
     setLoading(true)
-    await requestPasswordResetAction(email)
+    const result = await requestPasswordResetAction(email)
+    if (!result.success) {
+      alert(result.error)
+      setLoading(false)
+      return
+    }
     setSent(true)
     setLoading(false)
   }
