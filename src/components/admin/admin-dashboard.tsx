@@ -2,9 +2,10 @@
 
 import { useState, useRef, useEffect } from "react"
 import { extendTrialAction, cancelOrgAction, adminChatAction } from "@/actions/admin"
-import { Send, Loader2, Trophy, TrendingUp, Users, DollarSign, ChevronDown, ChevronUp } from "lucide-react"
+import { Send, Loader2, Trophy, TrendingUp, Users, DollarSign, ChevronDown, ChevronUp, Sprout, Rocket, Gem, Coins, Star, Activity } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { cn } from "@/lib/utils"
 
 type Org = {
@@ -34,12 +35,12 @@ type Metrics = {
 type ChatMessage = { role: "user" | "assistant"; content: string }
 
 const GOALS = [
-  { label: "Primeiros clientes", target: 10, emoji: "🌱", metric: (m: Metrics) => m.totalOrgs },
-  { label: "50 clínicas", target: 50, emoji: "🚀", metric: (m: Metrics) => m.totalOrgs },
-  { label: "100 clínicas", target: 100, emoji: "💎", metric: (m: Metrics) => m.totalOrgs },
-  { label: "R$1k MRR", target: 100000, emoji: "💰", metric: (m: Metrics) => m.mrr },
-  { label: "R$5k MRR", target: 500000, emoji: "🏆", metric: (m: Metrics) => m.mrr },
-  { label: "10 ativas", target: 10, emoji: "⭐", metric: (m: Metrics) => m.activeOrgs },
+  { label: "Primeiros clientes", target: 10, icon: Sprout, metric: (m: Metrics) => m.totalOrgs },
+  { label: "50 clínicas", target: 50, icon: Rocket, metric: (m: Metrics) => m.totalOrgs },
+  { label: "100 clínicas", target: 100, icon: Gem, metric: (m: Metrics) => m.totalOrgs },
+  { label: "R$1k MRR", target: 100000, icon: Coins, metric: (m: Metrics) => m.mrr },
+  { label: "R$5k MRR", target: 500000, icon: Trophy, metric: (m: Metrics) => m.mrr },
+  { label: "10 ativas", target: 10, icon: Star, metric: (m: Metrics) => m.activeOrgs },
 ]
 
 function formatBRL(cents: number) {
@@ -117,7 +118,7 @@ export function AdminDashboard({ metrics }: { metrics: Metrics }) {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-5xl mx-auto px-5 py-10 space-y-10">
+      <div className="max-w-5xl mx-auto px-5 py-10 space-y-8">
 
         {/* Header */}
         <div>
@@ -125,193 +126,203 @@ export function AdminDashboard({ metrics }: { metrics: Metrics }) {
           <p className="text-sm text-muted-foreground mt-1">Visão geral da plataforma Kira</p>
         </div>
 
-        {/* Métricas */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          {[
-            { label: "Total de clínicas", value: metrics.totalOrgs, icon: <Users size={16} /> },
-            { label: "Ativas", value: metrics.activeOrgs, icon: <TrendingUp size={16} /> },
-            { label: "Em trial", value: metrics.trialingOrgs, icon: <Users size={16} /> },
-            { label: "MRR", value: formatBRL(metrics.mrr), icon: <DollarSign size={16} /> },
-          ].map((m) => (
-            <div key={m.label} className="rounded-xl border border-border bg-card p-4 space-y-2">
-              <div className="flex items-center gap-1.5 text-muted-foreground text-xs">{m.icon}{m.label}</div>
-              <p className="font-heading text-2xl font-bold">{m.value}</p>
-            </div>
-          ))}
-        </div>
+        <Tabs defaultValue="overview">
+          <TabsList className="mb-6">
+            <TabsTrigger value="overview">Visão Geral</TabsTrigger>
+            <TabsTrigger value="clinicas">Clínicas ({orgs.length})</TabsTrigger>
+            <TabsTrigger value="growth" className="flex items-center gap-1.5"><TrendingUp size={13} />Growth</TabsTrigger>
+          </TabsList>
 
-        {/* Metas gamificadas */}
-        <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <Trophy size={16} className="text-primary" />
-            <h2 className="font-semibold text-sm">Metas</h2>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            {GOALS.map((goal) => {
-              const current = goal.metric(metrics)
-              const pct = Math.min((current / goal.target) * 100, 100)
-              const done = pct >= 100
-              return (
-                <div key={goal.label} className={cn(
-                  "rounded-xl border p-4 space-y-2.5 transition-colors",
-                  done ? "border-primary/30 bg-primary/5" : "border-border bg-card"
-                )}>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium">{goal.emoji} {goal.label}</span>
-                    {done && <span className="text-xs text-primary font-bold">✓</span>}
-                  </div>
-                  <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
-                    <div
-                      className={cn("h-full rounded-full transition-all", done ? "bg-primary" : "bg-primary/50")}
-                      style={{ width: `${pct}%` }}
-                    />
-                  </div>
-                  <p className="text-xs text-muted-foreground tabular-nums">
-                    {goal.label.includes("MRR") ? formatBRL(current) : current} / {goal.label.includes("MRR") ? formatBRL(goal.target) : goal.target}
-                  </p>
+          {/* Aba: Visão Geral */}
+          <TabsContent value="overview" className="space-y-8">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              {[
+                { label: "Total de clínicas", value: metrics.totalOrgs, icon: <Users size={16} /> },
+                { label: "Ativas", value: metrics.activeOrgs, icon: <TrendingUp size={16} /> },
+                { label: "Em trial", value: metrics.trialingOrgs, icon: <Users size={16} /> },
+                { label: "MRR", value: formatBRL(metrics.mrr), icon: <DollarSign size={16} /> },
+              ].map((m) => (
+                <div key={m.label} className="rounded-xl border border-border bg-card p-4 space-y-2">
+                  <div className="flex items-center gap-1.5 text-muted-foreground text-xs">{m.icon}{m.label}</div>
+                  <p className="font-heading text-2xl font-bold">{m.value}</p>
                 </div>
-              )
-            })}
-          </div>
-        </div>
+              ))}
+            </div>
 
-        {/* Lista de orgs */}
-        <div className="space-y-3">
-          <h2 className="font-semibold text-sm">Clínicas ({orgs.length})</h2>
-          <div className="rounded-xl border border-border overflow-hidden divide-y divide-border">
-            {orgs.map((org) => (
-              <div key={org.id}>
-                <button
-                  onClick={() => setExpandedOrg(expandedOrg === org.id ? null : org.id)}
-                  className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/30 transition-colors text-left"
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium truncate">{org.name}</span>
-                      <span className={cn("text-[10px] font-medium px-1.5 py-0.5 rounded-full", statusColor(org.subscriptionStatus))}>
-                        {statusLabel(org.subscriptionStatus)}
-                      </span>
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Trophy size={16} className="text-primary" />
+                <h2 className="font-semibold text-sm">Metas</h2>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {GOALS.map((goal) => {
+                  const current = goal.metric(metrics)
+                  const pct = Math.min((current / goal.target) * 100, 100)
+                  const done = pct >= 100
+                  return (
+                    <div key={goal.label} className={cn(
+                      "rounded-xl border p-4 space-y-2.5 transition-colors",
+                      done ? "border-primary/30 bg-primary/5" : "border-border bg-card"
+                    )}>
+                      <div className="flex items-center justify-between">
+                        <span className="flex items-center gap-1.5 text-xs font-medium">
+                          <goal.icon size={13} className={done ? "text-primary" : "text-muted-foreground"} />
+                          {goal.label}
+                        </span>
+                        {done && <Activity size={13} className="text-primary" />}
+                      </div>
+                      <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+                        <div
+                          className={cn("h-full rounded-full transition-all", done ? "bg-primary" : "bg-primary/50")}
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground tabular-nums">
+                        {goal.label.includes("MRR") ? formatBRL(current) : current} / {goal.label.includes("MRR") ? formatBRL(goal.target) : goal.target}
+                      </p>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {org.owner?.email} · {org.clients} clientes · {org.appointments} atendimentos
-                    </p>
-                  </div>
-                  <div className="text-muted-foreground shrink-0">
-                    {expandedOrg === org.id ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                  </div>
-                </button>
+                  )
+                })}
+              </div>
+            </div>
+          </TabsContent>
 
-                {expandedOrg === org.id && (
-                  <div className="px-4 pb-4 pt-1 bg-muted/20 space-y-3">
-                    <div className="grid grid-cols-3 gap-3 text-xs">
-                      <div className="rounded-lg bg-background border border-border p-2.5 space-y-0.5">
-                        <p className="text-muted-foreground">Clientes</p>
-                        <p className="font-semibold text-base">{org.clients}</p>
+          {/* Aba: Clínicas */}
+          <TabsContent value="clinicas">
+            <div className="rounded-xl border border-border overflow-hidden divide-y divide-border">
+              {orgs.map((org) => (
+                <div key={org.id}>
+                  <button
+                    onClick={() => setExpandedOrg(expandedOrg === org.id ? null : org.id)}
+                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/30 transition-colors text-left"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium truncate">{org.name}</span>
+                        <span className={cn("text-[10px] font-medium px-1.5 py-0.5 rounded-full", statusColor(org.subscriptionStatus))}>
+                          {statusLabel(org.subscriptionStatus)}
+                        </span>
                       </div>
-                      <div className="rounded-lg bg-background border border-border p-2.5 space-y-0.5">
-                        <p className="text-muted-foreground">Atendimentos</p>
-                        <p className="font-semibold text-base">{org.appointments}</p>
-                      </div>
-                      <div className="rounded-lg bg-background border border-border p-2.5 space-y-0.5">
-                        <p className="text-muted-foreground">Fotos</p>
-                        <p className="font-semibold text-base">{org.photos}</p>
-                      </div>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {org.owner?.email} · {org.clients} clientes · {org.appointments} atendimentos
+                      </p>
                     </div>
-                    <div className="text-xs text-muted-foreground space-y-0.5">
-                      <p>Owner: <span className="text-foreground">{org.owner?.name} ({org.owner?.email})</span></p>
-                      <p>Cadastro: <span className="text-foreground">{new Date(org.createdAt).toLocaleDateString("pt-BR")}</span></p>
-                      {org.trialEndsAt && (
-                        <p>Trial até: <span className="text-foreground">{new Date(org.trialEndsAt).toLocaleDateString("pt-BR")}</span></p>
-                      )}
+                    <div className="text-muted-foreground shrink-0">
+                      {expandedOrg === org.id ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                     </div>
-                    <div className="flex gap-2 pt-1">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        disabled={actionLoading === org.id}
-                        onClick={() => handleExtendTrial(org.id, 7)}
-                        className="text-xs h-7"
-                      >
-                        +7 dias trial
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        disabled={actionLoading === org.id}
-                        onClick={() => handleExtendTrial(org.id, 30)}
-                        className="text-xs h-7"
-                      >
-                        +30 dias trial
-                      </Button>
-                      {org.subscriptionStatus !== "canceled" && (
+                  </button>
+
+                  {expandedOrg === org.id && (
+                    <div className="px-4 pb-4 pt-1 bg-muted/20 space-y-3">
+                      <div className="grid grid-cols-3 gap-3 text-xs">
+                        <div className="rounded-lg bg-background border border-border p-2.5 space-y-0.5">
+                          <p className="text-muted-foreground">Clientes</p>
+                          <p className="font-semibold text-base">{org.clients}</p>
+                        </div>
+                        <div className="rounded-lg bg-background border border-border p-2.5 space-y-0.5">
+                          <p className="text-muted-foreground">Atendimentos</p>
+                          <p className="font-semibold text-base">{org.appointments}</p>
+                        </div>
+                        <div className="rounded-lg bg-background border border-border p-2.5 space-y-0.5">
+                          <p className="text-muted-foreground">Fotos</p>
+                          <p className="font-semibold text-base">{org.photos}</p>
+                        </div>
+                      </div>
+                      <div className="text-xs text-muted-foreground space-y-0.5">
+                        <p>Owner: <span className="text-foreground">{org.owner?.name} ({org.owner?.email})</span></p>
+                        <p>Cadastro: <span className="text-foreground">{new Date(org.createdAt).toLocaleDateString("pt-BR")}</span></p>
+                        {org.trialEndsAt && (
+                          <p>Trial até: <span className="text-foreground">{new Date(org.trialEndsAt).toLocaleDateString("pt-BR")}</span></p>
+                        )}
+                      </div>
+                      <div className="flex gap-2 pt-1">
                         <Button
                           size="sm"
                           variant="outline"
                           disabled={actionLoading === org.id}
-                          onClick={() => handleCancel(org.id)}
-                          className="text-xs h-7 text-destructive hover:text-destructive border-destructive/30 hover:border-destructive/60"
+                          onClick={() => handleExtendTrial(org.id, 7)}
+                          className="text-xs h-7"
                         >
-                          Cancelar
+                          +7 dias trial
                         </Button>
-                      )}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={actionLoading === org.id}
+                          onClick={() => handleExtendTrial(org.id, 30)}
+                          className="text-xs h-7"
+                        >
+                          +30 dias trial
+                        </Button>
+                        {org.subscriptionStatus !== "canceled" && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={actionLoading === org.id}
+                            onClick={() => handleCancel(org.id)}
+                            className="text-xs h-7 text-destructive hover:text-destructive border-destructive/30 hover:border-destructive/60"
+                          >
+                            Cancelar
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </TabsContent>
+
+          {/* Aba: Growth */}
+          <TabsContent value="growth">
+            <div className="rounded-xl border border-border overflow-hidden flex flex-col" style={{ height: 520 }}>
+              <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                {messages.length === 0 && (
+                  <div className="h-full flex items-center justify-center text-center px-6">
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium">Olá! Sou seu consultor de growth.</p>
+                      <p className="text-xs text-muted-foreground">Tenho acesso às métricas atuais do Kira. Pergunte sobre estratégias de marketing, conversão de trials, ou qualquer coisa sobre crescimento.</p>
                     </div>
                   </div>
                 )}
+                {messages.map((msg, i) => (
+                  <div key={i} className={cn("flex", msg.role === "user" ? "justify-end" : "justify-start")}>
+                    <div className={cn(
+                      "max-w-[80%] rounded-xl px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-wrap",
+                      msg.role === "user"
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted text-foreground"
+                    )}>
+                      {msg.content}
+                    </div>
+                  </div>
+                ))}
+                {chatLoading && (
+                  <div className="flex justify-start">
+                    <div className="bg-muted rounded-xl px-3.5 py-2.5">
+                      <Loader2 size={14} className="animate-spin text-muted-foreground" />
+                    </div>
+                  </div>
+                )}
+                <div ref={chatEndRef} />
               </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Chat com Groq */}
-        <div className="space-y-3">
-          <h2 className="font-semibold text-sm">Consultor de growth ✨</h2>
-          <div className="rounded-xl border border-border overflow-hidden flex flex-col" style={{ height: 420 }}>
-            <div className="flex-1 overflow-y-auto p-4 space-y-3">
-              {messages.length === 0 && (
-                <div className="h-full flex items-center justify-center text-center px-6">
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium">Olá! Sou seu consultor de growth.</p>
-                    <p className="text-xs text-muted-foreground">Tenho acesso às métricas atuais do Kira. Pergunte sobre estratégias de marketing, conversão de trials, ou qualquer coisa sobre crescimento.</p>
-                  </div>
-                </div>
-              )}
-              {messages.map((msg, i) => (
-                <div key={i} className={cn("flex", msg.role === "user" ? "justify-end" : "justify-start")}>
-                  <div className={cn(
-                    "max-w-[80%] rounded-xl px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-wrap",
-                    msg.role === "user"
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted text-foreground"
-                  )}>
-                    {msg.content}
-                  </div>
-                </div>
-              ))}
-              {chatLoading && (
-                <div className="flex justify-start">
-                  <div className="bg-muted rounded-xl px-3.5 py-2.5">
-                    <Loader2 size={14} className="animate-spin text-muted-foreground" />
-                  </div>
-                </div>
-              )}
-              <div ref={chatEndRef} />
+              <div className="border-t border-border p-3">
+                <form onSubmit={handleChat} className="flex gap-2">
+                  <Input
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    placeholder="Como aumentar conversão de trials..."
+                    className="h-9 text-sm"
+                    disabled={chatLoading}
+                  />
+                  <Button type="submit" size="sm" disabled={chatLoading || !input.trim()} className="h-9 px-3">
+                    <Send size={14} />
+                  </Button>
+                </form>
+              </div>
             </div>
-            <div className="border-t border-border p-3">
-              <form onSubmit={handleChat} className="flex gap-2">
-                <Input
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  placeholder="Como aumentar conversão de trials..."
-                  className="h-9 text-sm"
-                  disabled={chatLoading}
-                />
-                <Button type="submit" size="sm" disabled={chatLoading || !input.trim()} className="h-9 px-3">
-                  <Send size={14} />
-                </Button>
-              </form>
-            </div>
-          </div>
-        </div>
+          </TabsContent>
+        </Tabs>
 
       </div>
     </div>
