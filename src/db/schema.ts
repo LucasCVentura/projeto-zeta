@@ -14,7 +14,7 @@ import { relations } from "drizzle-orm"
 
 // ── enums ────────────────────────────────────────────────────────────────────
 
-export const professionEnum = pgEnum("profession", ["esteticista", "biomedico"])
+export const professionEnum = pgEnum("profession", ["esteticista", "biomedico", "outro"])
 
 export const orgRoleEnum = pgEnum("org_role", [
   "owner",
@@ -51,6 +51,7 @@ export const users = pgTable("users", {
   birthDate: date("birth_date"),
 
   profession: professionEnum("profession"),
+  professionSegment: text("profession_segment"),
   professionalDocument: text("professional_document"),
   professionalDocumentType: text("professional_document_type"),
   instagram: text("instagram"),
@@ -250,6 +251,8 @@ export const procedures = pgTable("procedures", {
 
   name: text("name").notNull(),
   price: integer("price").notNull().default(0), // centavos
+  hasReturn: boolean("has_return").notNull().default(false),
+  returnIntervalDays: integer("return_interval_days"),
   active: boolean("active").notNull().default(true),
 
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -294,6 +297,7 @@ export const transactions = pgTable("transactions", {
     .references(() => users.id, { onDelete: "restrict" }),
 
   appointmentId: text("appointment_id").references(() => appointments.id, { onDelete: "set null" }),
+  clientPackageId: text("client_package_id"), // sem FK para evitar circularidade; preenchido na venda de pacote
 
   amount: integer("amount").notNull(), // centavos
   description: text("description"),

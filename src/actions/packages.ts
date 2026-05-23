@@ -1,7 +1,7 @@
 "use server"
 
 import { db } from "@/db"
-import { packages, clientPackages, procedures } from "@/db/schema"
+import { packages, clientPackages, procedures, transactions } from "@/db/schema"
 import { eq, and, lt, sql } from "drizzle-orm"
 import { requireSession } from "@/lib/session"
 import { revalidatePath } from "next/cache"
@@ -147,15 +147,60 @@ export async function assignPackageToClientAction(data: {
   packageId: string
   purchasedAt: string
 }): Promise<ActionResult> {
-  const { organizationId } = await requireSession()
-  await db.insert(clientPackages).values({
-    organizationId,
-    clientId: data.clientId,
-    packageId: data.packageId,
-    purchasedAt: data.purchasedAt,
-    sessionsUsed: 0,
-  })
+  const { userId, organizationId } = await requireSession()
+
+  const [pkg] = await db
+    .select({ name: packages.name, price: packages.price })
+    .from(packages)
+    .where(and(eq(packages.id, data.packageId), eq(packages.organizationId, organizationId)))
+    .limit(1)
+
+  const [inserted] = await db
+    .insert(clientPackages)
+    .values({
+      organizationId,
+      clientId: data.clientId,
+      packageId: data.packageId,
+      purchasedAt: data.purchasedAt,
+      sessionsUsed: 0,
+    })
+    .returning({ id: clientPackages.id })
+
+  if (pkg && pkg.price > 0) {
+    await db.insert(transactions).values({
+      organizationId,
+      professionalId: userId,
+      clientPackageId: inserted.id,
+      amount: pkg.price,
+      description: `Pacote: ${pkg.name}`,
+      date: data.purchasedAt,
+    })
+  }
+
   revalidatePath(`/clientes/${data.clientId}`)
+  revalidatePath("/financeiro")
+  return { success: true }
+}
+
+export async function removeClientPackageAction(clientPackageId: string): Promise<ActionResult> {
+  const { organizationId } = await requireSession()
+
+  const [pkg] = await db
+    .select({ sessionsUsed: clientPackages.sessionsUsed, clientId: clientPackages.clientId })
+    .from(clientPackages)
+    .where(and(eq(clientPackages.id, clientPackageId), eq(clientPackages.organizationId, organizationId)))
+    .limit(1)
+
+  if (!pkg) return { success: false, error: "Pacote não encontrado." }
+  if (pkg.sessionsUsed > 0) return { success: false, error: "Não é possível remover um pacote com sessões já utilizadas." }
+
+  await db.transaction(async (tx) => {
+    await tx.delete(transactions).where(eq(transactions.clientPackageId, clientPackageId))
+    await tx.delete(clientPackages).where(eq(clientPackages.id, clientPackageId))
+  })
+
+  revalidatePath(`/clientes/${pkg.clientId}`)
+  revalidatePath("/financeiro")
   return { success: true }
 }
 

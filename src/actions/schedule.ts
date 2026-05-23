@@ -55,10 +55,14 @@ export async function getDaySlots(date: string) {
       endTime: appointments.endTime,
       procedure: appointments.procedure,
       procedureId: appointments.procedureId,
+      clientPackageId: appointments.clientPackageId,
+      clientId: appointments.clientId,
       notes: appointments.notes,
       status: appointments.status,
       clientName: clients.name,
       procedurePrice: procedures.price,
+      hasReturn: procedures.hasReturn,
+      returnIntervalDays: procedures.returnIntervalDays,
     })
     .from(appointments)
     .innerJoin(clients, eq(clients.id, appointments.clientId))

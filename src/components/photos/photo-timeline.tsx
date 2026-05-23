@@ -5,7 +5,8 @@ import { getClientPhotosAction, deleteClientPhotoAction } from "@/actions/photos
 import { PhotoUpload } from "./photo-upload"
 import { PhotoComparison, CompareButton } from "./photo-comparison"
 import { AiPhotoAnalysis } from "./ai-photo-analysis"
-import { Trash2, CheckSquare } from "lucide-react"
+import { PhotoCarousel } from "./photo-carousel"
+import { Trash2, Loader2, Play, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { mediaUrl } from "@/lib/media-url"
 import type { ClientPhoto } from "@/db/schema"
@@ -21,11 +22,10 @@ function formatDate(d: string) {
   })
 }
 
-// Agrupa fotos por mês
 function groupByMonth(photos: ClientPhoto[]) {
   const groups: Record<string, ClientPhoto[]> = {}
   for (const photo of photos) {
-    const key = photo.takenAt.slice(0, 7) // "2024-05"
+    const key = photo.takenAt.slice(0, 7)
     if (!groups[key]) groups[key] = []
     groups[key].push(photo)
   }
@@ -42,8 +42,11 @@ export function PhotoTimeline({ clientId, initialPhotos }: Props) {
   const [photos, setPhotos] = useState<ClientPhoto[]>(initialPhotos)
   const [selected, setSelected] = useState<string[]>([])
   const [comparing, setComparing] = useState(false)
-  const [selectMode, setSelectMode] = useState(false)
   const [deleting, setDeleting] = useState<string | null>(null)
+  const [carouselIndex, setCarouselIndex] = useState<number | null>(null)
+
+  const chronological = [...photos].sort((a, b) => a.takenAt.localeCompare(b.takenAt))
+  const selectMode = selected.length > 0
 
   const refresh = useCallback(async () => {
     const updated = await getClientPhotosAction(clientId)
@@ -51,11 +54,9 @@ export function PhotoTimeline({ clientId, initialPhotos }: Props) {
   }, [clientId])
 
   function toggleSelect(photoId: string) {
-    setSelected((prev) => {
-      if (prev.includes(photoId)) return prev.filter((id) => id !== photoId)
-      if (prev.length >= 3) return prev // máx 3
-      return [...prev, photoId]
-    })
+    setSelected((prev) =>
+      prev.includes(photoId) ? prev.filter((id) => id !== photoId) : [...prev, photoId]
+    )
   }
 
   async function handleDelete(photo: ClientPhoto) {
@@ -72,48 +73,67 @@ export function PhotoTimeline({ clientId, initialPhotos }: Props) {
 
   return (
     <>
-      {comparing && selectedPhotos.length >= 2 && (
-        <PhotoComparison
-          photos={selectedPhotos}
-          onClose={() => { setComparing(false); setSelected([]); setSelectMode(false) }}
+      {carouselIndex !== null && (
+        <PhotoCarousel
+          photos={chronological}
+          startIndex={carouselIndex}
+          onClose={() => setCarouselIndex(null)}
         />
       )}
 
-      <div className="space-y-6">
-        {/* Toolbar */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <PhotoUpload clientId={clientId} onUploaded={refresh} />
-              {photos.length >= 2 && (
-                <button
-                  onClick={() => { setSelectMode((v) => !v); setSelected([]) }}
-                  className={cn(
-                    "flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors",
-                    selectMode
-                      ? "border-primary bg-primary/5 text-primary"
-                      : "border-border text-muted-foreground hover:border-primary/40"
-                  )}
-                >
-                  <CheckSquare size={13} />
-                  {selectMode ? "Cancelar" : "Selecionar"}
-                </button>
-              )}
-            </div>
+      {comparing && selectedPhotos.length >= 2 && (
+        <PhotoComparison
+          photos={selectedPhotos}
+          onClose={() => { setComparing(false); setSelected([]) }}
+        />
+      )}
 
-            {selectMode && (
-              <CompareButton
-                selectedCount={selected.length}
-                onCompare={() => setComparing(true)}
-                onClear={() => setSelected([])}
-              />
+      <div className="space-y-4">
+        {/* Toolbar */}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <PhotoUpload clientId={clientId} onUploaded={refresh} />
+            {photos.length >= 2 && !selectMode && (
+              <button
+                onClick={() => setCarouselIndex(0)}
+                className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:border-primary/40 hover:text-primary transition-colors"
+              >
+                <Play size={12} />
+                Evolução
+              </button>
             )}
           </div>
 
-          {photos.length >= 2 && !selectMode && (
-            <AiPhotoAnalysis mode="evolution" clientId={clientId} />
+          {/* Barra de seleção ativa */}
+          {selectMode && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">
+                {selected.length} selecionada{selected.length !== 1 ? "s" : ""}
+              </span>
+              <button
+                onClick={() => setSelected([])}
+                className="flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:bg-accent transition-colors"
+              >
+                <X size={12} /> Limpar
+              </button>
+            </div>
           )}
         </div>
+
+        {/* Botões de IA — aparecem apenas com seleção */}
+        {selectMode && (
+          <AiPhotoAnalysis
+            selectedIds={selected}
+            onClearSelection={() => setSelected([])}
+          />
+        )}
+
+        {/* Hint de seleção */}
+        {!selectMode && photos.length >= 1 && (
+          <p className="text-xs text-muted-foreground">
+            Toque em uma foto para selecioná-la e usar as ferramentas de IA.
+          </p>
+        )}
 
         {photos.length === 0 ? (
           <div className="flex flex-col items-center gap-3 py-16 text-center">
@@ -133,7 +153,6 @@ export function PhotoTimeline({ clientId, initialPhotos }: Props) {
           <div className="space-y-8">
             {groups.map(([monthKey, groupPhotos]) => (
               <div key={monthKey} className="space-y-3">
-                {/* Mês */}
                 <div className="flex items-center gap-3">
                   <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                     {monthLabel(monthKey)}
@@ -142,21 +161,19 @@ export function PhotoTimeline({ clientId, initialPhotos }: Props) {
                   <span className="text-xs text-muted-foreground">{groupPhotos.length} foto{groupPhotos.length > 1 ? "s" : ""}</span>
                 </div>
 
-                {/* Grid */}
                 <div className="grid grid-cols-3 gap-2">
                   {groupPhotos.map((photo) => {
                     const isSelected = selected.includes(photo.id)
-                    const isDisabled = selectMode && selected.length >= 3 && !isSelected
+                    const selectionOrder = selected.indexOf(photo.id) + 1
 
                     return (
                       <div
                         key={photo.id}
                         className={cn(
                           "group relative aspect-square overflow-hidden rounded-xl border-2 transition-all cursor-pointer",
-                          isSelected ? "border-primary shadow-md shadow-primary/20" : "border-transparent",
-                          isDisabled ? "opacity-40 cursor-not-allowed" : ""
+                          isSelected ? "border-primary shadow-md shadow-primary/20" : "border-transparent"
                         )}
-                        onClick={() => selectMode && !isDisabled && toggleSelect(photo.id)}
+                        onClick={() => toggleSelect(photo.id)}
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
@@ -169,13 +186,13 @@ export function PhotoTimeline({ clientId, initialPhotos }: Props) {
                         {isSelected && (
                           <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
                             <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-white text-xs font-bold shadow">
-                              {selected.indexOf(photo.id) + 1}
+                              {selectionOrder}
                             </div>
                           </div>
                         )}
 
                         {/* Tag procedimento */}
-                        {photo.procedure && (
+                        {photo.procedure && !isSelected && (
                           <div className="absolute top-1.5 left-1.5">
                             <span className="inline-block rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm">
                               {photo.procedure}
@@ -183,25 +200,26 @@ export function PhotoTimeline({ clientId, initialPhotos }: Props) {
                           </div>
                         )}
 
-                        {/* Hover actions (modo normal) */}
+                        {/* Botão excluir — sempre visível, some quando em modo seleção */}
                         {!selectMode && (
-                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors">
-                            <div className="absolute bottom-1.5 right-1.5 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <button
-                                onClick={(e) => { e.stopPropagation(); handleDelete(photo) }}
-                                disabled={deleting === photo.id}
-                                className="flex h-7 w-7 items-center justify-center rounded-lg bg-black/60 text-white hover:bg-destructive transition-colors"
-                              >
-                                <Trash2 size={12} />
-                              </button>
-                            </div>
-                          </div>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleDelete(photo) }}
+                            disabled={deleting === photo.id}
+                            className="absolute top-1.5 right-1.5 flex h-7 w-7 items-center justify-center rounded-lg bg-black/50 text-white hover:bg-destructive transition-colors disabled:opacity-40"
+                          >
+                            {deleting === photo.id
+                              ? <Loader2 size={12} className="animate-spin" />
+                              : <Trash2 size={12} />
+                            }
+                          </button>
                         )}
 
-                        {/* Data */}
-                        <div className="absolute bottom-0 left-0 right-0 bg-linear-to-t from-black/60 to-transparent px-2 py-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <p className="text-[10px] text-white/90">{formatDate(photo.takenAt)}</p>
-                        </div>
+                        {/* Data no hover */}
+                        {!isSelected && (
+                          <div className="absolute bottom-0 left-0 right-0 bg-linear-to-t from-black/60 to-transparent px-2 py-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <p className="text-[10px] text-white/90">{formatDate(photo.takenAt)}</p>
+                          </div>
+                        )}
                       </div>
                     )
                   })}

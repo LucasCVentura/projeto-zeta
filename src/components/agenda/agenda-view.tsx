@@ -74,9 +74,14 @@ export function AgendaView({ initialDate, slots: initialSlots, hasConfig, slotDu
   const [completeModal, setCompleteModal] = useState<{
     open: boolean
     appointmentId: string
+    clientId?: string
     clientName: string
     procedure?: string
     procedurePrice?: number
+    isPackageSession?: boolean
+    hasReturn?: boolean
+    returnIntervalDays?: number | null
+    appointmentDate?: string
   }>({ open: false, appointmentId: "", clientName: "" })
   const [editModal, setEditModal] = useState<{
     open: boolean
@@ -88,7 +93,7 @@ export function AgendaView({ initialDate, slots: initialSlots, hasConfig, slotDu
 
   const weekDays = getWeekDays(date)
   const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" })
-  const nowBRT = new Date(new Date().toLocaleString("en-CA", { timeZone: "America/Sao_Paulo", hour12: false }))
+  const nowBRT = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }))
   const nowMinutes = nowBRT.getHours() * 60 + nowBRT.getMinutes()
 
   function isSlotPast(slotTime: string) {
@@ -118,9 +123,14 @@ export function AgendaView({ initialDate, slots: initialSlots, hasConfig, slotDu
       setCompleteModal({
         open: true,
         appointmentId,
+        clientId: slot.clientId,
         clientName: slot.clientName ?? "",
         procedure: slot.procedure,
         procedurePrice: slot.procedurePrice,
+        isPackageSession: !!slot.clientPackageId,
+        hasReturn: slot.hasReturn,
+        returnIntervalDays: slot.returnIntervalDays,
+        appointmentDate: date,
       })
       return
     }
@@ -278,10 +288,15 @@ export function AgendaView({ initialDate, slots: initialSlots, hasConfig, slotDu
           startTransition(() => refreshSlots(date))
         }}
         appointmentId={completeModal.appointmentId}
+        clientId={completeModal.clientId}
         date={date}
         clientName={completeModal.clientName}
         procedure={completeModal.procedure}
         procedurePrice={completeModal.procedurePrice}
+        isPackageSession={completeModal.isPackageSession}
+        hasReturn={completeModal.hasReturn}
+        returnIntervalDays={completeModal.returnIntervalDays}
+        appointmentDate={completeModal.appointmentDate}
       />
 
       <EditAppointmentModal

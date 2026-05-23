@@ -4,6 +4,7 @@ import { useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import { createAppointmentAction } from "@/actions/schedule"
 import { suggestRecurrenceAction } from "@/actions/ai"
 import { sendPackageScheduleConfirmation } from "@/actions/whatsapp"
@@ -43,6 +44,7 @@ export function SchedulePackageModal({
   const [time, setTime] = useState("09:00")
   const [frequency, setFrequency] = useState<Frequency>("biweekly")
   const [count, setCount] = useState(sessionsRemaining)
+  const [notes, setNotes] = useState("")
   const [loading, setLoading] = useState(false)
   const [aiLoading, setAiLoading] = useState(false)
   const [aiExplanation, setAiExplanation] = useState<string | null>(null)
@@ -74,6 +76,7 @@ export function SchedulePackageModal({
       procedureId,
       procedure: procedureName,
       clientPackageId,
+      notes: notes.trim() || undefined,
       recurrence: count > 1 ? { frequency, count } : undefined,
     })
     setLoading(false)
@@ -205,6 +208,17 @@ export function SchedulePackageModal({
               )}
             </div>
           )}
+
+          <div className="space-y-1.5">
+            <Label className="text-xs">Observação <span className="text-muted-foreground font-normal">— opcional</span></Label>
+            <Textarea
+              placeholder="Ex: Paciente alérgica a látex..."
+              rows={2}
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              className="resize-none text-sm"
+            />
+          </div>
 
           <div className="flex gap-3 pt-1">
             <Button type="button" variant="outline" className="flex-1" onClick={onClose}>Cancelar</Button>

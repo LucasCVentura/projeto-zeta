@@ -26,6 +26,8 @@ export async function getProceduresAction() {
 export async function createProcedureAction(data: {
   name: string
   price: number
+  hasReturn?: boolean
+  returnIntervalDays?: number | null
 }): Promise<ActionResult> {
   const { organizationId, role } = await requireSession()
 
@@ -36,7 +38,9 @@ export async function createProcedureAction(data: {
   await db.insert(procedures).values({
     organizationId,
     name: data.name.trim(),
-    price: Math.round(data.price * 100), // converte reais → centavos
+    price: Math.round(data.price * 100),
+    hasReturn: data.hasReturn ?? false,
+    returnIntervalDays: data.hasReturn ? (data.returnIntervalDays ?? null) : null,
   })
 
   revalidatePath("/configuracoes/procedimentos")
@@ -45,7 +49,7 @@ export async function createProcedureAction(data: {
 
 export async function updateProcedureAction(
   id: string,
-  data: { name?: string; price?: number }
+  data: { name?: string; price?: number; hasReturn?: boolean; returnIntervalDays?: number | null }
 ): Promise<ActionResult> {
   const { organizationId, role } = await requireSession()
 
@@ -58,6 +62,8 @@ export async function updateProcedureAction(
     .set({
       ...(data.name ? { name: data.name.trim() } : {}),
       ...(data.price !== undefined ? { price: Math.round(data.price * 100) } : {}),
+      ...(data.hasReturn !== undefined ? { hasReturn: data.hasReturn } : {}),
+      returnIntervalDays: data.hasReturn ? (data.returnIntervalDays ?? null) : null,
       updatedAt: new Date(),
     })
     .where(

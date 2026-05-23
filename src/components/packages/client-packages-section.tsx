@@ -1,8 +1,8 @@
 "use client"
 
 import { useState } from "react"
-import { assignPackageToClientAction } from "@/actions/packages"
-import { Package, Plus, CalendarDays } from "lucide-react"
+import { assignPackageToClientAction, removeClientPackageAction } from "@/actions/packages"
+import { Package, Plus, CalendarDays, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
@@ -51,8 +51,18 @@ export function ClientPackagesSection({ clientId, clientPhone, clientName, clien
   const [selectedPkgId, setSelectedPkgId] = useState(availablePackages[0]?.id ?? "")
   const [purchasedAt, setPurchasedAt] = useState(() => new Date().toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" }))
   const [loading, setLoading] = useState(false)
+  const [removingId, setRemovingId] = useState<string | null>(null)
 
   const activePackages = availablePackages.filter((p) => p.active)
+
+  async function handleRemove(clientPackageId: string) {
+    if (!confirm("Remover este pacote? A transação financeira também será excluída.")) return
+    setRemovingId(clientPackageId)
+    const result = await removeClientPackageAction(clientPackageId)
+    if (!result.success) { alert(result.error); setRemovingId(null); return }
+    setPackages((prev) => prev.filter((p) => p.id !== clientPackageId))
+    setRemovingId(null)
+  }
 
   async function handleAssign(e: React.FormEvent) {
     e.preventDefault()
@@ -165,14 +175,27 @@ export function ClientPackagesSection({ clientId, clientPhone, clientName, clien
                       <p className="text-xs text-muted-foreground">{pkg.procedureName}</p>
                     </div>
                   </div>
-                  <span className={cn(
-                    "shrink-0 text-xs font-medium px-2 py-0.5 rounded-full",
-                    pkg.isActive
-                      ? "bg-primary/10 text-primary"
-                      : "bg-muted text-muted-foreground"
-                  )}>
-                    {pkg.isActive ? `${pkg.sessionsRemaining} restante${pkg.sessionsRemaining !== 1 ? "s" : ""}` : "Concluído"}
-                  </span>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className={cn(
+                      "text-xs font-medium px-2 py-0.5 rounded-full",
+                      pkg.isActive
+                        ? "bg-primary/10 text-primary"
+                        : "bg-muted text-muted-foreground"
+                    )}>
+                      {pkg.isActive ? `${pkg.sessionsRemaining} restante${pkg.sessionsRemaining !== 1 ? "s" : ""}` : "Concluído"}
+                    </span>
+                    {pkg.sessionsUsed === 0 && (
+                      <button
+                        type="button"
+                        onClick={() => handleRemove(pkg.id)}
+                        disabled={removingId === pkg.id}
+                        className="text-muted-foreground hover:text-destructive transition-colors disabled:opacity-40"
+                        title="Remover pacote"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )}
+                  </div>
                 </div>
                 {/* Barra de progresso */}
                 <div className="space-y-1">

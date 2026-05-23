@@ -39,6 +39,8 @@ export function ProceduresList({ initialProcedures }: { initialProcedures: Proce
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [formHasReturn, setFormHasReturn] = useState(false)
+  const [formReturnDays, setFormReturnDays] = useState("")
 
   const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -47,11 +49,14 @@ export function ProceduresList({ initialProcedures }: { initialProcedures: Proce
   async function onCreate(data: FormData) {
     setIsLoading(true)
     const price = data.price ? parseFloat(data.price.replace(/\./g, "").replace(",", ".")) : 0
-    const result = await createProcedureAction({ name: data.name, price })
+    const returnIntervalDays = formHasReturn && formReturnDays ? parseInt(formReturnDays) : null
+    const result = await createProcedureAction({ name: data.name, price, hasReturn: formHasReturn, returnIntervalDays })
     if (result.success) {
       const updated = await import("@/actions/procedures").then((m) => m.getProceduresAction())
       setItems(updated)
       reset()
+      setFormHasReturn(false)
+      setFormReturnDays("")
       setShowForm(false)
     }
     setIsLoading(false)
@@ -83,7 +88,8 @@ export function ProceduresList({ initialProcedures }: { initialProcedures: Proce
               onSave={async (data) => {
                 setIsLoading(true)
                 const price = data.price ? parseFloat(data.price.replace(/\./g, "").replace(",", ".")) : 0
-                await updateProcedureAction(proc.id, { name: data.name, price })
+                const returnIntervalDays = data.hasReturn && data.returnIntervalDays ? parseInt(data.returnIntervalDays) : null
+                await updateProcedureAction(proc.id, { name: data.name, price, hasReturn: data.hasReturn, returnIntervalDays })
                 const updated = await import("@/actions/procedures").then((m) => m.getProceduresAction())
                 setItems(updated)
                 setEditingId(null)
@@ -121,6 +127,7 @@ export function ProceduresList({ initialProcedures }: { initialProcedures: Proce
               </div>
             </div>
           </div>
+          <ReturnFields hasReturn={formHasReturn} returnDays={formReturnDays} onHasReturnChange={setFormHasReturn} onDaysChange={setFormReturnDays} />
           <div className="flex gap-2">
             <Button type="button" variant="outline" size="sm" onClick={() => { setShowForm(false); reset() }}>
               Cancelar
@@ -153,7 +160,7 @@ function ProcedureRow({
   isEditing: boolean
   onEdit: () => void
   onCancelEdit: () => void
-  onSave: (data: { name: string; price: string }) => void
+  onSave: (data: { name: string; price: string; hasReturn: boolean; returnIntervalDays?: string }) => void
   onDelete: () => void
   isLoading: boolean
 }) {
@@ -163,11 +170,13 @@ function ProcedureRow({
       price: (procedure.price / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2 }),
     },
   })
+  const [hasReturn, setHasReturn] = useState(procedure.hasReturn)
+  const [returnDays, setReturnDays] = useState(procedure.returnIntervalDays?.toString() ?? "")
 
   if (isEditing) {
     return (
       <form
-        onSubmit={handleSubmit(onSave)}
+        onSubmit={handleSubmit((data) => onSave({ ...data, hasReturn, returnIntervalDays: returnDays }))}
         className="surface grid grid-cols-2 gap-3"
       >
         <Input placeholder="Nome" {...register("name")} />
@@ -179,6 +188,9 @@ function ProcedureRow({
             {...register("price")}
             onChange={(e) => setValue("price", maskPrice(e.target.value))}
           />
+        </div>
+        <div className="col-span-2">
+          <ReturnFields hasReturn={hasReturn} returnDays={returnDays} onHasReturnChange={setHasReturn} onDaysChange={setReturnDays} />
         </div>
         <ProcedureSuppliesPanel procedureId={procedure.id} />
 
@@ -198,6 +210,11 @@ function ProcedureRow({
     <div className="surface flex items-center justify-between gap-4">
       <div className="min-w-0">
         <p className="font-medium text-sm truncate">{procedure.name}</p>
+        {procedure.hasReturn && (
+          <p className="text-xs text-primary/70">
+            Retorno{procedure.returnIntervalDays ? ` em ${procedure.returnIntervalDays} dias` : ""}
+          </p>
+        )}
       </div>
       <div className="flex items-center gap-3 shrink-0">
         <span className="text-sm font-semibold text-primary">
@@ -217,6 +234,45 @@ function ProcedureRow({
           <Trash2 size={13} />
         </button>
       </div>
+    </div>
+  )
+}
+
+// ── Campos de retorno reutilizáveis ───────────────────────────────────────────
+
+function ReturnFields({ hasReturn, returnDays, onHasReturnChange, onDaysChange }: {
+  hasReturn: boolean
+  returnDays: string
+  onHasReturnChange: (v: boolean) => void
+  onDaysChange: (v: string) => void
+}) {
+  return (
+    <div className="space-y-2">
+      <label className="flex items-center gap-2 cursor-pointer select-none">
+        <input
+          type="checkbox"
+          className="h-4 w-4 rounded border-border accent-primary"
+          checked={hasReturn}
+          onChange={(e) => onHasReturnChange(e.target.checked)}
+        />
+        <span className="text-sm">Procedimento tem retorno</span>
+      </label>
+      {hasReturn && (
+        <div className="flex items-center gap-2 pl-6">
+          <span className="text-xs text-muted-foreground">Retorno sugerido em</span>
+          <Input
+            type="number"
+            min={1}
+            max={365}
+            inputMode="numeric"
+            className="w-20 h-8 text-sm"
+            placeholder="30"
+            value={returnDays}
+            onChange={(e) => onDaysChange(e.target.value)}
+          />
+          <span className="text-xs text-muted-foreground">dias</span>
+        </div>
+      )}
     </div>
   )
 }

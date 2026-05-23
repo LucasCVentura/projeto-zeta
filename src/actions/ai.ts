@@ -307,3 +307,116 @@ export async function analyzeClientEvolutionAction(clientId: string): Promise<{
 
   return { success: true, analysis }
 }
+
+export async function suggestProceduresFromPhotosAction(photoIds: string[]): Promise<{
+  success: boolean
+  analysis?: string
+  error?: string
+}> {
+  const { organizationId } = await requireSession()
+
+  const apiKey = process.env.GROQ_API_KEY
+  if (!apiKey) return { success: false, error: "GROQ_API_KEY não configurada." }
+  if (photoIds.length < 1) return { success: false, error: "Selecione ao menos 1 foto." }
+
+  const photos = await db
+    .select()
+    .from(clientPhotos)
+    .where(and(eq(clientPhotos.organizationId, organizationId)))
+
+  const selected = photoIds
+    .map((id) => photos.find((p) => p.id === id))
+    .filter(Boolean) as typeof photos
+
+  if (selected.length === 0) return { success: false, error: "Fotos não encontradas." }
+
+  const imageContents = await Promise.all(
+    selected.map(async (photo) => {
+      const b64 = await photoToBase64(photo.url)
+      if (!b64) return null
+      return {
+        type: "image_url" as const,
+        image_url: { url: `data:${imageMediaType(photo.url)};base64,${b64}` },
+      }
+    })
+  )
+
+  const validImages = imageContents.filter(Boolean)
+  if (validImages.length === 0) return { success: false, error: "Não foi possível carregar as imagens." }
+
+  const groq = new Groq({ apiKey })
+
+  const chat = await groq.chat.completions.create({
+    model: "meta-llama/llama-4-scout-17b-16e-instruct",
+    messages: [
+      {
+        role: "user",
+        content: [
+          {
+            type: "text",
+            text: `Você é um especialista em estética e biomedicina estética. Analise as fotos do cliente e indique, de forma objetiva e profissional em português, quais procedimentos estéticos seriam mais indicados com base no que é visível nas imagens (textura de pele, manchas, flacidez, volume, rugas, poros, hidratação, etc.). Liste de 3 a 5 procedimentos com uma breve justificativa para cada. Seja direto e clínico.`,
+          },
+          ...validImages,
+        ],
+      },
+    ],
+    temperature: 0.4,
+    max_tokens: 400,
+  })
+
+  const analysis = chat.choices[0]?.message?.content?.trim()
+  if (!analysis) return { success: false, error: "Não foi possível gerar indicações." }
+
+  return { success: true, analysis }
+}
+
+export async function suggestReturnDateAction(data: {
+  procedureName: string
+  returnIntervalDays: number | null
+  lastAppointmentDate: string
+}): Promise<{ success: true; suggestedDate: string; explanation: string } | { success: false; error: string }> {
+  try {
+    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
+    const intervalHint = data.returnIntervalDays
+      ? `O protocolo padrão sugere retorno em ${data.returnIntervalDays} dias.`
+      : "Não há intervalo padrão definido."
+
+    const chat = await groq.chat.completions.create({
+      model: "llama-3.3-70b-versatile",
+      messages: [
+        {
+          role: "user",
+          content: `Você é especialista em estética e biomedicina. O paciente realizou "${data.procedureName}" em ${data.lastAppointmentDate}. ${intervalHint}
+
+Responda APENAS em JSON válido com este formato exato:
+{"days": <número inteiro>, "explanation": "<frase curta em pt-BR explicando o porquê deste intervalo>"}
+
+O campo "days" deve ser um número entre 1 e 365. Sem markdown, sem texto extra.`,
+        },
+      ],
+      temperature: 0.3,
+      max_tokens: 120,
+    })
+
+    const raw = chat.choices[0]?.message?.content?.trim() ?? ""
+    const json = JSON.parse(raw.replace(/```json?|```/g, "").trim())
+    const days = parseInt(json.days)
+    if (!days || days < 1) throw new Error("invalid days")
+
+    const base = new Date(data.lastAppointmentDate + "T12:00:00")
+    base.setDate(base.getDate() + days)
+    const suggestedDate = base.toLocaleDateString("en-CA")
+
+    return { success: true, suggestedDate, explanation: json.explanation ?? "" }
+  } catch {
+    // Fallback: usa o intervalo padrão ou 30 dias
+    const days = data.returnIntervalDays ?? 30
+    const base = new Date(data.lastAppointmentDate + "T12:00:00")
+    base.setDate(base.getDate() + days)
+    return {
+      success: true,
+      suggestedDate: base.toLocaleDateString("en-CA"),
+      explanation: `Intervalo padrão de ${days} dias para ${data.procedureName}.`,
+    }
+  }
+}

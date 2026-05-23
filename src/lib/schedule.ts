@@ -4,10 +4,14 @@ export type TimeSlot = {
   time: string   // "08:00"
   available: boolean
   appointmentId?: string
+  clientId?: string
   clientName?: string
   procedure?: string
   procedureId?: string | null
   procedurePrice?: number // centavos
+  hasReturn?: boolean
+  returnIntervalDays?: number | null
+  clientPackageId?: string | null
   notes?: string | null
   status?: Appointment["status"]
   isBlocked?: boolean
@@ -29,7 +33,7 @@ export function generateSlots(
   config: ScheduleConfig,
   date: string,
   blocks: ScheduleBlock[],
-  appointments: (Appointment & { clientName: string; procedurePrice?: number | null })[],
+  appointments: (Appointment & { clientName: string; procedurePrice?: number | null; clientPackageId?: string | null; hasReturn?: boolean | null; returnIntervalDays?: number | null })[],
 ): TimeSlot[] {
   const dayOfWeek = new Date(date + "T12:00:00").getDay()
   const workDays = config.workDays.split(",").map(Number)
@@ -72,9 +76,15 @@ export function generateSlots(
         time,
         available: false,
         appointmentId: appt.id,
+        clientId: appt.clientId,
         clientName: appt.clientName,
         procedure: appt.procedure ?? undefined,
+        procedureId: appt.procedureId ?? null,
         procedurePrice: appt.procedurePrice ?? undefined,
+        hasReturn: appt.hasReturn ?? false,
+        returnIntervalDays: appt.returnIntervalDays ?? null,
+        clientPackageId: appt.clientPackageId ?? null,
+        notes: appt.notes ?? null,
         status: appt.status,
       })
       continue

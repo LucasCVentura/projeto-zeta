@@ -42,14 +42,17 @@ export async function completeAppointmentWithRevenueAction(data: {
         )
       )
 
-    await tx.insert(transactions).values({
-      organizationId,
-      professionalId: userId,
-      appointmentId: data.appointmentId,
-      amount: data.amount,
-      description: data.description || null,
-      date: data.date,
-    })
+    // Pacotes pré-pagos: receita já registrada na venda — não criar nova transação
+    if (!appt?.clientPackageId) {
+      await tx.insert(transactions).values({
+        organizationId,
+        professionalId: userId,
+        appointmentId: data.appointmentId,
+        amount: data.amount,
+        description: data.description || null,
+        date: data.date,
+      })
+    }
 
     // Consumir sessão do pacote se vinculado
     if (appt?.clientPackageId) {
@@ -163,8 +166,9 @@ export async function getTransactionsAction(year: number, month: number) {
       description: transactions.description,
       date: transactions.date,
       appointmentId: transactions.appointmentId,
+      txClientPackageId: transactions.clientPackageId,
       procedureId: appointments.procedureId,
-      clientPackageId: appointments.clientPackageId,
+      apptClientPackageId: appointments.clientPackageId,
     })
     .from(transactions)
     .leftJoin(appointments, eq(appointments.id, transactions.appointmentId))
@@ -178,12 +182,15 @@ export async function getTransactionsAction(year: number, month: number) {
     )
     .orderBy(transactions.date)
 
-  // For appointments linked to a client package, use package.cost / totalSessions as cost per session.
-  // For standalone appointments, fall back to procedure_supplies calculation.
-  const clientPackageIds = [...new Set(rows.map((r) => r.clientPackageId).filter(Boolean) as string[])]
-  const packageCostMap = new Map<string, number>() // clientPackageId → cost per session in cents
+  // Collect all clientPackageIds: from package sale transactions (txClientPackageId)
+  // and from appointment-linked transactions (apptClientPackageId)
+  const allClientPackageIds = [...new Set([
+    ...rows.map((r) => r.txClientPackageId).filter(Boolean) as string[],
+    ...rows.map((r) => r.apptClientPackageId).filter(Boolean) as string[],
+  ])]
+  const packageCostMap = new Map<string, { cost: number; totalSessions: number }>()
 
-  if (clientPackageIds.length > 0) {
+  if (allClientPackageIds.length > 0) {
     const pkgRows = await db
       .select({
         clientPackageId: clientPackages.id,
@@ -195,17 +202,15 @@ export async function getTransactionsAction(year: number, month: number) {
       .where(eq(clientPackages.organizationId, organizationId))
 
     for (const pr of pkgRows) {
-      if (pr.cost > 0 && pr.totalSessions > 0) {
-        packageCostMap.set(pr.clientPackageId, Math.round(pr.cost / pr.totalSessions))
-      }
+      packageCostMap.set(pr.clientPackageId, { cost: pr.cost, totalSessions: pr.totalSessions })
     }
   }
 
-  // Fallback: procedure_supplies cost for non-package appointments
+  // Fallback: procedure_supplies cost for standalone appointments
   const standaloneProcedureIds = [...new Set(
-    rows.filter((r) => !r.clientPackageId).map((r) => r.procedureId).filter(Boolean) as string[]
+    rows.filter((r) => !r.txClientPackageId && !r.apptClientPackageId).map((r) => r.procedureId).filter(Boolean) as string[]
   )]
-  const supplyCostMap = new Map<string, number>() // procedureId → cost in cents
+  const supplyCostMap = new Map<string, number>()
 
   if (standaloneProcedureIds.length > 0) {
     const costRows = await db
@@ -226,8 +231,16 @@ export async function getTransactionsAction(year: number, month: number) {
 
   const enriched = rows.map((r) => {
     let cost = 0
-    if (r.clientPackageId && packageCostMap.has(r.clientPackageId)) {
-      cost = packageCostMap.get(r.clientPackageId)!
+    if (r.txClientPackageId) {
+      // Package sale transaction: cost = total package supply cost
+      const pkg = packageCostMap.get(r.txClientPackageId)
+      cost = pkg?.cost ?? 0
+    } else if (r.apptClientPackageId) {
+      // Package session completion: cost = per-session supply cost
+      const pkg = packageCostMap.get(r.apptClientPackageId)
+      if (pkg && pkg.cost > 0 && pkg.totalSessions > 0) {
+        cost = Math.round(pkg.cost / pkg.totalSessions)
+      }
     } else if (r.procedureId) {
       cost = supplyCostMap.get(r.procedureId) ?? 0
     }
