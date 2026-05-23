@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { updateProfileAction, uploadAvatarAction } from "@/actions/user"
+import { mediaUrl } from "@/lib/media-url"
 import { Camera, Check } from "lucide-react"
 import type { User } from "@/db/schema"
 
@@ -28,7 +29,7 @@ function getInitials(name: string) {
 }
 
 export function ProfileForm({ user }: { user: User }) {
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(user.image ?? null)
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(user.image ? mediaUrl(user.image) : null)
   const [avatarError, setAvatarError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
