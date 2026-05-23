@@ -5,7 +5,7 @@ import { users } from "@/db/schema"
 import { eq } from "drizzle-orm"
 import { requireSession } from "@/lib/session"
 import { revalidatePath } from "next/cache"
-import { uploadToGCS } from "@/lib/gcs"
+import { uploadToStorage } from "@/lib/storage"
 import type { ActionResult } from "./auth"
 
 export async function getCurrentUserAction() {
@@ -53,10 +53,10 @@ export async function uploadAvatarAction(formData: FormData): Promise<ActionResu
   if (!file.type.startsWith("image/")) return { success: false, error: "Formato inválido. Envie uma imagem." }
 
   const ext = file.type === "image/png" ? "png" : "jpg"
-  const objectName = `zeta/avatars/${userId}.${ext}`
+  const objectName = `avatars/${userId}.${ext}`
   const buffer = Buffer.from(await file.arrayBuffer())
 
-  const imageUrl = await uploadToGCS(objectName, buffer, file.type)
+  const imageUrl = await uploadToStorage(objectName, buffer, file.type)
   await db.update(users).set({ image: imageUrl, updatedAt: new Date() }).where(eq(users.id, userId))
 
   revalidatePath("/perfil")

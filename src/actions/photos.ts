@@ -6,7 +6,7 @@ import { eq, and, desc } from "drizzle-orm"
 import { requireSession } from "@/lib/session"
 import { todayBRT } from "@/lib/date"
 import { revalidatePath } from "next/cache"
-import { uploadToGCS, deleteFromGCS, gcsUrlToObjectName } from "@/lib/gcs"
+import { uploadToStorage, deleteFromStorage, storageUrlToObjectName } from "@/lib/storage"
 import type { ActionResult } from "./auth"
 
 export async function getClientPhotosAction(clientId: string) {
@@ -49,10 +49,10 @@ export async function uploadClientPhotoAction(
 
   const ext = file.type.includes("png") ? "png" : "jpg"
   const photoId = crypto.randomUUID()
-  const objectName = `zeta/photos/${organizationId}/${clientId}-${photoId}.${ext}`
+  const objectName = `photos/${organizationId}/${clientId}-${photoId}.${ext}`
   const buffer = Buffer.from(await file.arrayBuffer())
 
-  const url = await uploadToGCS(objectName, buffer, file.type)
+  const url = await uploadToStorage(objectName, buffer, file.type)
 
   let procedureName: string | null = null
   if (procedureId) {
@@ -98,7 +98,7 @@ export async function deleteClientPhotoAction(photoId: string, clientId: string)
 
   if (!photo) return { success: false, error: "Foto não encontrada." }
 
-  await deleteFromGCS(gcsUrlToObjectName(photo.url))
+  await deleteFromStorage(storageUrlToObjectName(photo.url))
   await db.delete(clientPhotos).where(eq(clientPhotos.id, photoId))
 
   revalidatePath(`/clientes/${clientId}/fotos`)

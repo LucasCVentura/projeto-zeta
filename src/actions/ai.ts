@@ -8,11 +8,13 @@ import { requireSession } from "@/lib/session"
 import { todayBRT } from "@/lib/date"
 async function photoToBase64(url: string): Promise<string | null> {
   try {
-    if (url.startsWith("gcs://")) {
-      // Lê direto do GCS sem passar pela signed URL
-      const { downloadFromGCS, gcsUrlToObjectName } = await import("@/lib/gcs")
-      const buffer = await downloadFromGCS(gcsUrlToObjectName(url))
-      return buffer?.toString("base64") ?? null
+    // Supabase internal URL — fetch via public URL
+    if (url.startsWith("supabase://")) {
+      const { mediaUrl } = await import("@/lib/media-url")
+      const publicUrl = mediaUrl(url)
+      const res = await fetch(publicUrl)
+      if (!res.ok) return null
+      return Buffer.from(await res.arrayBuffer()).toString("base64")
     }
     if (url.startsWith("http")) {
       const res = await fetch(url)
