@@ -41,7 +41,7 @@ export function ClientPackagesSection({ clientId, clientPackages: initial, avail
   const [packages, setPackages] = useState(initial)
   const [showAssign, setShowAssign] = useState(false)
   const [selectedPkgId, setSelectedPkgId] = useState(availablePackages[0]?.id ?? "")
-  const [purchasedAt, setPurchasedAt] = useState(new Date().toISOString().split("T")[0])
+  const [purchasedAt, setPurchasedAt] = useState(() => new Date().toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" }))
   const [loading, setLoading] = useState(false)
 
   const activePackages = availablePackages.filter((p) => p.active)

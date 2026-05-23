@@ -29,9 +29,14 @@ function formatDate(dateStr: string) {
 }
 
 export function FinanceiroView() {
-  const now = new Date()
-  const [year, setYear] = useState(now.getFullYear())
-  const [month, setMonth] = useState(now.getMonth() + 1)
+  const [year, setYear] = useState(() => {
+    const now = new Date(new Date().toLocaleString("en-CA", { timeZone: "America/Sao_Paulo", hour12: false }))
+    return now.getFullYear()
+  })
+  const [month, setMonth] = useState(() => {
+    const now = new Date(new Date().toLocaleString("en-CA", { timeZone: "America/Sao_Paulo", hour12: false }))
+    return now.getMonth() + 1
+  })
   const [data, setData] = useState<{ rows: Transaction[]; total: number } | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 

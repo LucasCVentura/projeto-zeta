@@ -23,7 +23,7 @@ export function PhotoUpload({ clientId, onUploaded }: Props) {
   const [procedures, setProcedures] = useState<Procedure[]>([])
   const [procedureId, setProcedureId] = useState("")
   const [notes, setNotes] = useState("")
-  const [takenAt, setTakenAt] = useState(new Date().toISOString().split("T")[0])
+  const [takenAt, setTakenAt] = useState(() => new Date().toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" }))
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const cameraRef = useRef<HTMLInputElement>(null)
@@ -40,7 +40,7 @@ export function PhotoUpload({ clientId, onUploaded }: Props) {
     setFile(null)
     setProcedureId("")
     setNotes("")
-    setTakenAt(new Date().toISOString().split("T")[0])
+    setTakenAt(new Date().toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" }))
     setError(null)
   }
 
