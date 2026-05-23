@@ -33,17 +33,24 @@ export async function createCheckoutSessionAction(): Promise<ActionResult> {
 
   const baseUrl = process.env.AUTH_URL ?? "http://localhost:3000"
 
-  const session = await stripe.checkout.sessions.create({
-    customer: customerId,
-    mode: "subscription",
-    line_items: [{ price: PRICE_ID, quantity: 1 }],
-    success_url: `${baseUrl}/dashboard?assinatura=ativa`,
-    cancel_url: `${baseUrl}/assinar`,
-    metadata: { organizationId },
-    subscription_data: { metadata: { organizationId } },
-    payment_method_types: ["card"],
-    locale: "pt-BR",
-  })
+  let session
+  try {
+    session = await stripe.checkout.sessions.create({
+      customer: customerId,
+      mode: "subscription",
+      line_items: [{ price: PRICE_ID, quantity: 1 }],
+      success_url: `${baseUrl}/dashboard?assinatura=ativa`,
+      cancel_url: `${baseUrl}/assinar`,
+      metadata: { organizationId },
+      subscription_data: { metadata: { organizationId } },
+      payment_method_types: ["card"],
+      locale: "pt-BR",
+    })
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error("[checkout] Stripe error:", msg)
+    return { error: `Erro Stripe: ${msg}` }
+  }
 
   if (!session.url) return { error: "Erro ao iniciar sessão de pagamento. Tente novamente." }
 
