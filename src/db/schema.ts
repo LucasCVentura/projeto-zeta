@@ -77,6 +77,7 @@ export const organizations = pgTable("organizations", {
   email: text("email"),
   instagram: text("instagram"),
   address: text("address"),
+  googleReviewUrl: text("google_review_url"),
   logo: text("logo"),
 
   stripeCustomerId: text("stripe_customer_id"),

@@ -18,6 +18,7 @@ export async function getOrganizationAction() {
       email: organizations.email,
       instagram: organizations.instagram,
       address: organizations.address,
+      googleReviewUrl: organizations.googleReviewUrl,
     })
     .from(organizations)
     .where(eq(organizations.id, organizationId))
@@ -32,6 +33,7 @@ export async function updateOrganizationAction(data: {
   email?: string
   instagram?: string
   address?: string
+  googleReviewUrl?: string
 }): Promise<ActionResult> {
   const { organizationId, role } = await requireSession()
 
@@ -47,6 +49,7 @@ export async function updateOrganizationAction(data: {
       email: data.email || null,
       instagram: data.instagram ? data.instagram.replace(/^@/, "") : null,
       address: data.address || null,
+      googleReviewUrl: data.googleReviewUrl || null,
     })
     .where(eq(organizations.id, organizationId))
 

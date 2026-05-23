@@ -106,7 +106,7 @@ export async function completeAppointmentWithRevenueAction(data: {
         .limit(1)
 
       const [org] = await db
-        .select({ name: organizations.name })
+        .select({ name: organizations.name, googleReviewUrl: organizations.googleReviewUrl })
         .from(organizations)
         .where(eq(organizations.id, organizationId))
         .limit(1)
@@ -116,6 +116,7 @@ export async function completeAppointmentWithRevenueAction(data: {
           clientPhone: clientData.phone,
           clientName: clientData.name,
           orgName: org?.name ?? "Clínica",
+          googleReviewUrl: org?.googleReviewUrl,
         })
       }
     }

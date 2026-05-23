@@ -15,6 +15,7 @@ const schema = z.object({
   email: z.string().email("E-mail inválido").optional().or(z.literal("")),
   instagram: z.string().optional(),
   address: z.string().optional(),
+  googleReviewUrl: z.string().optional(),
 })
 
 type FormData = z.infer<typeof schema>
@@ -69,6 +70,12 @@ export function ClinicForm({ defaultValues }: { defaultValues: FormData }) {
       <div className="space-y-2">
         <Label htmlFor="address">Endereço</Label>
         <Input id="address" {...register("address")} placeholder="Rua, número, bairro — Cidade/UF" />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="googleReviewUrl">Link de avaliação do Google</Label>
+        <Input id="googleReviewUrl" {...register("googleReviewUrl")} placeholder="https://g.page/r/..." />
+        <p className="text-xs text-muted-foreground">Enviado automaticamente na mensagem pós-consulta via WhatsApp.</p>
       </div>
 
       {error && <p className="text-sm text-destructive">{error}</p>}

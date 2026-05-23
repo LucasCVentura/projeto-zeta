@@ -1,6 +1,6 @@
 "use server"
 
-import { sendWhatsApp } from "@/lib/twilio"
+import { sendWhatsApp } from "@/lib/whatsapp-client"
 import { makeAppointmentToken } from "@/lib/appointment-tokens"
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? process.env.AUTH_URL ?? "https://app.kirasaas.com.br"
@@ -64,13 +64,19 @@ export async function sendPostConsultationMessage(params: {
   clientPhone: string
   clientName: string
   orgName: string
+  googleReviewUrl?: string | null
 }) {
-  const { clientPhone, clientName, orgName } = params
+  const { clientPhone, clientName, orgName, googleReviewUrl } = params
+
+  const review = googleReviewUrl
+    ? `\n\n⭐ Sua opinião é muito importante! Deixe sua avaliação:\n${googleReviewUrl}`
+    : ""
 
   const body =
     `Olá, ${clientName}! 💜\n\n` +
     `Obrigado por nos visitar hoje na *${orgName}*.\n\n` +
-    `Esperamos que tenha gostado do atendimento. Qualquer dúvida sobre o procedimento realizado, estamos à disposição.\n\n` +
+    `Esperamos que tenha gostado do atendimento. Qualquer dúvida sobre o procedimento realizado, estamos à disposição.` +
+    `${review}\n\n` +
     `Até a próxima! ✨`
 
   await sendWhatsApp(clientPhone, body)

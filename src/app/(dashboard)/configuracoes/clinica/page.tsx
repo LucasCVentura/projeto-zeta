@@ -22,6 +22,7 @@ export default async function ClinicaPage() {
         email: org?.email ?? "",
         instagram: org?.instagram ?? "",
         address: org?.address ?? "",
+        googleReviewUrl: org?.googleReviewUrl ?? "",
       }} />
     </div>
   )
