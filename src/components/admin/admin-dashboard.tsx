@@ -1,8 +1,8 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { extendTrialAction, cancelOrgAction, adminChatAction } from "@/actions/admin"
-import { Send, Loader2, Trophy, TrendingUp, Users, DollarSign, ChevronDown, ChevronUp, Sprout, Rocket, Gem, Coins, Star, Activity, MessageSquare } from "lucide-react"
+import { extendTrialAction, cancelOrgAction, adminChatAction, markInboundEmailReadAction } from "@/actions/admin"
+import { Send, Loader2, Trophy, TrendingUp, Users, DollarSign, ChevronDown, ChevronUp, Sprout, Rocket, Gem, Coins, Star, Activity, MessageSquare, Mail, MailOpen } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -48,6 +48,15 @@ type FeedbackSummary = {
   generatedAt: Date
 } | null
 
+type InboundEmail = {
+  id: string
+  from: string
+  subject: string
+  body: string
+  read: boolean
+  receivedAt: Date
+}
+
 const GOALS = [
   { label: "Primeiros clientes", target: 10, icon: Sprout, metric: (m: Metrics) => m.totalOrgs },
   { label: "50 clínicas", target: 50, icon: Rocket, metric: (m: Metrics) => m.totalOrgs },
@@ -78,14 +87,19 @@ export function AdminDashboard({
   metrics,
   feedbacks,
   feedbackSummary,
+  inboundEmails: initialInboundEmails,
 }: {
   metrics: Metrics
   feedbacks: FeedbackItem[]
   feedbackSummary: FeedbackSummary
+  inboundEmails: InboundEmail[]
 }) {
   const [orgs, setOrgs] = useState(metrics.orgs)
   const [expandedOrg, setExpandedOrg] = useState<string | null>(null)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
+
+  const [inboundEmails, setInboundEmails] = useState(initialInboundEmails)
+  const [expandedEmail, setExpandedEmail] = useState<string | null>(null)
 
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState("")
@@ -126,6 +140,15 @@ export function AdminDashboard({
     setActionLoading(null)
   }
 
+  async function handleExpandEmail(id: string) {
+    setExpandedEmail(expandedEmail === id ? null : id)
+    const email = inboundEmails.find(e => e.id === id)
+    if (email && !email.read) {
+      await markInboundEmailReadAction(id)
+      setInboundEmails(prev => prev.map(e => e.id === id ? { ...e, read: true } : e))
+    }
+  }
+
   async function handleChat(e: React.FormEvent) {
     e.preventDefault()
     if (!input.trim() || chatLoading) return
@@ -154,6 +177,14 @@ export function AdminDashboard({
             <TabsTrigger value="clinicas">Clínicas ({orgs.length})</TabsTrigger>
             <TabsTrigger value="growth" className="flex items-center gap-1.5"><TrendingUp size={13} />Growth</TabsTrigger>
             <TabsTrigger value="feedback" className="flex items-center gap-1.5"><MessageSquare size={13} />Feedback {feedbacks.length > 0 && <span className="ml-0.5 text-[10px] bg-primary/15 text-primary rounded-full px-1.5 py-0.5 font-medium">{feedbacks.length}</span>}</TabsTrigger>
+            <TabsTrigger value="suporte" className="flex items-center gap-1.5">
+              <Mail size={13} />Suporte
+              {inboundEmails.filter(e => !e.read).length > 0 && (
+                <span className="ml-0.5 text-[10px] bg-destructive/15 text-destructive rounded-full px-1.5 py-0.5 font-medium">
+                  {inboundEmails.filter(e => !e.read).length}
+                </span>
+              )}
+            </TabsTrigger>
           </TabsList>
 
           {/* Aba: Visão Geral */}
@@ -385,6 +416,55 @@ export function AdminDashboard({
                 </div>
               )}
             </div>
+          </TabsContent>
+
+          {/* Aba: Suporte */}
+          <TabsContent value="suporte" className="space-y-3">
+            {inboundEmails.length === 0 ? (
+              <div className="rounded-xl border border-border bg-card p-8 text-center space-y-2">
+                <MailOpen size={24} className="mx-auto text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">Nenhum email recebido ainda.</p>
+                <p className="text-xs text-muted-foreground">Emails enviados para <span className="font-medium">suporte@kiraclinic.com.br</span> aparecerão aqui.</p>
+              </div>
+            ) : (
+              <div className="rounded-xl border border-border overflow-hidden divide-y divide-border">
+                {inboundEmails.map((email) => (
+                  <div key={email.id}>
+                    <button
+                      onClick={() => handleExpandEmail(email.id)}
+                      className={cn(
+                        "w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/30 transition-colors text-left",
+                        !email.read && "bg-primary/5"
+                      )}
+                    >
+                      <div className="shrink-0 text-muted-foreground">
+                        {email.read ? <MailOpen size={14} /> : <Mail size={14} className="text-primary" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className={cn("text-sm truncate", !email.read && "font-semibold")}>{email.subject}</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                          {email.from} · {new Date(email.receivedAt).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+                        </p>
+                      </div>
+                      <div className="text-muted-foreground shrink-0">
+                        {expandedEmail === email.id ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                      </div>
+                    </button>
+
+                    {expandedEmail === email.id && (
+                      <div className="px-4 pb-4 pt-2 bg-muted/20 space-y-2">
+                        <p className="text-xs text-muted-foreground">De: <span className="text-foreground">{email.from}</span></p>
+                        <div className="rounded-lg bg-background border border-border p-3 text-sm whitespace-pre-wrap leading-relaxed">
+                          {email.body || "(sem conteúdo)"}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </TabsContent>
 
         </Tabs>

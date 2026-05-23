@@ -617,3 +617,19 @@ export const feedbackSummaries = pgTable("feedback_summaries", {
 })
 
 export type FeedbackSummary = typeof feedbackSummaries.$inferSelect
+
+// ── inbound_emails ─────────────────────────────────────────────────────────────
+
+export const inboundEmails = pgTable("inbound_emails", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+
+  from: text("from").notNull(),
+  subject: text("subject").notNull().default("(sem assunto)"),
+  body: text("body").notNull().default(""),
+  read: boolean("read").notNull().default(false),
+  receivedAt: timestamp("received_at").notNull().defaultNow(),
+})
+
+export type InboundEmail = typeof inboundEmails.$inferSelect

@@ -135,6 +135,20 @@ export async function cancelOrgAction(orgId: string) {
   revalidatePath("/admin")
 }
 
+export async function getInboundEmailsAction() {
+  await requireAdmin()
+  const { inboundEmails } = await import("@/db/schema")
+  const { desc } = await import("drizzle-orm")
+  return db.select().from(inboundEmails).orderBy(desc(inboundEmails.receivedAt))
+}
+
+export async function markInboundEmailReadAction(id: string) {
+  await requireAdmin()
+  const { inboundEmails } = await import("@/db/schema")
+  const { eq } = await import("drizzle-orm")
+  await db.update(inboundEmails).set({ read: true }).where(eq(inboundEmails.id, id))
+}
+
 export async function adminChatAction(messages: { role: "user" | "assistant"; content: string }[], metricsContext: string) {
   await requireAdmin()
 
