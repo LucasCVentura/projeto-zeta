@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils"
 type Transaction = {
   id: string
   amount: number
+  cost: number
   description: string | null
   date: string
   appointmentId: string | null
@@ -37,7 +38,7 @@ export function FinanceiroView() {
     const now = new Date(new Date().toLocaleString("en-CA", { timeZone: "America/Sao_Paulo", hour12: false }))
     return now.getMonth() + 1
   })
-  const [data, setData] = useState<{ rows: Transaction[]; total: number } | null>(null)
+  const [data, setData] = useState<{ rows: Transaction[]; total: number; totalCost: number } | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
@@ -89,22 +90,37 @@ export function FinanceiroView() {
         </button>
       </div>
 
-      {/* Card total */}
-      <div className="surface flex items-center gap-4">
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-green-50">
-          <TrendingUp size={20} className="text-green-600" />
-        </div>
-        <div>
-          <p className="text-xs text-muted-foreground">Total do mês</p>
-          <p className="text-2xl font-bold">
-            {isLoading ? "—" : formatCurrency(data?.total ?? 0)}
-          </p>
-        </div>
-        {!isLoading && data && (
-          <div className="ml-auto text-right">
-            <p className="text-2xl font-bold text-muted-foreground/40">{data.rows.length}</p>
-            <p className="text-xs text-muted-foreground">atendimento{data.rows.length !== 1 ? "s" : ""}</p>
+      {/* Cards resumo */}
+      <div className="grid grid-cols-3 gap-3">
+        <div className="surface col-span-3 flex items-center gap-4">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-green-50">
+            <TrendingUp size={20} className="text-green-600" />
           </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs text-muted-foreground">Receita bruta</p>
+            <p className="text-2xl font-bold">
+              {isLoading ? "—" : formatCurrency(data?.total ?? 0)}
+            </p>
+          </div>
+          {!isLoading && data && (
+            <div className="ml-auto text-right shrink-0">
+              <p className="text-2xl font-bold text-muted-foreground/40">{data.rows.length}</p>
+              <p className="text-xs text-muted-foreground">atendimento{data.rows.length !== 1 ? "s" : ""}</p>
+            </div>
+          )}
+        </div>
+
+        {!isLoading && data && (data.totalCost > 0) && (
+          <>
+            <div className="surface">
+              <p className="text-xs text-muted-foreground">Custo insumos</p>
+              <p className="text-lg font-semibold text-orange-600">{formatCurrency(data.totalCost)}</p>
+            </div>
+            <div className="surface col-span-2">
+              <p className="text-xs text-muted-foreground">Lucro líquido</p>
+              <p className="text-lg font-semibold text-green-600">{formatCurrency(data.total - data.totalCost)}</p>
+            </div>
+          </>
         )}
       </div>
 
@@ -124,9 +140,12 @@ export function FinanceiroView() {
                 <p className="text-sm font-medium truncate">{tx.description ?? "Atendimento"}</p>
                 <p className="text-xs text-muted-foreground">{formatDate(tx.date)}</p>
               </div>
-              <span className="text-sm font-semibold text-green-600 shrink-0">
-                {formatCurrency(tx.amount)}
-              </span>
+              <div className="text-right shrink-0">
+                <p className="text-sm font-semibold text-green-600">{formatCurrency(tx.amount)}</p>
+                {tx.cost > 0 && (
+                  <p className="text-xs text-orange-500">-{formatCurrency(tx.cost)} insumos</p>
+                )}
+              </div>
             </div>
           ))
         )}

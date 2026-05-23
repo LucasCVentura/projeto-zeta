@@ -132,8 +132,10 @@ export async function getTransactionsAction(year: number, month: number) {
       description: transactions.description,
       date: transactions.date,
       appointmentId: transactions.appointmentId,
+      procedureId: appointments.procedureId,
     })
     .from(transactions)
+    .leftJoin(appointments, eq(appointments.id, transactions.appointmentId))
     .where(
       and(
         eq(transactions.organizationId, organizationId),
@@ -144,6 +146,41 @@ export async function getTransactionsAction(year: number, month: number) {
     )
     .orderBy(transactions.date)
 
-  const total = rows.reduce((acc, r) => acc + r.amount, 0)
-  return { rows, total }
+  // Calculate material cost per transaction using procedure_supplies
+  const procedureIds = [...new Set(rows.map((r) => r.procedureId).filter(Boolean) as string[])]
+
+  const costMap = new Map<string, number>() // procedureId → cost in cents
+  if (procedureIds.length > 0) {
+    const costRows = await db
+      .select({
+        procedureId: procedureSupplies.procedureId,
+        quantityPerSession: procedureSupplies.quantityPerSession,
+        costPerUnit: supplies.costPerUnit,
+      })
+      .from(procedureSupplies)
+      .innerJoin(supplies, eq(supplies.id, procedureSupplies.supplyId))
+      .where(
+        and(
+          eq(supplies.organizationId, organizationId),
+        )
+      )
+
+    for (const cr of costRows) {
+      const prev = costMap.get(cr.procedureId) ?? 0
+      costMap.set(cr.procedureId, prev + Math.round(Number(cr.quantityPerSession) * cr.costPerUnit))
+    }
+  }
+
+  const enriched = rows.map((r) => ({
+    id: r.id,
+    amount: r.amount,
+    description: r.description,
+    date: r.date,
+    appointmentId: r.appointmentId,
+    cost: r.procedureId ? (costMap.get(r.procedureId) ?? 0) : 0,
+  }))
+
+  const total = enriched.reduce((acc, r) => acc + r.amount, 0)
+  const totalCost = enriched.reduce((acc, r) => acc + r.cost, 0)
+  return { rows: enriched, total, totalCost }
 }
