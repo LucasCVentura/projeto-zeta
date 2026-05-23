@@ -110,12 +110,12 @@ export default async function AssinaturaPage() {
               <span className="text-muted-foreground">
                 {sub.cancel_at_period_end ? "Acesso até" : "Próxima cobrança"}
               </span>
-              <span className="font-medium">{fmt(sub.current_period_end)}</span>
+              <span className="font-medium">{fmt(sub.items.data[0]?.current_period_end ?? (sub as unknown as Record<string, number>).current_period_end)}</span>
             </div>
             {sub.cancel_at_period_end && (
               <div className="rounded-lg bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-400">
                 Sua assinatura foi cancelada e expira em{" "}
-                <strong>{fmt(sub.current_period_end)}</strong>.
+                <strong>{fmt(sub.items.data[0]?.current_period_end ?? (sub as unknown as Record<string, number>).current_period_end)}</strong>.
               </div>
             )}
           </div>
