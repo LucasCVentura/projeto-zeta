@@ -21,6 +21,15 @@ export async function createCheckoutSessionAction(): Promise<ActionResult> {
 
   let customerId = org.stripeCustomerId
 
+  if (customerId) {
+    try {
+      await stripe.customers.retrieve(customerId)
+    } catch {
+      customerId = null
+      await db.update(organizations).set({ stripeCustomerId: null }).where(eq(organizations.id, organizationId))
+    }
+  }
+
   if (!customerId) {
     const customer = await stripe.customers.create({
       name: org.name,
