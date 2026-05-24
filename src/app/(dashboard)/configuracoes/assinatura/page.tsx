@@ -5,6 +5,7 @@ import { organizations } from "@/db/schema"
 import { eq } from "drizzle-orm"
 import { stripe } from "@/lib/stripe"
 import { BillingPortalButton } from "@/components/subscription/billing-portal-button"
+import { CancelSubscriptionButton } from "@/components/subscription/cancel-subscription-button"
 import { CheckCircle2, Clock, XCircle, CreditCard, ArrowLeft } from "lucide-react"
 import Link from "next/link"
 
@@ -145,6 +146,7 @@ export default async function AssinaturaPage() {
           </Link>
         )}
         {(isActive || sub) && <BillingPortalButton />}
+        {isActive && !sub?.cancel_at_period_end && <CancelSubscriptionButton />}
       </div>
     </div>
   )

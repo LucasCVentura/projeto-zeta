@@ -1,7 +1,7 @@
 "use server"
 
 import { db } from "@/db"
-import { organizations } from "@/db/schema"
+import { organizations, userFeedback } from "@/db/schema"
 import { eq } from "drizzle-orm"
 import { requireSession } from "@/lib/session"
 import { stripe, PRICE_ID } from "@/lib/stripe"
@@ -68,6 +68,24 @@ export async function createCheckoutSessionAction(): Promise<ActionResult> {
   if (!session.url) return { error: "Erro ao iniciar sessão de pagamento. Tente novamente." }
 
   return { url: session.url }
+}
+
+export async function saveCancellationFeedbackAction(reason: string, comment: string): Promise<{ error: string } | { ok: true }> {
+  const { organizationId, userId } = await requireSession()
+
+  if (!reason) return { error: "Selecione um motivo." }
+
+  const content = comment.trim()
+    ? `[CANCELAMENTO] Motivo: ${reason} | Detalhe: ${comment.trim()}`
+    : `[CANCELAMENTO] Motivo: ${reason}`
+
+  await db.insert(userFeedback).values({
+    organizationId,
+    userId,
+    content,
+  })
+
+  return { ok: true }
 }
 
 export async function createBillingPortalAction(): Promise<ActionResult> {
