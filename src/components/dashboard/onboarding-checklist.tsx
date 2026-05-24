@@ -138,8 +138,8 @@ export function OnboardingChecklist({
           </div>
           <p className="text-xs text-muted-foreground">
             Sugestões ou problemas?{" "}
-            <a href="mailto:contato@send.kiraclinic.com.br" className="text-primary hover:underline underline-offset-4">
-              contato@send.kiraclinic.com.br
+            <a href="mailto:suporte@kiraclinic.com.br" className="text-primary hover:underline underline-offset-4">
+              suporte@kiraclinic.com.br
             </a>
           </p>
         </div>

@@ -114,7 +114,7 @@ export default function TermosPage() {
           </Section>
 
           <Section title="15. Contato">
-            <p>Dúvidas sobre estes termos podem ser enviadas para: <strong>contato@send.kiraclinic.com.br</strong></p>
+            <p>Dúvidas sobre estes termos podem ser enviadas para: <strong>suporte@kiraclinic.com.br</strong></p>
           </Section>
         </div>
 

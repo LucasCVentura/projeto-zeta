@@ -33,7 +33,7 @@ export default function PrivacidadePage() {
 
           <Section title="1. Controlador e Operador de Dados">
             <p>O Kira atua como <strong>controlador</strong> dos dados dos Usuários da plataforma (profissionais de estética) e como <strong>operador</strong> dos dados dos clientes finais cadastrados pelos Usuários.</p>
-            <p>Encarregado de Dados (DPO): <strong>contato@send.kiraclinic.com.br</strong></p>
+            <p>Encarregado de Dados (DPO): <strong>suporte@kiraclinic.com.br</strong></p>
           </Section>
 
           <Section title="2. Dados Coletados">
@@ -122,7 +122,7 @@ export default function PrivacidadePage() {
               <li>Revogar consentimento a qualquer momento</li>
               <li>Solicitar a exclusão completa da sua conta e dados</li>
             </ul>
-            <p>Para exercer qualquer direito, envie um e-mail para <strong>contato@send.kiraclinic.com.br</strong> com o assunto &quot;Direitos LGPD&quot;. Responderemos em até 15 dias úteis.</p>
+            <p>Para exercer qualquer direito, envie um e-mail para <strong>suporte@kiraclinic.com.br</strong> com o assunto &quot;Direitos LGPD&quot;. Responderemos em até 15 dias úteis.</p>
           </Section>
 
           <Section title="8. Segurança">
@@ -146,7 +146,7 @@ export default function PrivacidadePage() {
           <Section title="11. Contato">
             <p>Para dúvidas, solicitações ou reclamações relacionadas à privacidade:</p>
             <ul>
-              <li>E-mail: <strong>contato@send.kiraclinic.com.br</strong></li>
+              <li>E-mail: <strong>suporte@kiraclinic.com.br</strong></li>
               <li>Você também pode registrar reclamações na Autoridade Nacional de Proteção de Dados (ANPD): <strong>gov.br/anpd</strong></li>
             </ul>
           </Section>
