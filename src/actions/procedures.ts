@@ -5,22 +5,22 @@ import { procedures } from "@/db/schema"
 import { eq, and } from "drizzle-orm"
 import { requireSession } from "@/lib/session"
 import { can } from "@/lib/permissions"
-import { revalidatePath } from "next/cache"
+import { revalidatePath, revalidateTag, unstable_cache } from "next/cache"
 import type { ActionResult } from "./auth"
 
 export async function getProceduresAction() {
   const { organizationId } = await requireSession()
-
-  return db
-    .select()
-    .from(procedures)
-    .where(
-      and(
-        eq(procedures.organizationId, organizationId),
-        eq(procedures.active, true)
-      )
-    )
-    .orderBy(procedures.name)
+  const tag = `procedures-${organizationId}`
+  return unstable_cache(
+    async (orgId: string) =>
+      db
+        .select()
+        .from(procedures)
+        .where(and(eq(procedures.organizationId, orgId), eq(procedures.active, true)))
+        .orderBy(procedures.name),
+    [tag],
+    { tags: [tag], revalidate: 3600 }
+  )(organizationId)
 }
 
 export async function createProcedureAction(data: {
@@ -43,6 +43,7 @@ export async function createProcedureAction(data: {
     returnIntervalDays: data.hasReturn ? (data.returnIntervalDays ?? null) : null,
   })
 
+  revalidateTag(`procedures-${organizationId}`, {})
   revalidatePath("/configuracoes/procedimentos")
   return { success: true }
 }
@@ -73,6 +74,7 @@ export async function updateProcedureAction(
       )
     )
 
+  revalidateTag(`procedures-${organizationId}`, {})
   revalidatePath("/configuracoes/procedimentos")
   return { success: true }
 }
@@ -95,6 +97,7 @@ export async function deleteProcedureAction(id: string): Promise<ActionResult> {
       )
     )
 
+  revalidateTag(`procedures-${organizationId}`, {})
   revalidatePath("/configuracoes/procedimentos")
   return { success: true }
 }

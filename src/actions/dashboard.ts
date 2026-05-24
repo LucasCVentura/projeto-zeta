@@ -4,11 +4,20 @@ import { db } from "@/db"
 import { appointments, clients, transactions } from "@/db/schema"
 import { eq, and, gte, lte, sum, count, sql, isNotNull } from "drizzle-orm"
 import { requireSession } from "@/lib/session"
+import { unstable_cache } from "next/cache"
 import { todayBRT, nowBRT } from "@/lib/date"
 
 export async function getDashboardDataAction() {
   const { userId, organizationId } = await requireSession()
+  const tag = `dashboard-${userId}-${organizationId}`
+  return unstable_cache(
+    async (uId: string, orgId: string) => _fetchDashboard(uId, orgId),
+    [tag],
+    { tags: [tag], revalidate: 60 }
+  )(userId, organizationId)
+}
 
+async function _fetchDashboard(userId: string, organizationId: string) {
   const today = todayBRT()
   const now = nowBRT()
   const year = now.getFullYear()

@@ -5,7 +5,7 @@ import { clients, clientAnamnesis, appointments } from "@/db/schema"
 import { eq, and, ilike, or, count, max, sql, desc, asc } from "drizzle-orm"
 import { requireSession } from "@/lib/session"
 import { can } from "@/lib/permissions"
-import { revalidatePath } from "next/cache"
+import { revalidatePath, revalidateTag, unstable_cache } from "next/cache"
 import type { ActionResult } from "./auth"
 
 // ── Listar clientes ───────────────────────────────────────────────────────────
@@ -13,81 +13,96 @@ import type { ActionResult } from "./auth"
 export async function getClientsListAction(search?: string) {
   const { organizationId } = await requireSession()
 
-  const baseQuery = db
-    .select({
-      id: clients.id,
-      name: clients.name,
-      phone: clients.phone,
-      whatsapp: clients.whatsapp,
-      email: clients.email,
-      createdAt: clients.createdAt,
-      totalAppointments: count(appointments.id),
-      lastAppointment: max(appointments.date),
-    })
-    .from(clients)
-    .leftJoin(appointments, eq(appointments.clientId, clients.id))
-    .where(
-      search
-        ? and(
-            eq(clients.organizationId, organizationId),
-            or(
-              ilike(clients.name, `%${search}%`),
-              ilike(clients.phone ?? "", `%${search}%`),
-              ilike(clients.whatsapp ?? "", `%${search}%`)
-            )
+  // Buscas com texto nunca são cacheadas (resultado altamente variável)
+  if (search) {
+    return db
+      .select({
+        id: clients.id,
+        name: clients.name,
+        phone: clients.phone,
+        whatsapp: clients.whatsapp,
+        email: clients.email,
+        createdAt: clients.createdAt,
+        totalAppointments: count(appointments.id),
+        lastAppointment: max(appointments.date),
+      })
+      .from(clients)
+      .leftJoin(appointments, eq(appointments.clientId, clients.id))
+      .where(
+        and(
+          eq(clients.organizationId, organizationId),
+          or(
+            ilike(clients.name, `%${search}%`),
+            ilike(clients.phone ?? "", `%${search}%`),
+            ilike(clients.whatsapp ?? "", `%${search}%`)
           )
-        : eq(clients.organizationId, organizationId)
-    )
-    .groupBy(clients.id)
-    .orderBy(sql`lower(${clients.name})`)
+        )
+      )
+      .groupBy(clients.id)
+      .orderBy(sql`lower(${clients.name})`)
+  }
 
-  return baseQuery
+  const tag = `clients-${organizationId}`
+  return unstable_cache(
+    async (orgId: string) =>
+      db
+        .select({
+          id: clients.id,
+          name: clients.name,
+          phone: clients.phone,
+          whatsapp: clients.whatsapp,
+          email: clients.email,
+          createdAt: clients.createdAt,
+          totalAppointments: count(appointments.id),
+          lastAppointment: max(appointments.date),
+        })
+        .from(clients)
+        .leftJoin(appointments, eq(appointments.clientId, clients.id))
+        .where(eq(clients.organizationId, orgId))
+        .groupBy(clients.id)
+        .orderBy(sql`lower(${clients.name})`),
+    [tag],
+    { tags: [tag], revalidate: 3600 }
+  )(organizationId)
 }
 
 // ── Buscar cliente por ID ─────────────────────────────────────────────────────
 
 export async function getClientAction(clientId: string) {
   const { organizationId } = await requireSession()
+  const tag = `client-${clientId}`
+  return unstable_cache(
+    async (cId: string, orgId: string) => {
+      const [client] = await db
+        .select()
+        .from(clients)
+        .where(and(eq(clients.id, cId), eq(clients.organizationId, orgId)))
+        .limit(1)
 
-  const [client] = await db
-    .select()
-    .from(clients)
-    .where(
-      and(
-        eq(clients.id, clientId),
-        eq(clients.organizationId, organizationId)
-      )
-    )
-    .limit(1)
+      if (!client) return null
 
-  if (!client) return null
+      const [anamnesis, history] = await Promise.all([
+        db.select().from(clientAnamnesis).where(eq(clientAnamnesis.clientId, cId)).limit(1),
+        db
+          .select({
+            id: appointments.id,
+            date: appointments.date,
+            startTime: appointments.startTime,
+            endTime: appointments.endTime,
+            procedure: appointments.procedure,
+            status: appointments.status,
+            notes: appointments.notes,
+          })
+          .from(appointments)
+          .where(and(eq(appointments.clientId, cId), eq(appointments.organizationId, orgId)))
+          .orderBy(asc(appointments.date), asc(appointments.startTime)),
+      ])
 
-  const anamnesis = await db
-    .select()
-    .from(clientAnamnesis)
-    .where(eq(clientAnamnesis.clientId, clientId))
-    .limit(1)
-
-  const history = await db
-    .select({
-      id: appointments.id,
-      date: appointments.date,
-      startTime: appointments.startTime,
-      endTime: appointments.endTime,
-      procedure: appointments.procedure,
-      status: appointments.status,
-      notes: appointments.notes,
-    })
-    .from(appointments)
-    .where(
-      and(
-        eq(appointments.clientId, clientId),
-        eq(appointments.organizationId, organizationId)
-      )
-    )
-    .orderBy(asc(appointments.date), asc(appointments.startTime))
-
-  return { client, anamnesis: anamnesis[0] ?? null, history }
+      return { client, anamnesis: anamnesis[0] ?? null, history }
+    },
+    [tag],
+    { tags: [tag], revalidate: 3600 }
+  )(clientId, organizationId)
 }
 
 // ── Criar cliente ─────────────────────────────────────────────────────────────
@@ -155,6 +170,7 @@ export async function createClientAction(data: {
     }
   })
 
+  revalidateTag(`clients-${organizationId}`, {})
   revalidatePath("/clientes")
   return { success: true, clientId }
 }
@@ -189,6 +205,8 @@ export async function updateClientAction(
       )
     )
 
+  revalidateTag(`clients-${organizationId}`, {})
+  revalidateTag(`client-${clientId}`, {})
   revalidatePath(`/clientes/${clientId}`)
   return { success: true }
 }
@@ -234,6 +252,7 @@ export async function upsertAnamnesisAction(
     await db.insert(clientAnamnesis).values({ clientId, ...data })
   }
 
+  revalidateTag(`client-${clientId}`, {})
   revalidatePath(`/clientes/${clientId}`)
   return { success: true }
 }

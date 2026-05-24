@@ -4,27 +4,32 @@ import { db } from "@/db"
 import { organizations, organizationMembers } from "@/db/schema"
 import { eq, and } from "drizzle-orm"
 import { requireSession } from "@/lib/session"
-import { revalidatePath } from "next/cache"
+import { revalidatePath, revalidateTag, unstable_cache } from "next/cache"
 import type { ActionResult } from "./auth"
 
 export async function getOrganizationAction() {
   const { organizationId } = await requireSession()
-
-  const [org] = await db
-    .select({
-      id: organizations.id,
-      name: organizations.name,
-      phone: organizations.phone,
-      email: organizations.email,
-      instagram: organizations.instagram,
-      address: organizations.address,
-      googleReviewUrl: organizations.googleReviewUrl,
-    })
-    .from(organizations)
-    .where(eq(organizations.id, organizationId))
-    .limit(1)
-
-  return org ?? null
+  const tag = `org-${organizationId}`
+  return unstable_cache(
+    async (orgId: string) => {
+      const [org] = await db
+        .select({
+          id: organizations.id,
+          name: organizations.name,
+          phone: organizations.phone,
+          email: organizations.email,
+          instagram: organizations.instagram,
+          address: organizations.address,
+          googleReviewUrl: organizations.googleReviewUrl,
+        })
+        .from(organizations)
+        .where(eq(organizations.id, orgId))
+        .limit(1)
+      return org ?? null
+    },
+    [tag],
+    { tags: [tag], revalidate: 3600 }
+  )(organizationId)
 }
 
 export async function updateOrganizationAction(data: {
@@ -53,6 +58,7 @@ export async function updateOrganizationAction(data: {
     })
     .where(eq(organizations.id, organizationId))
 
+  revalidateTag(`org-${organizationId}`, {})
   revalidatePath("/configuracoes/clinica")
   return { success: true }
 }

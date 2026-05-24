@@ -129,6 +129,31 @@
   --sidebar-ring: oklch(0.72 0.1 350);
 }
 
+/* ── Scrollbar personalizada ───────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted-foreground);
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
 /* ── Base styles ───────────────────────────────────────────────────────────── */
 @layer base {
   * {

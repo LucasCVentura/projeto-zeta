@@ -4,29 +4,35 @@ import { db } from "@/db"
 import { packages, clientPackages, procedures, transactions } from "@/db/schema"
 import { eq, and, lt, sql } from "drizzle-orm"
 import { requireSession } from "@/lib/session"
-import { revalidatePath } from "next/cache"
+import { revalidatePath, revalidateTag, unstable_cache } from "next/cache"
 import type { ActionResult } from "./auth"
 
 // ── Pacotes (catálogo) ────────────────────────────────────────────────────────
 
 export async function getPackagesAction() {
   const { organizationId } = await requireSession()
-  return db
-    .select({
-      id: packages.id,
-      name: packages.name,
-      description: packages.description,
-      totalSessions: packages.totalSessions,
-      price: packages.price,
-      cost: packages.cost,
-      active: packages.active,
-      procedureId: packages.procedureId,
-      procedureName: procedures.name,
-    })
-    .from(packages)
-    .innerJoin(procedures, eq(procedures.id, packages.procedureId))
-    .where(eq(packages.organizationId, organizationId))
-    .orderBy(packages.name)
+  const tag = `packages-${organizationId}`
+  return unstable_cache(
+    async (orgId: string) =>
+      db
+        .select({
+          id: packages.id,
+          name: packages.name,
+          description: packages.description,
+          totalSessions: packages.totalSessions,
+          price: packages.price,
+          cost: packages.cost,
+          active: packages.active,
+          procedureId: packages.procedureId,
+          procedureName: procedures.name,
+        })
+        .from(packages)
+        .innerJoin(procedures, eq(procedures.id, packages.procedureId))
+        .where(eq(packages.organizationId, orgId))
+        .orderBy(packages.name),
+    [tag],
+    { tags: [tag], revalidate: 3600 }
+  )(organizationId)
 }
 
 export async function createPackageAction(data: {
@@ -47,6 +53,7 @@ export async function createPackageAction(data: {
     price: data.price,
     cost: data.cost ?? 0,
   })
+  revalidateTag(`packages-${organizationId}`, {})
   revalidatePath("/configuracoes/pacotes")
   return { success: true }
 }
@@ -64,6 +71,7 @@ export async function updatePackageAction(id: string, data: {
     .update(packages)
     .set({ ...data, cost: data.cost ?? 0, description: data.description || null, updatedAt: new Date() })
     .where(and(eq(packages.id, id), eq(packages.organizationId, organizationId)))
+  revalidateTag(`packages-${organizationId}`, {})
   revalidatePath("/configuracoes/pacotes")
   return { success: true }
 }
@@ -73,6 +81,7 @@ export async function deletePackageAction(id: string): Promise<ActionResult> {
   await db
     .delete(packages)
     .where(and(eq(packages.id, id), eq(packages.organizationId, organizationId)))
+  revalidateTag(`packages-${organizationId}`, {})
   revalidatePath("/configuracoes/pacotes")
   return { success: true }
 }

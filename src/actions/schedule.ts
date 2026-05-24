@@ -12,7 +12,7 @@ import { eq, and } from "drizzle-orm"
 import { requireSession } from "@/lib/session"
 import { can } from "@/lib/permissions"
 import { generateSlots } from "@/lib/schedule"
-import { revalidatePath } from "next/cache"
+import { revalidatePath, revalidateTag, unstable_cache } from "next/cache"
 import type { AppointmentStatus } from "@/db/schema"
 import type { ActionResult } from "./auth"
 import { sendAppointmentConfirmation } from "./whatsapp"
@@ -84,12 +84,17 @@ export async function getDaySlots(date: string) {
 
 export async function getProceduresForBookingAction() {
   const { organizationId } = await requireSession()
-
-  return db
-    .select({ id: procedures.id, name: procedures.name, price: procedures.price })
-    .from(procedures)
-    .where(and(eq(procedures.organizationId, organizationId), eq(procedures.active, true)))
-    .orderBy(procedures.name)
+  const tag = `procedures-${organizationId}`
+  return unstable_cache(
+    async (orgId: string) =>
+      db
+        .select({ id: procedures.id, name: procedures.name, price: procedures.price })
+        .from(procedures)
+        .where(and(eq(procedures.organizationId, orgId), eq(procedures.active, true)))
+        .orderBy(procedures.name),
+    [tag],
+    { tags: [tag], revalidate: 3600 }
+  )(organizationId)
 }
 
 export async function createAppointmentAction(data: {
@@ -191,6 +196,9 @@ export async function createAppointmentAction(data: {
     }))
   ).returning({ id: appointments.id })
 
+  revalidateTag(`dashboard-${userId}-${organizationId}`, {})
+  revalidateTag(`clients-${organizationId}`, {})
+  revalidateTag(`client-${data.clientId}`, {})
   revalidatePath("/agenda")
 
   // Envia confirmação WhatsApp para o primeiro agendamento (fire-and-forget)
@@ -232,7 +240,7 @@ export async function updateAppointmentStatusAction(
   appointmentId: string,
   status: AppointmentStatus
 ): Promise<ActionResult> {
-  const { organizationId, role } = await requireSession()
+  const { userId, organizationId, role } = await requireSession()
 
   if (!can(role, "schedule:update")) {
     return { success: false, error: "Sem permissão." }
@@ -248,6 +256,7 @@ export async function updateAppointmentStatusAction(
       )
     )
 
+  revalidateTag(`dashboard-${userId}-${organizationId}`, {})
   revalidatePath("/agenda")
   return { success: true }
 }
@@ -403,10 +412,15 @@ export async function saveScheduleConfigAction(data: {
 
 export async function getClientsAction() {
   const { organizationId } = await requireSession()
-
-  return db
-    .select({ id: clients.id, name: clients.name, phone: clients.phone })
-    .from(clients)
-    .where(eq(clients.organizationId, organizationId))
-    .orderBy(clients.name)
+  const tag = `clients-${organizationId}`
+  return unstable_cache(
+    async (orgId: string) =>
+      db
+        .select({ id: clients.id, name: clients.name, phone: clients.phone })
+        .from(clients)
+        .where(eq(clients.organizationId, orgId))
+        .orderBy(clients.name),
+    [tag],
+    { tags: [tag], revalidate: 3600 }
+  )(organizationId)
 }
