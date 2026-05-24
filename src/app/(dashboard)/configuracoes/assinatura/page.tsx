@@ -6,7 +6,8 @@ import { eq } from "drizzle-orm"
 import { stripe } from "@/lib/stripe"
 import { BillingPortalButton } from "@/components/subscription/billing-portal-button"
 import { CancelSubscriptionButton } from "@/components/subscription/cancel-subscription-button"
-import { CheckCircle2, Clock, XCircle, CreditCard, ArrowLeft } from "lucide-react"
+import { CheckCircle2, Clock, XCircle, CreditCard, ArrowLeft, QrCode } from "lucide-react"
+import { PixQrCode } from "@/components/subscription/pix-qr-code"
 import Link from "next/link"
 
 function fmt(date: number | null | undefined) {
@@ -42,6 +43,30 @@ export default async function AssinaturaPage() {
     } catch {
       // se não encontrar, ignora
     }
+  }
+
+  // Verifica se há fatura Pix aberta aguardando pagamento
+  type PixData = { qrCodeUrl: string; pixPayload: string; expiresAt: number; amount: number }
+  let pixData: PixData | null = null
+  if (sub?.latest_invoice) {
+    try {
+      const invoice = await stripe.invoices.retrieve(sub.latest_invoice as string)
+      if (invoice.status === "open" && invoice.confirmation_secret?.client_secret) {
+        const piId = invoice.confirmation_secret.client_secret.split("_secret_")[0]
+        if (piId.startsWith("pi_")) {
+          const pi = await stripe.paymentIntents.retrieve(piId)
+          const qr = pi.next_action?.pix_display_qr_code
+          if (qr?.image_url_png && qr?.data) {
+            pixData = {
+              qrCodeUrl: qr.image_url_png,
+              pixPayload: qr.data,
+              expiresAt: qr.expires_at ?? 0,
+              amount: invoice.amount_due,
+            }
+          }
+        }
+      }
+    } catch { /* ignora */ }
   }
 
   const isActive = org.subscriptionStatus === "active"
@@ -134,6 +159,25 @@ export default async function AssinaturaPage() {
           </div>
         )}
       </div>
+
+      {/* Pix QR Code */}
+      {pixData && (
+        <div className="surface space-y-4">
+          <div className="flex items-center gap-2.5">
+            <QrCode size={18} className="text-primary" />
+            <span className="font-medium text-sm">Pagamento via Pix</span>
+            <span className="ml-auto rounded-full bg-amber-500/10 px-2.5 py-0.5 text-xs font-medium text-amber-600">
+              Aguardando pagamento
+            </span>
+          </div>
+          <PixQrCode
+            qrCodeUrl={pixData.qrCodeUrl}
+            pixPayload={pixData.pixPayload}
+            expiresAt={pixData.expiresAt}
+            amount={fmtBRL(pixData.amount)}
+          />
+        </div>
+      )}
 
       {/* Actions */}
       <div className="space-y-2">

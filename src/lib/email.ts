@@ -5,6 +5,8 @@ import { TrialEndingEmail } from "@/emails/trial-ending"
 import { TrialExpiredEmail } from "@/emails/trial-expired"
 import { SubscriptionActiveEmail } from "@/emails/subscription-active"
 import { ResetPasswordEmail } from "@/emails/reset-password"
+import { PixReminderEmail } from "@/emails/pix-reminder"
+import { PixInvoiceEmail } from "@/emails/pix-invoice"
 
 export async function sendWelcomeEmail(to: string, name: string) {
   await resend.emails.send({
@@ -54,5 +56,23 @@ export async function sendSubscriptionActiveEmail(to: string, name: string) {
     to,
     subject: "Assinatura confirmada! Bem-vinda ao Kira Pro 🎉",
     react: createElement(SubscriptionActiveEmail, { name, appUrl: APP_URL }),
+  })
+}
+
+export async function sendPixReminderEmail(to: string, name: string, daysLeft: number, amount: string) {
+  await resend.emails.send({
+    from: FROM_EMAIL,
+    to,
+    subject: `Seu pagamento do Kira vence em ${daysLeft} ${daysLeft === 1 ? "dia" : "dias"}`,
+    react: createElement(PixReminderEmail, { name, daysLeft, amount, appUrl: APP_URL }),
+  })
+}
+
+export async function sendPixInvoiceEmail(to: string, name: string, amount: string, expiresAt: string) {
+  await resend.emails.send({
+    from: FROM_EMAIL,
+    to,
+    subject: "Seu QR code Pix do Kira está disponível 📲",
+    react: createElement(PixInvoiceEmail, { name, amount, expiresAt, appUrl: APP_URL }),
   })
 }
