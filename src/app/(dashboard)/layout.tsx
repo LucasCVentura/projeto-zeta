@@ -33,15 +33,16 @@ export default async function DashboardLayout({ children }: { children: React.Re
       const isActive = org.subscriptionStatus === "active"
       const trialEnd = org.trialEndsAt ? new Date(org.trialEndsAt) : null
       const isTrialing = org.subscriptionStatus === "trialing" && trialEnd != null && trialEnd > new Date()
-      const isPendingBoleto = org.subscriptionStatus === "incomplete"
+      const isIncomplete = org.subscriptionStatus === "incomplete"
+      const trialStillValid = trialEnd != null && trialEnd > new Date()
 
-      if (!isActive && !isTrialing && !isPendingBoleto) {
+      if (!isActive && !isTrialing && !isIncomplete) {
         const motivo = org.subscriptionStatus === "trialing" ? "trial-expirado" : "sem-assinatura"
         redirect(`/assinar?motivo=${motivo}`)
       }
 
-      // boleto gerado mas ainda não pago → redireciona pra página de assinatura (evita loop)
-      if (isPendingBoleto) {
+      // boleto gerado + trial vencido → só assinatura acessível
+      if (isIncomplete && !trialStillValid) {
         const headersList = await headers()
         const pathname = headersList.get("x-pathname") ?? ""
         if (!pathname.startsWith("/configuracoes/assinatura")) {
@@ -49,7 +50,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
         }
       }
 
+      // boleto gerado + ainda no trial → acesso normal, mostra banner de trial
       if (isTrialing && trialEnd) {
+        trialDaysLeft = Math.ceil((trialEnd.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+      } else if (isIncomplete && trialStillValid && trialEnd) {
         trialDaysLeft = Math.ceil((trialEnd.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
       }
     }

@@ -53,29 +53,46 @@ export default async function AssinaturaPage() {
     expiresAt: number | null
     amount: number
   } | null = null
+  let boletoExpired = false
 
-  if (sub && org.stripeSubscriptionId) {
+  if (org.stripeSubscriptionId) {
     try {
       const latestInvoice = await stripe.invoices.list({
         subscription: org.stripeSubscriptionId,
         limit: 1,
       })
       const inv = latestInvoice.data[0]
-      if (inv && inv.status === "open") {
-        const cs = (inv as unknown as Record<string, { client_secret?: string }>).confirmation_secret?.client_secret
-        if (cs) {
-          const piId = cs.split("_secret_")[0]
-          const pi = await stripe.paymentIntents.retrieve(piId)
-          const boleto = pi.next_action?.boleto_display_details
-          if (boleto) {
-            boletoDetails = {
-              number: boleto.number ?? null,
-              voucherUrl: boleto.hosted_voucher_url ?? null,
-              pdfUrl: boleto.pdf ?? null,
-              expiresAt: boleto.expires_at ?? null,
-              amount: inv.amount_due,
-            }
+      if (inv) {
+        if (inv.status === "open") {
+          // tenta extrair detalhes do boleto via PaymentIntent
+          const invRaw = inv as unknown as Record<string, { client_secret?: string } | string>
+          const cs = (invRaw.confirmation_secret as { client_secret?: string } | undefined)?.client_secret
+          const legacyPi = invRaw.payment_intent
+          const piId = cs
+            ? cs.split("_secret_")[0]
+            : typeof legacyPi === "string"
+              ? legacyPi
+              : (legacyPi as { id?: string } | undefined)?.id ?? null
+
+          let boleto = null
+          if (piId) {
+            try {
+              const pi = await stripe.paymentIntents.retrieve(piId)
+              boleto = pi.next_action?.boleto_display_details ?? null
+            } catch { /* ignora */ }
           }
+
+          boletoDetails = {
+            number: boleto?.number ?? null,
+            // fallback para hosted_invoice_url quando boleto_display_details não disponível
+            voucherUrl: boleto?.hosted_voucher_url ?? inv.hosted_invoice_url ?? null,
+            pdfUrl: boleto?.pdf ?? inv.invoice_pdf ?? null,
+            expiresAt: boleto?.expires_at ?? null,
+            amount: inv.amount_due,
+          }
+        } else if (org.subscriptionStatus === "incomplete") {
+          // fatura não está mais aberta → boleto venceu sem pagamento
+          boletoExpired = true
         }
       }
     } catch { /* ignora */ }
@@ -83,6 +100,7 @@ export default async function AssinaturaPage() {
 
   const isActive = org.subscriptionStatus === "active"
   const isTrialing = org.subscriptionStatus === "trialing"
+  const isIncompleteBoleto = org.subscriptionStatus === "incomplete"
   const isCanceled = org.subscriptionStatus === "canceled" || org.subscriptionStatus === "incomplete_expired"
 
   return (
@@ -103,20 +121,22 @@ export default async function AssinaturaPage() {
           <div className="flex items-center gap-2.5">
             {isActive && <CheckCircle2 size={18} className="text-green-500" />}
             {isTrialing && <Clock size={18} className="text-amber-500" />}
+            {isIncompleteBoleto && <Clock size={18} className="text-amber-500" />}
             {isCanceled && <XCircle size={18} className="text-red-500" />}
             <span className="font-medium text-sm">
               {isActive && "Assinatura ativa"}
               {isTrialing && "Período de teste"}
+              {isIncompleteBoleto && "Aguardando pagamento do boleto"}
               {isCanceled && "Assinatura cancelada"}
-              {!isActive && !isTrialing && !isCanceled && "Sem assinatura"}
+              {!isActive && !isTrialing && !isIncompleteBoleto && !isCanceled && "Sem assinatura"}
             </span>
           </div>
           <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
             isActive ? "bg-green-500/10 text-green-600" :
-            isTrialing ? "bg-amber-500/10 text-amber-600" :
+            isTrialing || isIncompleteBoleto ? "bg-amber-500/10 text-amber-600" :
             "bg-red-500/10 text-red-600"
           }`}>
-            {isActive ? "Ativo" : isTrialing ? "Trial" : "Cancelado"}
+            {isActive ? "Ativo" : isTrialing ? "Trial" : isIncompleteBoleto ? "Pendente" : "Cancelado"}
           </span>
         </div>
 
@@ -131,6 +151,15 @@ export default async function AssinaturaPage() {
           </div>
         )}
 
+        {/* Boleto pendente info */}
+        {isIncompleteBoleto && (
+          <div className="rounded-lg bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-400">
+            {boletoExpired
+              ? "Seu boleto venceu sem pagamento. Gere um novo para ativar sua assinatura."
+              : "Seu boleto foi gerado e está aguardando compensação. Assim que o pagamento for confirmado, seu acesso será liberado automaticamente."}
+          </div>
+        )}
+
         {/* Subscription details */}
         {sub && (
           <div className="space-y-3 pt-1">
@@ -141,7 +170,7 @@ export default async function AssinaturaPage() {
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">Forma de pagamento</span>
               <span className="font-medium">
-                {boletoDetails
+                {boletoDetails || isIncompleteBoleto
                   ? "Boleto bancário"
                   : sub.default_payment_method && typeof sub.default_payment_method !== "string" && sub.default_payment_method.card
                     ? `${sub.default_payment_method.card.brand.charAt(0).toUpperCase() + sub.default_payment_method.card.brand.slice(1)} •••• ${sub.default_payment_method.card.last4}`
@@ -204,6 +233,14 @@ export default async function AssinaturaPage() {
             className="flex w-full items-center justify-center rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
           >
             {`Assinar por ${PLAN_PRICE_BRL}/mês`}
+          </Link>
+        )}
+        {isIncompleteBoleto && boletoExpired && (
+          <Link
+            href="/assinar"
+            className="flex w-full items-center justify-center rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
+          >
+            Gerar novo boleto
           </Link>
         )}
         {(isActive || sub) && <BillingPortalButton />}
