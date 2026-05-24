@@ -5,6 +5,7 @@ import { AuthSessionProvider } from "@/components/layout/session-provider"
 import { TrialBanner } from "@/components/subscription/trial-banner"
 import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
+import { headers } from "next/headers"
 import { db } from "@/db"
 import { organizationMembers, organizations } from "@/db/schema"
 import { eq, and } from "drizzle-orm"
@@ -32,10 +33,20 @@ export default async function DashboardLayout({ children }: { children: React.Re
       const isActive = org.subscriptionStatus === "active"
       const trialEnd = org.trialEndsAt ? new Date(org.trialEndsAt) : null
       const isTrialing = org.subscriptionStatus === "trialing" && trialEnd != null && trialEnd > new Date()
+      const isPendingBoleto = org.subscriptionStatus === "incomplete"
 
-      if (!isActive && !isTrialing) {
+      if (!isActive && !isTrialing && !isPendingBoleto) {
         const motivo = org.subscriptionStatus === "trialing" ? "trial-expirado" : "sem-assinatura"
         redirect(`/assinar?motivo=${motivo}`)
+      }
+
+      // boleto gerado mas ainda não pago → redireciona pra página de assinatura (evita loop)
+      if (isPendingBoleto) {
+        const headersList = await headers()
+        const pathname = headersList.get("x-pathname") ?? ""
+        if (!pathname.startsWith("/configuracoes/assinatura")) {
+          redirect("/configuracoes/assinatura")
+        }
       }
 
       if (isTrialing && trialEnd) {

@@ -22,7 +22,9 @@ export default auth((req) => {
     return NextResponse.redirect(loginUrl)
   }
 
-  return NextResponse.next()
+  const res = NextResponse.next()
+  res.headers.set("x-pathname", nextUrl.pathname)
+  return res
 })
 
 export const config = {
