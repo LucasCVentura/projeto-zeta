@@ -8,6 +8,8 @@ import { ResetPasswordEmail } from "@/emails/reset-password"
 import { PixReminderEmail } from "@/emails/pix-reminder"
 import { PixInvoiceEmail } from "@/emails/pix-invoice"
 import { BoletoInvoiceEmail } from "@/emails/boleto-invoice"
+import { BoletoWelcomeEmail } from "@/emails/boleto-welcome"
+import { BoletoPaymentConfirmedEmail } from "@/emails/boleto-payment-confirmed"
 
 export async function sendWelcomeEmail(to: string, name: string) {
   await resend.emails.send({
@@ -75,6 +77,30 @@ export async function sendPixInvoiceEmail(to: string, name: string, amount: stri
     to,
     subject: "Seu QR code Pix do Kira está disponível 📲",
     react: createElement(PixInvoiceEmail, { name, amount, expiresAt, appUrl: APP_URL }),
+  })
+}
+
+export async function sendBoletoWelcomeEmail(
+  to: string,
+  name: string,
+  amount: string,
+  expiresAt: string,
+  voucherUrl: string,
+) {
+  await resend.emails.send({
+    from: FROM_EMAIL,
+    to,
+    subject: "Seu boleto do Kira foi gerado — aguardando compensação 🧾",
+    react: createElement(BoletoWelcomeEmail, { name, amount, expiresAt, voucherUrl, appUrl: APP_URL }),
+  })
+}
+
+export async function sendBoletoPaymentConfirmedEmail(to: string, name: string) {
+  await resend.emails.send({
+    from: FROM_EMAIL,
+    to,
+    subject: "Pagamento via boleto confirmado — acesso ao Kira liberado! 🎉",
+    react: createElement(BoletoPaymentConfirmedEmail, { name, appUrl: APP_URL }),
   })
 }
 
