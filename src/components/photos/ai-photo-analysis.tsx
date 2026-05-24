@@ -46,7 +46,7 @@ function ResultModal({ mode, analysis, error, onClose }: {
 
       {/* Card */}
       <div
-        className="relative w-full max-w-md rounded-2xl bg-card border border-border shadow-xl overflow-hidden transition-all duration-250"
+        className="relative w-full max-w-md rounded-2xl bg-card border border-border shadow-xl overflow-hidden transition-all duration-250 flex flex-col max-h-[85vh]"
         style={{
           opacity: visible ? 1 : 0,
           transform: visible ? "translateY(0) scale(1)" : "translateY(24px) scale(0.97)",
@@ -72,7 +72,7 @@ function ResultModal({ mode, analysis, error, onClose }: {
         </div>
 
         {/* Corpo */}
-        <div className="px-5 py-4 max-h-[60vh] overflow-y-auto">
+        <div className="px-5 py-4 flex-1 overflow-y-auto">
           {error ? (
             <p className="text-sm text-destructive">{error}</p>
           ) : (
