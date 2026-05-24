@@ -50,6 +50,9 @@ export async function getAdminMetricsAction() {
 
   // MRR: orgs ativas × R$49,90
   const mrr = activeOrgs * 4990
+  // Net MRR após taxa Stripe: 2,99% + R$0,39 por cobrança
+  const stripeFeePerSub = Math.round(4990 * 0.0299) + 39
+  const netMrr = activeOrgs * (4990 - stripeFeePerSub)
 
   // Novos no mês passado (para calcular crescimento)
   const newOrgsLastMonth = await db
@@ -99,6 +102,7 @@ export async function getAdminMetricsAction() {
     newOrgsThisMonth,
     newOrgsLastMonth,
     mrr,
+    netMrr,
     orgs,
   }
 }

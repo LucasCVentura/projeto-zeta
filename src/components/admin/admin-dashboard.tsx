@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react"
 import { extendTrialAction, cancelOrgAction, adminChatAction, markInboundEmailReadAction } from "@/actions/admin"
-import { Send, Loader2, Trophy, TrendingUp, Users, DollarSign, ChevronDown, ChevronUp, Sprout, Rocket, Gem, Coins, Star, Activity, MessageSquare, Mail, MailOpen } from "lucide-react"
+import { Send, Loader2, Trophy, TrendingUp, Users, DollarSign, ChevronDown, ChevronUp, Sprout, Rocket, Gem, Coins, Star, Activity, MessageSquare, Mail, MailOpen, Wallet } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -29,8 +29,26 @@ type Metrics = {
   newOrgsThisMonth: number
   newOrgsLastMonth: number
   mrr: number
+  netMrr: number
   orgs: Org[]
 }
+
+type Service = {
+  name: string
+  category: string
+  tier: string
+  monthlyCost: number | null  // null = variável
+  notes: string
+  url: string
+}
+
+const SERVICES: Service[] = [
+  { name: "Vercel",    category: "Hosting",    tier: "Hobby (free)",  monthlyCost: 0,    notes: "100 deploys/dia, sem SLA",          url: "https://vercel.com/pricing" },
+  { name: "Supabase",  category: "Banco",      tier: "Free",          monthlyCost: 0,    notes: "500 MB DB, 1 GB storage, 50k MAU",  url: "https://supabase.com/pricing" },
+  { name: "Resend",    category: "Email",      tier: "Free",          monthlyCost: 0,    notes: "3k emails/mês, 100/dia",            url: "https://resend.com/pricing" },
+  { name: "Groq",      category: "IA",         tier: "Free",          monthlyCost: 0,    notes: "Rate-limited, só no admin",          url: "https://groq.com/pricing" },
+  { name: "Stripe",    category: "Pagamentos", tier: "Pay-as-you-go", monthlyCost: null, notes: "2,99% + R$0,39 por cobrança",       url: "https://stripe.com/br/pricing" },
+]
 
 type ChatMessage = { role: "user" | "assistant"; content: string }
 
@@ -177,6 +195,7 @@ export function AdminDashboard({
             <TabsTrigger value="clinicas">Clínicas ({orgs.length})</TabsTrigger>
             <TabsTrigger value="growth" className="flex items-center gap-1.5"><TrendingUp size={13} />Growth</TabsTrigger>
             <TabsTrigger value="feedback" className="flex items-center gap-1.5"><MessageSquare size={13} />Feedback {feedbacks.length > 0 && <span className="ml-0.5 text-[10px] bg-primary/15 text-primary rounded-full px-1.5 py-0.5 font-medium">{feedbacks.length}</span>}</TabsTrigger>
+            <TabsTrigger value="financeiro" className="flex items-center gap-1.5"><Wallet size={13} />Financeiro</TabsTrigger>
             <TabsTrigger value="suporte" className="flex items-center gap-1.5">
               <Mail size={13} />Suporte
               {inboundEmails.filter(e => !e.read).length > 0 && (
@@ -416,6 +435,78 @@ export function AdminDashboard({
                 </div>
               )}
             </div>
+          </TabsContent>
+
+          {/* Aba: Financeiro */}
+          <TabsContent value="financeiro" className="space-y-6">
+
+            {/* MRR Breakdown */}
+            <div className="rounded-xl border border-border bg-card p-5 space-y-4">
+              <div className="flex items-center gap-2">
+                <DollarSign size={15} className="text-primary" />
+                <h2 className="font-semibold text-sm">Receita Mensal</h2>
+              </div>
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">MRR bruto ({metrics.activeOrgs} × R$49,90)</span>
+                  <span className="font-medium tabular-nums">{formatBRL(metrics.mrr)}</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Taxa Stripe (~2,99% + R$0,39/cobrança)</span>
+                  <span className="text-destructive tabular-nums">− {formatBRL(metrics.mrr - metrics.netMrr)}</span>
+                </div>
+                <div className="h-px bg-border" />
+                <div className="flex items-center justify-between text-sm">
+                  <span className="font-semibold">MRR líquido</span>
+                  <span className="font-bold text-green-600 dark:text-green-400 tabular-nums">{formatBRL(metrics.netMrr)}</span>
+                </div>
+              </div>
+              {metrics.activeOrgs === 0 && (
+                <p className="text-xs text-muted-foreground">Nenhuma org ativa ainda — os valores aparecerão quando houver assinantes.</p>
+              )}
+            </div>
+
+            {/* Serviços terceiros */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <h2 className="font-semibold text-sm">Serviços terceiros</h2>
+                <span className="text-xs text-muted-foreground">(estimativa mensal)</span>
+              </div>
+              <div className="rounded-xl border border-border overflow-hidden divide-y divide-border">
+                {SERVICES.map((s) => {
+                  const stripeFee = s.monthlyCost === null ? metrics.mrr - metrics.netMrr : null
+                  const displayCost = s.monthlyCost !== null ? formatBRL(s.monthlyCost) : formatBRL(stripeFee ?? 0)
+                  return (
+                    <div key={s.name} className="flex items-center gap-3 px-4 py-3">
+                      <div className="flex-1 min-w-0 space-y-0.5">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium">{s.name}</span>
+                          <span className="text-[10px] bg-muted text-muted-foreground rounded-full px-1.5 py-0.5">{s.tier}</span>
+                          <span className="text-[10px] text-muted-foreground">{s.category}</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground">{s.notes}</p>
+                      </div>
+                      <span className={cn(
+                        "text-sm font-semibold tabular-nums shrink-0",
+                        s.monthlyCost === 0 ? "text-green-600 dark:text-green-400" :
+                        s.monthlyCost === null ? "text-destructive" : "text-foreground"
+                      )}>
+                        {s.monthlyCost === 0 ? "Grátis" : s.monthlyCost === null ? `− ${displayCost}` : displayCost}
+                      </span>
+                    </div>
+                  )
+                })}
+                <div className="flex items-center justify-between px-4 py-3 bg-muted/30">
+                  <span className="text-sm font-semibold">Total estimado</span>
+                  <span className="text-sm font-bold tabular-nums">
+                    {formatBRL(metrics.mrr - metrics.netMrr)}
+                    <span className="text-xs font-normal text-muted-foreground ml-1">/mês</span>
+                  </span>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">Serviços fixos atuais estão em planos gratuitos. Stripe é o único custo real — variável com a receita.</p>
+            </div>
+
           </TabsContent>
 
           {/* Aba: Suporte */}
