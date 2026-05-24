@@ -139,6 +139,16 @@ export default async function AssinaturaPage() {
               <span className="font-medium">Kira Pro</span>
             </div>
             <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Forma de pagamento</span>
+              <span className="font-medium">
+                {boletoDetails
+                  ? "Boleto bancário"
+                  : sub.default_payment_method && typeof sub.default_payment_method !== "string" && sub.default_payment_method.card
+                    ? `${sub.default_payment_method.card.brand.charAt(0).toUpperCase() + sub.default_payment_method.card.brand.slice(1)} •••• ${sub.default_payment_method.card.last4}`
+                    : "—"}
+              </span>
+            </div>
+            <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">Valor</span>
               <span className="font-medium">
                 {fmtBRL(sub.items.data[0]?.price?.unit_amount ?? 4990)}/mês
@@ -159,15 +169,11 @@ export default async function AssinaturaPage() {
           </div>
         )}
 
-        {/* Payment method */}
+        {/* Card expiry */}
         {sub?.default_payment_method && typeof sub.default_payment_method !== "string" && sub.default_payment_method.card && (
-          <div className="flex items-center gap-2.5 pt-1 text-sm text-muted-foreground border-t border-border">
-            <CreditCard size={15} />
-            <span className="capitalize">{sub.default_payment_method.card.brand}</span>
-            <span>•••• {sub.default_payment_method.card.last4}</span>
-            <span className="ml-auto">
-              {sub.default_payment_method.card.exp_month}/{sub.default_payment_method.card.exp_year}
-            </span>
+          <div className="flex items-center gap-1.5 pt-1 text-xs text-muted-foreground border-t border-border">
+            <CreditCard size={13} />
+            <span>Vence em {sub.default_payment_method.card.exp_month}/{sub.default_payment_method.card.exp_year}</span>
           </div>
         )}
       </div>
