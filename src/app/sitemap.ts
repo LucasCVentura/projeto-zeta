@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next"
 
-const baseUrl = "https://kiraclinic.com.br"
+const baseUrl = "https://www.kiraclinic.com.br"
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date()

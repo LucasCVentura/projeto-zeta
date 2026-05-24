@@ -32,6 +32,7 @@ const structuredData = {
 };
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://www.kiraclinic.com.br"),
   title: "Kira — Sistema para Clínica de Estética e Biomédica Esteta",
   description: "Sistema de gestão para clínicas de estética, biomédicas estetas e profissionais da beleza organizarem agenda, clientes, prontuários, fotos, financeiro, estoque e pacotes.",
   keywords: [
