@@ -6,10 +6,9 @@ export default function robots(): MetadataRoute.Robots {
   return {
     rules: {
       userAgent: "*",
-      allow: "/",
+      allow: ["/", "/agenda-para-estetica"],
       disallow: [
         "/dashboard",
-        "/agenda$",
         "/agenda/",
         "/clientes",
         "/financeiro",
