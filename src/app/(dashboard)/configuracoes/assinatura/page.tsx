@@ -205,6 +205,9 @@ export default async function AssinaturaPage() {
             <span>Vence em {sub.default_payment_method.card.exp_month}/{sub.default_payment_method.card.exp_year}</span>
           </div>
         )}
+
+        <p className="text-xs text-muted-foreground pt-1">🔜 Pagamento via Pix em breve</p>
+        <p className="text-xs text-muted-foreground">Para trocar a forma de pagamento, use o botão "Gerenciar assinatura" abaixo.</p>
       </div>
 
       {/* Boleto pending payment */}

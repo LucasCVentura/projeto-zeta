@@ -125,6 +125,10 @@ function AssinarContent() {
           <p className="text-center text-xs text-muted-foreground">
             Cancele quando quiser · Sem fidelidade
           </p>
+
+          <p className="text-center text-xs text-muted-foreground">
+            🔜 Pagamento via Pix em breve
+          </p>
         </div>
 
         {/* Rodapé de confiança */}
