@@ -47,7 +47,7 @@ const SERVICES: Service[] = [
   { name: "Supabase",  category: "Banco",      tier: "Free",          monthlyCost: 0,    notes: "500 MB DB, 1 GB storage, 50k MAU",  url: "https://supabase.com/pricing" },
   { name: "Resend",    category: "Email",      tier: "Free",          monthlyCost: 0,    notes: "3k emails/mês, 100/dia",            url: "https://resend.com/pricing" },
   { name: "Groq",      category: "IA",         tier: "Free",          monthlyCost: 0,    notes: "Rate-limited, só no admin",          url: "https://groq.com/pricing" },
-  { name: "Stripe",    category: "Pagamentos", tier: "Pay-as-you-go", monthlyCost: null, notes: "2,99% + R$0,39 por cobrança",       url: "https://stripe.com/br/pricing" },
+  { name: "Stripe",    category: "Pagamentos", tier: "Pay-as-you-go", monthlyCost: null, notes: "3,99% + R$0,39 por cobrança",       url: "https://stripe.com/br/pricing" },
 ]
 
 type ChatMessage = { role: "user" | "assistant"; content: string }
@@ -452,7 +452,7 @@ export function AdminDashboard({
                   <span className="font-medium tabular-nums">{formatBRL(metrics.mrr)}</span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Taxa Stripe (~2,99% + R$0,39/cobrança)</span>
+                  <span className="text-muted-foreground">Taxa Stripe (3,99% + R$0,39/cobrança)</span>
                   <span className="text-destructive tabular-nums">− {formatBRL(metrics.mrr - metrics.netMrr)}</span>
                 </div>
                 <div className="h-px bg-border" />
