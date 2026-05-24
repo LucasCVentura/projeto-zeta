@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "db:migrate": "bash -lc 'set -a; source .env.local; set +a; npx drizzle-kit migrate'",
+    "db:reset": "docker compose down -v && docker compose up -d postgres && npm run db:migrate",
+    "dev:with-db": "npm run db:migrate && next dev",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",

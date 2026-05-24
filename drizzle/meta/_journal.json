@@ -47,29 +47,64 @@
     {
       "idx": 6,
       "version": "7",
+      "when": 1779331200000,
+      "tag": "0006_password_reset_tokens",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
       "when": 1779565356000,
       "tag": "0007_add_other_profession",
       "breakpoints": true
     },
     {
-      "idx": 7,
+      "idx": 8,
       "version": "7",
       "when": 1779566400000,
       "tag": "0008_add_profession_segment",
       "breakpoints": true
     },
     {
-      "idx": 8,
+      "idx": 9,
       "version": "7",
-      "when": 1748044800000,
+      "when": 1779567000000,
       "tag": "0009_add_client_package_id_to_transactions",
       "breakpoints": true
     },
     {
-      "idx": 9,
+      "idx": 10,
       "version": "7",
-      "when": 1748044900000,
+      "when": 1779567100000,
       "tag": "0010_procedure_return_fields",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1779567200000,
+      "tag": "0011_add_google_review_url",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1779567300000,
+      "tag": "0012_add_notifications_and_feedback_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1779567400000,
+      "tag": "0013_add_missing_operational_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1779567500000,
+      "tag": "0014_ensure_missing_columns",
       "breakpoints": true
     }
   ]

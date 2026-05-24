@@ -6,17 +6,20 @@ import { StatusBadge } from "@/components/agenda/status-badge"
 import { RevenueChart, ProceduresChart, StatusChart } from "@/components/dashboard/dashboard-charts"
 import { OnboardingChecklist } from "@/components/dashboard/onboarding-checklist"
 import Link from "next/link"
+import { requireSession } from "@/lib/session"
 
 function formatCurrency(cents: number) {
   return (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
 }
 
 export default async function DashboardPage() {
-  const [data, lowStock, onboarding] = await Promise.all([
+  const [session, data, lowStock, onboarding] = await Promise.all([
+    requireSession(),
     getDashboardDataAction(),
     getLowStockSuppliesAction(),
     getOnboardingStatusAction(),
   ])
+  const dismissStorageKey = `kira:onboarding-dismissed:${session.organizationId}:${session.userId}`
 
   const stats = [
     {
@@ -55,7 +58,7 @@ export default async function DashboardPage() {
       )}
 
       {/* Onboarding — aparece até o usuário dispensar */}
-      <OnboardingChecklist {...onboarding} />
+      <OnboardingChecklist dismissStorageKey={dismissStorageKey} {...onboarding} />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {stats.map(({ label, value, icon: Icon }) => (

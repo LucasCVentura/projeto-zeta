@@ -31,6 +31,7 @@ type Step = {
 }
 
 type Props = {
+  dismissStorageKey: string
   hasSchedule: boolean
   hasProcedure: boolean
   hasClient: boolean
@@ -40,6 +41,7 @@ type Props = {
 }
 
 export function OnboardingChecklist({
+  dismissStorageKey,
   hasSchedule,
   hasProcedure,
   hasClient,
@@ -48,7 +50,7 @@ export function OnboardingChecklist({
   hasPhoto,
 }: Props) {
   const [dismissed, setDismissed] = useState(() =>
-    typeof window !== "undefined" && localStorage.getItem("kira:onboarding-dismissed") === "1"
+    typeof window !== "undefined" && localStorage.getItem(dismissStorageKey) === "1"
   )
 
   const steps: Step[] = [
@@ -113,7 +115,7 @@ export function OnboardingChecklist({
   return (
     <section className="surface relative overflow-hidden">
       <button
-        onClick={() => { localStorage.setItem("kira:onboarding-dismissed", "1"); setDismissed(true) }}
+        onClick={() => { localStorage.setItem(dismissStorageKey, "1"); setDismissed(true) }}
         className="absolute top-4 right-4 text-muted-foreground hover:text-foreground transition-colors"
         aria-label="Dispensar"
       >
