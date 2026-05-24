@@ -206,8 +206,10 @@ export default async function AssinaturaPage() {
           </div>
         )}
 
-        <p className="text-xs text-muted-foreground pt-1">🔜 Pagamento via Pix em breve</p>
-        <p className="text-xs text-muted-foreground">Para trocar a forma de pagamento, use o botão "Gerenciar assinatura" abaixo.</p>
+        <div className="rounded-lg border border-border bg-muted/40 px-3.5 py-2.5 space-y-1.5 mt-1">
+          <p className="text-xs font-medium">🔜 Pagamento via Pix em breve</p>
+          <p className="text-xs text-muted-foreground">Para trocar a forma de pagamento, use o botão <strong className="text-foreground">"Gerenciar assinatura"</strong> abaixo.</p>
+        </div>
       </div>
 
       {/* Boleto pending payment */}
