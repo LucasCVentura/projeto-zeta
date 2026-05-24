@@ -5,6 +5,10 @@ import { organizations, users, organizationMembers } from "@/db/schema"
 import { eq } from "drizzle-orm"
 import type Stripe from "stripe"
 
+function fmtBRL(amount: number) {
+  return (amount / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
+}
+
 async function getOrgOwner(organizationId: string) {
   const [row] = await db
     .select({ name: users.name, email: users.email })
@@ -66,6 +70,42 @@ export async function POST(req: NextRequest) {
       await db.update(organizations)
         .set({ subscriptionStatus: "canceled" })
         .where(eq(organizations.id, organizationId))
+      break
+    }
+
+    case "invoice.payment_action_required": {
+      const invoice = event.data.object as Stripe.Invoice
+      const inv = invoice as unknown as Record<string, { metadata?: Record<string, string> }>
+      const organizationId = (inv.subscription_details?.metadata?.organizationId
+        ?? inv.subscription?.metadata?.organizationId) as string | undefined
+      if (!organizationId) break
+
+      try {
+        const cs = (invoice as unknown as Record<string, { client_secret?: string }>).confirmation_secret?.client_secret
+        if (!cs) break
+
+        const piId = cs.split("_secret_")[0]
+        const pi = await stripe.paymentIntents.retrieve(piId)
+        const boleto = pi.next_action?.boleto_display_details
+        if (!boleto) break
+
+        const owner = await getOrgOwner(organizationId)
+        if (owner?.email) {
+          const amount = fmtBRL(invoice.amount_due)
+          const expiresAt = boleto.expires_at
+            ? new Date(boleto.expires_at * 1000).toLocaleDateString("pt-BR", { day: "numeric", month: "long", year: "numeric" })
+            : "—"
+          const { sendBoletoInvoiceEmail } = await import("@/lib/email")
+          await sendBoletoInvoiceEmail(
+            owner.email,
+            owner.name ?? "",
+            amount,
+            expiresAt,
+            boleto.number ?? "",
+            boleto.hosted_voucher_url ?? "",
+          )
+        }
+      } catch { /* não bloqueia */ }
       break
     }
   }

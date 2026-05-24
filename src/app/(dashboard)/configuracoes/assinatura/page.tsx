@@ -6,6 +6,7 @@ import { eq } from "drizzle-orm"
 import { stripe } from "@/lib/stripe"
 import { BillingPortalButton } from "@/components/subscription/billing-portal-button"
 import { CancelSubscriptionButton } from "@/components/subscription/cancel-subscription-button"
+import { BoletoDisplay } from "@/components/subscription/boleto-display"
 import { CheckCircle2, Clock, XCircle, CreditCard, ArrowLeft } from "lucide-react"
 import Link from "next/link"
 
@@ -44,6 +45,41 @@ export default async function AssinaturaPage() {
     }
   }
 
+  // boleto: check if there's a pending invoice with boleto payment action
+  let boletoDetails: {
+    number: string | null
+    voucherUrl: string | null
+    pdfUrl: string | null
+    expiresAt: number | null
+    amount: number
+  } | null = null
+
+  if (sub && org.stripeSubscriptionId) {
+    try {
+      const latestInvoice = await stripe.invoices.list({
+        subscription: org.stripeSubscriptionId,
+        limit: 1,
+      })
+      const inv = latestInvoice.data[0]
+      if (inv && inv.status === "open") {
+        const cs = (inv as unknown as Record<string, { client_secret?: string }>).confirmation_secret?.client_secret
+        if (cs) {
+          const piId = cs.split("_secret_")[0]
+          const pi = await stripe.paymentIntents.retrieve(piId)
+          const boleto = pi.next_action?.boleto_display_details
+          if (boleto) {
+            boletoDetails = {
+              number: boleto.number ?? null,
+              voucherUrl: boleto.hosted_voucher_url ?? null,
+              pdfUrl: boleto.pdf ?? null,
+              expiresAt: boleto.expires_at ?? null,
+              amount: inv.amount_due,
+            }
+          }
+        }
+      }
+    } catch { /* ignora */ }
+  }
 
   const isActive = org.subscriptionStatus === "active"
   const isTrialing = org.subscriptionStatus === "trialing"
@@ -135,6 +171,24 @@ export default async function AssinaturaPage() {
           </div>
         )}
       </div>
+
+      {/* Boleto pending payment */}
+      {boletoDetails && (
+        <div className="surface space-y-3">
+          <div className="flex items-center gap-2">
+            <span className="rounded-full bg-amber-500/10 px-2.5 py-0.5 text-xs font-medium text-amber-600">
+              Pagamento pendente
+            </span>
+          </div>
+          <BoletoDisplay
+            boletoNumber={boletoDetails.number}
+            voucherUrl={boletoDetails.voucherUrl}
+            pdfUrl={boletoDetails.pdfUrl}
+            expiresAt={boletoDetails.expiresAt}
+            amount={fmtBRL(boletoDetails.amount)}
+          />
+        </div>
+      )}
 
       {/* Actions */}
       <div className="space-y-2">
