@@ -56,7 +56,7 @@ export async function createCheckoutSessionAction(): Promise<ActionResult> {
       cancel_url: `${baseUrl}/assinar`,
       metadata: { organizationId },
       subscription_data: { metadata: { organizationId } },
-      payment_method_types: ["card", "pix"],
+      payment_method_types: ["card"],
       locale: "pt-BR",
     })
   } catch (err) {
