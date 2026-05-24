@@ -7,7 +7,10 @@ export function useTheme() {
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
-    setIsDark(document.documentElement.classList.contains("dark"))
+    const saved = localStorage.getItem("theme")
+    const dark = !saved || saved === "dark"
+    setIsDark(dark)
+    document.documentElement.classList.toggle("dark", dark)
     setMounted(true)
   }, [])
 
