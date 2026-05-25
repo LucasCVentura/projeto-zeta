@@ -7,6 +7,8 @@ import { requireSession } from "@/lib/session"
 import { can } from "@/lib/permissions"
 import type { OrgRole } from "@/db/schema"
 import { revalidatePath } from "next/cache"
+import { signIn } from "@/lib/auth"
+import { hash } from "bcryptjs"
 import crypto from "crypto"
 
 export type ActionResult = { success: true } | { success: false; error: string }
@@ -45,7 +47,7 @@ export async function getTeamAction() {
   return { members, pendingInvites }
 }
 
-export async function inviteMemberAction(email: string, role: OrgRole): Promise<ActionResult> {
+export async function inviteMemberAction(email: string, name: string, role: OrgRole): Promise<ActionResult> {
   const { organizationId, role: myRole } = await requireSession()
 
   if (!can(myRole, "org:invite")) {
@@ -53,9 +55,16 @@ export async function inviteMemberAction(email: string, role: OrgRole): Promise<
   }
 
   const normalizedEmail = email.toLowerCase().trim()
+  const trimmedName = name.trim()
+
+  if (!trimmedName) {
+    return { success: false, error: "Informe o nome do membro." }
+  }
+
+  let invitedUserId: string
 
   const [existingUser] = await db
-    .select({ id: users.id })
+    .select({ id: users.id, password: users.password })
     .from(users)
     .where(eq(users.email, normalizedEmail))
     .limit(1)
@@ -76,6 +85,17 @@ export async function inviteMemberAction(email: string, role: OrgRole): Promise<
     if (existingMember) {
       return { success: false, error: "Este e-mail já é membro da equipe." }
     }
+
+    invitedUserId = existingUser.id
+  } else {
+    // Cria o usuário sem senha — ele vai definir ao aceitar o convite
+    invitedUserId = crypto.randomUUID()
+    await db.insert(users).values({
+      id: invitedUserId,
+      name: trimmedName,
+      email: normalizedEmail,
+      password: null,
+    })
   }
 
   const [existingInvite] = await db
@@ -212,4 +232,60 @@ export async function acceptInviteAction(token: string): Promise<{ success: true
 
   revalidatePath("/dashboard")
   return { success: true, orgName: org?.name ?? "a clínica" }
+}
+
+export async function setPasswordAndAcceptAction(
+  token: string,
+  password: string
+): Promise<{ success: true } | { success: false; error: string }> {
+  const [invite] = await db
+    .select()
+    .from(invites)
+    .where(eq(invites.token, token))
+    .limit(1)
+
+  if (!invite) return { success: false, error: "Convite não encontrado." }
+  if (invite.acceptedAt) return { success: false, error: "Este convite já foi aceito." }
+  if (invite.expiresAt < new Date()) return { success: false, error: "Este convite expirou." }
+
+  const [user] = await db
+    .select({ id: users.id, email: users.email })
+    .from(users)
+    .where(eq(users.email, invite.email))
+    .limit(1)
+
+  if (!user) return { success: false, error: "Usuário não encontrado." }
+
+  const hashedPassword = await hash(password, 12)
+  await db.update(users).set({ password: hashedPassword }).where(eq(users.id, user.id))
+
+  const [existingMember] = await db
+    .select({ id: organizationMembers.userId })
+    .from(organizationMembers)
+    .where(
+      and(
+        eq(organizationMembers.organizationId, invite.organizationId),
+        eq(organizationMembers.userId, user.id)
+      )
+    )
+    .limit(1)
+
+  if (!existingMember) {
+    await db.insert(organizationMembers).values({
+      organizationId: invite.organizationId,
+      userId: user.id,
+      role: invite.role,
+      joinedAt: new Date(),
+    })
+  }
+
+  await db.update(invites).set({ acceptedAt: new Date() }).where(eq(invites.id, invite.id))
+
+  // Faz login automático
+  try {
+    await signIn("credentials", { email: user.email, password, redirect: false })
+  } catch { /* ignorar erro de redirect do next-auth */ }
+
+  revalidatePath("/dashboard")
+  return { success: true }
 }

@@ -44,6 +44,7 @@ export function TeamManager({
   currentUserId: string
 }) {
   const [email, setEmail] = useState("")
+  const [name, setName] = useState("")
   const [role, setRole] = useState<OrgRole>("professional")
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
@@ -54,9 +55,10 @@ export function TeamManager({
     setError(null)
     setSuccess(null)
     startTransition(async () => {
-      const result = await inviteMemberAction(email, role)
+      const result = await inviteMemberAction(email, name, role)
       if (result.success) {
         setEmail("")
+        setName("")
         setSuccess("Convite enviado com sucesso!")
         setTimeout(() => setSuccess(null), 4000)
       } else {
@@ -153,6 +155,18 @@ export function TeamManager({
         </div>
 
         <form onSubmit={handleInvite} className="space-y-3">
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground">Nome</label>
+            <input
+              type="text"
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Nome completo"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+            />
+          </div>
+
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-muted-foreground">E-mail</label>
             <input

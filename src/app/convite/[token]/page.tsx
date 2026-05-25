@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm"
 import { auth } from "@/lib/auth"
 import { KiraMark } from "@/components/ui/kira-mark"
 import { AcceptInviteButton } from "@/components/settings/accept-invite-button"
+import { SetPasswordForm } from "@/components/settings/set-password-form"
 import { CheckCircle2, XCircle, Clock } from "lucide-react"
 import Link from "next/link"
 import type { OrgRole } from "@/db/schema"
@@ -44,6 +45,16 @@ export default async function ConvitePage({ params }: { params: Promise<{ token:
     .where(eq(organizations.id, invite.organizationId))
     .limit(1)
 
+  // Verifica se o usuário convidado já tem senha (conta existente) ou não (criado pelo invite)
+  const [invitedUser] = await db
+    .select({ password: users.password, name: users.name })
+    .from(users)
+    .where(eq(users.email, invite.email))
+    .limit(1)
+
+  const hasPassword = !!invitedUser?.password
+  const inviteeName = invitedUser?.name ?? ""
+
   const session = await auth()
   const loggedEmail = session?.user?.email ?? null
   const emailMatches = loggedEmail?.toLowerCase() === invite.email.toLowerCase()
@@ -64,9 +75,14 @@ export default async function ConvitePage({ params }: { params: Promise<{ token:
         {/* Card */}
         <div className="rounded-2xl border border-border bg-card p-6 space-y-5 shadow-sm">
           <div className="space-y-1 text-center">
-            <h1 className="font-heading text-xl font-semibold">Você foi convidada</h1>
+            <h1 className="font-heading text-xl font-semibold">
+              {hasPassword ? "Você foi convidada" : `Olá, ${inviteeName.split(" ")[0]}!`}
+            </h1>
             <p className="text-sm text-muted-foreground">
-              para entrar na clínica <strong className="text-foreground">{org?.name}</strong>
+              {hasPassword
+                ? <>para entrar na clínica <strong className="text-foreground">{org?.name}</strong></>
+                : <>Defina sua senha para acessar a clínica <strong className="text-foreground">{org?.name}</strong></>
+              }
             </p>
           </div>
 
@@ -79,19 +95,20 @@ export default async function ConvitePage({ params }: { params: Promise<{ token:
               <span className="text-muted-foreground">Função</span>
               <span className="font-medium">{roleLabels[invite.role]}</span>
             </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Convidado para</span>
-              <span className="font-medium text-xs">{invite.email}</span>
-            </div>
           </div>
 
-          {/* Logged in as correct user */}
-          {session && emailMatches && (
+          {/* Usuário sem senha (criado pelo invite) — define senha direto */}
+          {!hasPassword && (
+            <SetPasswordForm token={token} />
+          )}
+
+          {/* Usuário com conta existente + logado com e-mail certo */}
+          {hasPassword && session && emailMatches && (
             <AcceptInviteButton token={token} />
           )}
 
-          {/* Logged in as wrong user */}
-          {session && !emailMatches && (
+          {/* Usuário com conta existente + logado com e-mail errado */}
+          {hasPassword && session && !emailMatches && (
             <div className="space-y-3">
               <p className="text-xs text-center text-muted-foreground">
                 Você está logado como <strong>{loggedEmail}</strong>, mas o convite é para <strong>{invite.email}</strong>.
@@ -105,25 +122,14 @@ export default async function ConvitePage({ params }: { params: Promise<{ token:
             </div>
           )}
 
-          {/* Not logged in */}
-          {!session && (
-            <div className="space-y-3">
-              <p className="text-xs text-center text-muted-foreground">
-                Entre na sua conta para aceitar o convite.
-              </p>
-              <Link
-                href={`/login?next=/convite/${token}`}
-                className="flex w-full items-center justify-center rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
-              >
-                Entrar na minha conta
-              </Link>
-              <Link
-                href={`/register?next=/convite/${token}&email=${encodeURIComponent(invite.email)}`}
-                className="flex w-full items-center justify-center rounded-xl border border-border py-3 text-sm font-medium hover:bg-accent transition-colors"
-              >
-                Criar conta
-              </Link>
-            </div>
+          {/* Usuário com conta existente + não logado */}
+          {hasPassword && !session && (
+            <Link
+              href={`/login?next=/convite/${token}`}
+              className="flex w-full items-center justify-center rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
+            >
+              Entrar para aceitar
+            </Link>
           )}
         </div>
       </div>
