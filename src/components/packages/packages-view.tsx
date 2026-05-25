@@ -1,8 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { createPackageAction, updatePackageAction, deletePackageAction } from "@/actions/packages"
-import { Plus, Pencil, Trash2, Package } from "lucide-react"
+import { Plus, Pencil, Trash2, Package, X, Users, CalendarPlus } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -36,9 +36,21 @@ function parsePriceCents(raw: string): number {
   return Math.round(parseFloat(raw.replace(",", ".")) * 100) || 0
 }
 
+const HINT_KEY = "kira:packages-hint-dismissed"
+
 export function PackagesView({ packages: initialPackages, procedures }: Props) {
   const [packages, setPackages] = useState(initialPackages)
+  const [showHint, setShowHint] = useState(false)
   const [showForm, setShowForm] = useState(false)
+
+  useEffect(() => {
+    if (!localStorage.getItem(HINT_KEY)) setShowHint(true)
+  }, [])
+
+  function dismissHint() {
+    localStorage.setItem(HINT_KEY, "1")
+    setShowHint(false)
+  }
   const [editing, setEditing] = useState<PackageRow | null>(null)
   const [loading, setLoading] = useState(false)
 
@@ -121,6 +133,52 @@ export function PackagesView({ packages: initialPackages, procedures }: Props) {
           <Plus size={15} /> Novo pacote
         </Button>
       </div>
+
+      {/* Dica de uso — aparece só na primeira visita */}
+      {showHint && (
+        <div className="relative rounded-xl border border-primary/20 bg-primary/5 p-5 space-y-4">
+          <button
+            onClick={dismissHint}
+            className="absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground hover:bg-accent transition-colors"
+          >
+            <X size={14} />
+          </button>
+
+          <p className="text-sm font-semibold text-primary">Como funcionam os pacotes?</p>
+
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="flex gap-3">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary font-bold text-sm">1</div>
+              <div>
+                <p className="text-sm font-medium">Crie o pacote aqui</p>
+                <p className="text-xs text-muted-foreground">Defina o procedimento, número de sessões e valor.</p>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                <Users size={15} className="text-primary" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">Vincule a uma cliente</p>
+                <p className="text-xs text-muted-foreground">Na ficha da cliente, aba Pacotes, associe e registre o pagamento.</p>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                <CalendarPlus size={15} className="text-primary" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">Agende as sessões</p>
+                <p className="text-xs text-muted-foreground">Ainda na ficha da cliente, agende cada sessão do pacote diretamente.</p>
+              </div>
+            </div>
+          </div>
+
+          <button onClick={dismissHint} className="text-xs text-primary hover:underline underline-offset-4">
+            Entendi, não mostrar novamente
+          </button>
+        </div>
+      )}
 
       {/* Form */}
       {showForm && (
