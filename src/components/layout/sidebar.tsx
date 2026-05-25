@@ -10,11 +10,14 @@ import { KiraMark } from "@/components/ui/kira-mark"
 import { useSidebar } from "./sidebar-context"
 import Image from "next/image"
 import { useState, useRef, useEffect } from "react"
+import { can } from "@/lib/permissions"
+import type { OrgRole } from "@/db/schema"
 
-const navItems = [
+const allNavItems = [
   {
     label: "Dashboard",
     href: "/dashboard",
+    requiredAction: null,
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
         <rect x="3" y="3" width="7" height="7" rx="1" />
@@ -27,6 +30,7 @@ const navItems = [
   {
     label: "Agenda",
     href: "/agenda",
+    requiredAction: "schedule:read" as const,
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
         <rect x="3" y="4" width="18" height="18" rx="2" />
@@ -37,6 +41,7 @@ const navItems = [
   {
     label: "Clientes",
     href: "/clientes",
+    requiredAction: "clients:read" as const,
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
@@ -48,6 +53,7 @@ const navItems = [
   {
     label: "Financeiro",
     href: "/financeiro",
+    requiredAction: "financial:read" as const,
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
         <line x1="12" y1="1" x2="12" y2="23" />
@@ -58,6 +64,7 @@ const navItems = [
   {
     label: "Estoque",
     href: "/estoque",
+    requiredAction: "org:update" as const,
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
         <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
@@ -69,6 +76,7 @@ const navItems = [
   {
     label: "Ajuda",
     href: "/ajuda",
+    requiredAction: null,
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
         <circle cx="12" cy="12" r="9" />
@@ -80,6 +88,7 @@ const navItems = [
   {
     label: "Configurações",
     href: "/configuracoes",
+    requiredAction: null,
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
         <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
@@ -89,10 +98,14 @@ const navItems = [
   },
 ]
 
-export function Sidebar() {
+export function Sidebar({ role }: { role: OrgRole }) {
   const pathname = usePathname()
   const { isDark, toggle, mounted } = useTheme()
   const { collapsed, toggle: toggleSidebar } = useSidebar()
+
+  const navItems = allNavItems.filter((item) =>
+    item.requiredAction === null || can(role, item.requiredAction)
+  )
 
   return (
     <aside

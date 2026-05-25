@@ -12,16 +12,19 @@ import { headers } from "next/headers"
 import { db } from "@/db"
 import { organizationMembers, organizations } from "@/db/schema"
 import { eq, and } from "drizzle-orm"
+import type { OrgRole } from "@/db/schema"
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const session = await auth()
   if (!session?.user?.id) redirect("/login")
 
   const [membership] = await db
-    .select({ organizationId: organizationMembers.organizationId })
+    .select({ organizationId: organizationMembers.organizationId, role: organizationMembers.role })
     .from(organizationMembers)
     .where(and(eq(organizationMembers.userId, session.user.id), eq(organizationMembers.active, true)))
     .limit(1)
+
+  const userRole: OrgRole = membership?.role ?? "professional"
 
   let trialDaysLeft: number | null = null
 
@@ -69,7 +72,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <NavProgress />
       <div className="flex h-dvh overflow-hidden bg-background">
         <div className="hidden lg:flex lg:shrink-0">
-          <Sidebar />
+          <Sidebar role={userRole} />
         </div>
         <div className="flex flex-1 flex-col overflow-hidden">
           {trialDaysLeft !== null && <TrialBanner daysLeft={trialDaysLeft} />}
@@ -78,7 +81,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
             {children}
           </main>
         </div>
-        <MobileNav />
+        <MobileNav role={userRole} />
       </div>
       </SidebarProvider>
     </AuthSessionProvider>

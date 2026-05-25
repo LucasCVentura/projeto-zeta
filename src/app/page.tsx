@@ -604,6 +604,12 @@ export default function LandingPage() {
               <Link href="/agenda-para-estetica" className="hover:text-foreground transition-colors">Agenda para estética</Link>
             </div>
             <div className="flex flex-col gap-2 sm:items-end">
+              <a href="https://www.instagram.com/kiraclinicgestao" target="_blank" rel="noreferrer" className="hover:text-foreground transition-colors">
+                Instagram @kiraclinicgestao
+              </a>
+              <a href="mailto:suporte@kiraclinic.com.br" className="hover:text-foreground transition-colors">
+                suporte@kiraclinic.com.br
+              </a>
               <Link href="/termos" className="hover:text-foreground transition-colors">Termos de Uso</Link>
               <Link href="/privacidade" className="hover:text-foreground transition-colors">Privacidade</Link>
               <Link href="/login" className="hover:text-foreground transition-colors">Entrar</Link>

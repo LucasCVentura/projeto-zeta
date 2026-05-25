@@ -8,11 +8,14 @@ import { cn } from "@/lib/utils"
 import { useTheme } from "@/hooks/use-theme"
 import { mediaUrl } from "@/lib/media-url"
 import Image from "next/image"
+import { can } from "@/lib/permissions"
+import type { OrgRole } from "@/db/schema"
 
-const navItems = [
+const allNavItems = [
   {
     label: "Início",
     href: "/dashboard",
+    requiredAction: null,
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
         <rect x="3" y="3" width="7" height="7" rx="1" />
@@ -25,6 +28,7 @@ const navItems = [
   {
     label: "Agenda",
     href: "/agenda",
+    requiredAction: "schedule:read" as const,
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
         <rect x="3" y="4" width="18" height="18" rx="2" />
@@ -35,6 +39,7 @@ const navItems = [
   {
     label: "Clientes",
     href: "/clientes",
+    requiredAction: "clients:read" as const,
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
@@ -46,6 +51,7 @@ const navItems = [
   {
     label: "Financeiro",
     href: "/financeiro",
+    requiredAction: "financial:read" as const,
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
         <line x1="12" y1="1" x2="12" y2="23" />
@@ -56,6 +62,7 @@ const navItems = [
   {
     label: "Estoque",
     href: "/estoque",
+    requiredAction: "org:update" as const,
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
         <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
@@ -66,12 +73,16 @@ const navItems = [
   },
 ]
 
-export function MobileNav() {
+export function MobileNav({ role }: { role: OrgRole }) {
   const pathname = usePathname()
   const [menuOpen, setMenuOpen] = useState(false)
   const { data: session } = useSession()
   const { isDark, toggle, mounted } = useTheme()
   const sheetRef = useRef<HTMLDivElement>(null)
+
+  const navItems = allNavItems.filter((item) =>
+    item.requiredAction === null || can(role, item.requiredAction)
+  )
 
   const name = session?.user?.name ?? "Minha conta"
   const image = session?.user?.image
