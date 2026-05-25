@@ -1,4 +1,5 @@
 import Link from "next/link"
+import { Instagram, Mail, ArrowUpRight } from "lucide-react"
 import { BonsaiIcon } from "@/components/ui/bonsai-icon"
 import { KiraMark } from "@/components/ui/kira-mark"
 
@@ -585,35 +586,55 @@ export default function LandingPage() {
 
       {/* ── Footer ── */}
       <footer className="border-t border-border px-5 py-10">
-        <div className="mx-auto grid max-w-6xl gap-8 sm:grid-cols-[1fr_auto]">
-          <div className="space-y-3">
+        <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[1fr_auto_auto]">
+          <div className="max-w-sm space-y-3">
             <div className="flex items-center gap-2">
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-primary/10">
                 <KiraMark size={28} />
               </div>
               <span className="text-sm font-semibold">Kira</span>
             </div>
+            <p className="text-sm leading-6 text-muted-foreground">
+              Gestão simples para profissionais da estética, biomedicina estética e beleza.
+            </p>
             <p className="text-xs text-muted-foreground">© {currentYear} Kira. Todos os direitos reservados.</p>
           </div>
 
-          <div className="grid gap-4 text-xs text-muted-foreground sm:grid-cols-2">
+          <div className="grid gap-8 text-sm text-muted-foreground sm:grid-cols-2 lg:gap-12">
             <div className="flex flex-col gap-2">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-foreground/70">Soluções</p>
               <Link href="/sistema-para-biomedica-esteta" className="hover:text-foreground transition-colors">Sistema para biomédica esteta</Link>
               <Link href="/sistema-para-clinica-de-estetica" className="hover:text-foreground transition-colors">Sistema para clínica de estética</Link>
               <Link href="/prontuario-estetico-digital" className="hover:text-foreground transition-colors">Prontuário estético digital</Link>
               <Link href="/agenda-para-estetica" className="hover:text-foreground transition-colors">Agenda para estética</Link>
             </div>
-            <div className="flex flex-col gap-2 sm:items-end">
-              <a href="https://www.instagram.com/kiraclinicgestao" target="_blank" rel="noreferrer" className="hover:text-foreground transition-colors">
-                Instagram @kiraclinicgestao
-              </a>
-              <a href="mailto:suporte@kiraclinic.com.br" className="hover:text-foreground transition-colors">
-                suporte@kiraclinic.com.br
-              </a>
+            <div className="flex flex-col gap-2">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-foreground/70">Conta</p>
               <Link href="/termos" className="hover:text-foreground transition-colors">Termos de Uso</Link>
               <Link href="/privacidade" className="hover:text-foreground transition-colors">Privacidade</Link>
               <Link href="/login" className="hover:text-foreground transition-colors">Entrar</Link>
             </div>
+          </div>
+
+          <div className="flex flex-col gap-3 text-sm">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-foreground/70">Contato</p>
+            <a
+              href="https://www.instagram.com/kiraclinicgestao"
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-muted-foreground hover:border-primary/40 hover:text-foreground transition-colors"
+            >
+              <Instagram size={16} />
+              @kiraclinicgestao
+              <ArrowUpRight size={14} className="opacity-60" />
+            </a>
+            <a
+              href="mailto:suporte@kiraclinic.com.br"
+              className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-muted-foreground hover:border-primary/40 hover:text-foreground transition-colors"
+            >
+              <Mail size={16} />
+              suporte@kiraclinic.com.br
+            </a>
           </div>
         </div>
       </footer>
