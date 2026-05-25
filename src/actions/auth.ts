@@ -106,6 +106,15 @@ export async function registerAction(data: {
     // não bloqueia o cadastro se o e-mail falhar
   }
 
+  try {
+    const { sendAdminPush } = await import("@/actions/push")
+    await sendAdminPush({
+      title: "🌱 Nova clínica cadastrada",
+      body: `${data.name} — ${data.email}`,
+      url: "/admin",
+    })
+  } catch { /* não bloqueia */ }
+
   return { success: true }
 }
 

@@ -46,6 +46,17 @@ export async function POST(req: NextRequest) {
         .where(eq(organizations.id, organizationId))
 
       try {
+        const { sendAdminPush } = await import("@/actions/push")
+        const orgRow = await db.select({ name: organizations.name }).from(organizations).where(eq(organizations.id, organizationId)).limit(1)
+        const orgName = orgRow[0]?.name ?? organizationId
+        await sendAdminPush({
+          title: isBoleto ? "🎉 Nova assinatura (boleto)" : "🎉 Nova assinatura",
+          body: `${orgName} assinou o Kira`,
+          url: "/admin",
+        })
+      } catch { /* não bloqueia */ }
+
+      try {
         const owner = await getOrgOwner(organizationId)
         if (owner?.email) {
           if (isBoleto) {

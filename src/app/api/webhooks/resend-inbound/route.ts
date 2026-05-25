@@ -36,5 +36,14 @@ export async function POST(req: NextRequest) {
     body,
   })
 
+  try {
+    const { sendAdminPush } = await import("@/actions/push")
+    await sendAdminPush({
+      title: "📧 Novo email de suporte",
+      body: `De: ${from ?? "desconhecido"} — ${subject ?? "(sem assunto)"}`,
+      url: "/admin",
+    })
+  } catch { /* não bloqueia */ }
+
   return NextResponse.json({ ok: true })
 }

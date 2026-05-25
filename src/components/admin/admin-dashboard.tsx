@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { cn } from "@/lib/utils"
+import { PushToggle } from "./push-toggle"
 
 type Org = {
   id: string
@@ -191,9 +192,12 @@ export function AdminDashboard({
             <p className="text-xs font-medium uppercase tracking-widest text-primary mb-1">Kira Admin</p>
             <h1 className="font-heading text-2xl sm:text-3xl font-bold">Visão Geral</h1>
           </div>
-          <div className="text-right shrink-0">
-            <p className="text-2xl font-bold tabular-nums text-green-600 dark:text-green-400">{formatBRL(metrics.mrr)}</p>
-            <p className="text-xs text-muted-foreground">MRR · {metrics.activeOrgs} ativa{metrics.activeOrgs !== 1 ? "s" : ""}</p>
+          <div className="flex flex-col items-end gap-2 shrink-0">
+            <div className="text-right">
+              <p className="text-2xl font-bold tabular-nums text-green-600 dark:text-green-400">{formatBRL(metrics.mrr)}</p>
+              <p className="text-xs text-muted-foreground">MRR · {metrics.activeOrgs} ativa{metrics.activeOrgs !== 1 ? "s" : ""}</p>
+            </div>
+            <PushToggle />
           </div>
         </div>
 

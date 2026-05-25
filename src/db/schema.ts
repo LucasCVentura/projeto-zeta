@@ -637,3 +637,16 @@ export const inboundEmails = pgTable("inbound_emails", {
 })
 
 export type InboundEmail = typeof inboundEmails.$inferSelect
+
+// ── push_subscriptions ────────────────────────────────────────────────────────
+
+export const pushSubscriptions = pgTable("push_subscriptions", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+
+  endpoint: text("endpoint").notNull().unique(),
+  p256dh: text("p256dh").notNull(),
+  auth: text("auth").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+})
