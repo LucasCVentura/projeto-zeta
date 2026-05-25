@@ -160,7 +160,7 @@ export function ClientForm({ defaultValues }: { defaultValues?: Partial<FormData
             {errors.name && <p className="text-destructive text-xs">{errors.name.message}</p>}
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="cpf">CPF</Label>
               <Input
@@ -187,7 +187,7 @@ export function ClientForm({ defaultValues }: { defaultValues?: Partial<FormData
       {/* ── Step 1: Contato ── */}
       {step === 1 && (
         <div className="surface space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="phone">Telefone</Label>
               <Input

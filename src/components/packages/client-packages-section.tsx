@@ -172,7 +172,7 @@ export function ClientPackagesSection({ clientId, clientPhone, clientName, clien
                     <Package size={14} className={cn(pkg.isActive ? "text-primary" : "text-muted-foreground")} />
                     <div>
                       <p className="text-sm font-medium leading-tight">{pkg.packageName}</p>
-                      <p className="text-xs text-muted-foreground">{pkg.procedureName}</p>
+                      <p className="text-xs text-muted-foreground truncate">{pkg.procedureName}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">

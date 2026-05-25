@@ -106,7 +106,7 @@ export function ProceduresList({ initialProcedures }: { initialProcedures: Proce
       {showForm ? (
         <form onSubmit={handleSubmit(onCreate)} className="surface space-y-4">
           <p className="text-sm font-medium">Novo procedimento</p>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="name">Nome</Label>
               <Input id="name" placeholder="Ex: Limpeza de pele" {...register("name")} />
@@ -177,7 +177,7 @@ function ProcedureRow({
     return (
       <form
         onSubmit={handleSubmit((data) => onSave({ ...data, hasReturn, returnIntervalDays: returnDays }))}
-        className="surface grid grid-cols-2 gap-3"
+        className="surface grid grid-cols-1 sm:grid-cols-2 gap-3"
       >
         <Input placeholder="Nome" {...register("name")} />
         <div className="relative">

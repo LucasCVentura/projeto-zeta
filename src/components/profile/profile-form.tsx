@@ -159,7 +159,7 @@ export function ProfileForm({ user }: { user: User }) {
           {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="phone">Telefone</Label>
             <Input id="phone" placeholder="(00) 00000-0000" {...register("phone")} />
@@ -188,7 +188,7 @@ export function ProfileForm({ user }: { user: User }) {
       <div className="surface space-y-4">
         <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Dados profissionais</p>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="professionalDocumentType">Tipo de registro</Label>
             <Input id="professionalDocumentType" placeholder="Ex: CRBM, CRF" {...register("professionalDocumentType")} />

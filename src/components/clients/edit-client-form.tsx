@@ -54,7 +54,7 @@ export function EditClientForm({ clientId, defaultValues }: Props) {
         {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="phone">Telefone</Label>
           <Input id="phone" {...register("phone")} placeholder="(11) 91234-5678" />
@@ -71,7 +71,7 @@ export function EditClientForm({ clientId, defaultValues }: Props) {
         {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="cpf">CPF</Label>
           <Input id="cpf" {...register("cpf")} placeholder="000.000.000-00" />

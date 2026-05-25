@@ -181,7 +181,7 @@ export function AdminDashboard({
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-5xl mx-auto px-5 py-10 space-y-8">
+      <div className="max-w-5xl mx-auto px-5 py-6 sm:py-10 space-y-8">
 
         {/* Header */}
         <div>
@@ -190,21 +190,23 @@ export function AdminDashboard({
         </div>
 
         <Tabs defaultValue="overview">
-          <TabsList className="mb-6">
-            <TabsTrigger value="overview">Visão Geral</TabsTrigger>
-            <TabsTrigger value="clinicas">Clínicas ({orgs.length})</TabsTrigger>
-            <TabsTrigger value="growth" className="flex items-center gap-1.5"><TrendingUp size={13} />Growth</TabsTrigger>
-            <TabsTrigger value="feedback" className="flex items-center gap-1.5"><MessageSquare size={13} />Feedback {feedbacks.length > 0 && <span className="ml-0.5 text-[10px] bg-primary/15 text-primary rounded-full px-1.5 py-0.5 font-medium">{feedbacks.length}</span>}</TabsTrigger>
-            <TabsTrigger value="financeiro" className="flex items-center gap-1.5"><Wallet size={13} />Financeiro</TabsTrigger>
-            <TabsTrigger value="suporte" className="flex items-center gap-1.5">
-              <Mail size={13} />Suporte
-              {inboundEmails.filter(e => !e.read).length > 0 && (
-                <span className="ml-0.5 text-[10px] bg-destructive/15 text-destructive rounded-full px-1.5 py-0.5 font-medium">
-                  {inboundEmails.filter(e => !e.read).length}
-                </span>
-              )}
-            </TabsTrigger>
-          </TabsList>
+          <div className="-mx-5 px-5 overflow-x-auto sm:mx-0 sm:px-0">
+            <TabsList className="mb-6 w-max">
+              <TabsTrigger value="overview">Visão Geral</TabsTrigger>
+              <TabsTrigger value="clinicas">Clínicas ({orgs.length})</TabsTrigger>
+              <TabsTrigger value="growth" className="flex items-center gap-1.5"><TrendingUp size={13} />Growth</TabsTrigger>
+              <TabsTrigger value="feedback" className="flex items-center gap-1.5"><MessageSquare size={13} />Feedback {feedbacks.length > 0 && <span className="ml-0.5 text-[10px] bg-primary/15 text-primary rounded-full px-1.5 py-0.5 font-medium">{feedbacks.length}</span>}</TabsTrigger>
+              <TabsTrigger value="financeiro" className="flex items-center gap-1.5"><Wallet size={13} />Financeiro</TabsTrigger>
+              <TabsTrigger value="suporte" className="flex items-center gap-1.5">
+                <Mail size={13} />Suporte
+                {inboundEmails.filter(e => !e.read).length > 0 && (
+                  <span className="ml-0.5 text-[10px] bg-destructive/15 text-destructive rounded-full px-1.5 py-0.5 font-medium">
+                    {inboundEmails.filter(e => !e.read).length}
+                  </span>
+                )}
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           {/* Aba: Visão Geral */}
           <TabsContent value="overview" className="space-y-8">
@@ -447,13 +449,13 @@ export function AdminDashboard({
                 <h2 className="font-semibold text-sm">Receita Mensal</h2>
               </div>
               <div className="space-y-2.5">
-                <div className="flex items-center justify-between text-sm">
+                <div className="flex items-start justify-between gap-3 text-sm">
                   <span className="text-muted-foreground">MRR bruto ({metrics.activeOrgs} × R$49,90)</span>
-                  <span className="font-medium tabular-nums">{formatBRL(metrics.mrr)}</span>
+                  <span className="font-medium tabular-nums shrink-0">{formatBRL(metrics.mrr)}</span>
                 </div>
-                <div className="flex items-center justify-between text-sm">
+                <div className="flex items-start justify-between gap-3 text-sm">
                   <span className="text-muted-foreground">Taxa Stripe (3,99% + R$0,39/cobrança)</span>
-                  <span className="text-destructive tabular-nums">− {formatBRL(metrics.mrr - metrics.netMrr)}</span>
+                  <span className="text-destructive tabular-nums shrink-0">− {formatBRL(metrics.mrr - metrics.netMrr)}</span>
                 </div>
                 <div className="h-px bg-border" />
                 <div className="flex items-center justify-between text-sm">

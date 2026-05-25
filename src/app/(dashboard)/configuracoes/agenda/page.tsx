@@ -129,7 +129,7 @@ export default function ConfiguracaoAgendaPage() {
         {/* Horário */}
         <div className="surface space-y-4">
           <Label>Horário de atendimento</Label>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="startTime" className="text-xs text-muted-foreground">Início</Label>
               <Input id="startTime" type="time" {...register("startTime")} />
@@ -142,7 +142,7 @@ export default function ConfiguracaoAgendaPage() {
 
           <div className="space-y-2">
             <Label className="text-xs text-muted-foreground">Intervalo (opcional)</Label>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label htmlFor="breakStart" className="text-xs text-muted-foreground">Início pausa</Label>
                 <Input id="breakStart" type="time" {...register("breakStart")} />

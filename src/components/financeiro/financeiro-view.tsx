@@ -91,8 +91,8 @@ export function FinanceiroView() {
       </div>
 
       {/* Cards resumo */}
-      <div className="grid grid-cols-3 gap-3">
-        <div className="surface col-span-3 flex items-center gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <div className="surface col-span-2 sm:col-span-3 flex items-center gap-4">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-green-50">
             <TrendingUp size={20} className="text-green-600" />
           </div>
@@ -116,7 +116,7 @@ export function FinanceiroView() {
               <p className="text-xs text-muted-foreground">Custo insumos</p>
               <p className="text-lg font-semibold text-orange-600">{formatCurrency(data.totalCost)}</p>
             </div>
-            <div className="surface col-span-2">
+            <div className="surface sm:col-span-2">
               <p className="text-xs text-muted-foreground">Lucro líquido</p>
               <p className="text-lg font-semibold text-green-600">{formatCurrency(data.total - data.totalCost)}</p>
             </div>
