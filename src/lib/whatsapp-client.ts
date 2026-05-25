@@ -1,24 +1,30 @@
-import twilio from "twilio"
-
-let _client: ReturnType<typeof twilio> | null = null
-
-function getClient() {
-  if (!_client) {
-    _client = twilio(
-      process.env.TWILIO_ACCOUNT_SID!,
-      process.env.TWILIO_AUTH_TOKEN!
-    )
-  }
-  return _client
-}
-
-const FROM = process.env.TWILIO_WHATSAPP_FROM ?? "whatsapp:+14155238886"
+const API_URL = "https://api.gupshup.io/wa/api/v1/msg"
 
 export async function sendWhatsApp(to: string, body: string) {
   const normalized = to.replace(/\D/g, "")
   if (!normalized || normalized.length < 10) return
 
-  const toFormatted = `whatsapp:+55${normalized.replace(/^55/, "")}`
+  const destination = `55${normalized.replace(/^55/, "")}`
 
-  await getClient().messages.create({ from: FROM, to: toFormatted, body })
+  const params = new URLSearchParams({
+    channel: "whatsapp",
+    source: process.env.GUPSHUP_SENDER!,
+    destination,
+    message: JSON.stringify({ type: "text", text: body }),
+    "src.name": process.env.GUPSHUP_APP_NAME!,
+  })
+
+  const res = await fetch(API_URL, {
+    method: "POST",
+    headers: {
+      apikey: process.env.GUPSHUP_API_KEY!,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: params.toString(),
+  })
+
+  if (!res.ok) {
+    const text = await res.text()
+    throw new Error(`Gupshup error ${res.status}: ${text}`)
+  }
 }
