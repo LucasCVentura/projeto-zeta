@@ -10,6 +10,8 @@ import { PixInvoiceEmail } from "@/emails/pix-invoice"
 import { BoletoInvoiceEmail } from "@/emails/boleto-invoice"
 import { BoletoWelcomeEmail } from "@/emails/boleto-welcome"
 import { BoletoPaymentConfirmedEmail } from "@/emails/boleto-payment-confirmed"
+import { InviteEmail } from "@/emails/invite"
+import type { OrgRole } from "@/db/schema"
 
 export async function sendWelcomeEmail(to: string, name: string) {
   await resend.emails.send({
@@ -117,5 +119,15 @@ export async function sendBoletoInvoiceEmail(
     to,
     subject: "Seu boleto do Kira está disponível 🧾",
     react: createElement(BoletoInvoiceEmail, { name, amount, expiresAt, boletoNumber, voucherUrl, appUrl: APP_URL }),
+  })
+}
+
+export async function sendInviteEmail(to: string, orgName: string, token: string, role: OrgRole) {
+  const inviteUrl = `${APP_URL}/convite/${token}`
+  await resend.emails.send({
+    from: FROM_EMAIL,
+    to,
+    subject: `Você foi convidada para a equipe ${orgName} no Kira`,
+    react: createElement(InviteEmail, { orgName, role, inviteUrl }),
   })
 }
