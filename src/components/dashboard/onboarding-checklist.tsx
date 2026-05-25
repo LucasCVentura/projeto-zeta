@@ -15,7 +15,7 @@ import {
   UserPlus,
   X,
 } from "lucide-react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import type { ReactNode } from "react"
 import { cn } from "@/lib/utils"
 
@@ -49,9 +49,11 @@ export function OnboardingChecklist({
   hasAppointment,
   hasPhoto,
 }: Props) {
-  const [dismissed, setDismissed] = useState(() =>
-    typeof window !== "undefined" && localStorage.getItem(dismissStorageKey) === "1"
-  )
+  const [dismissed, setDismissed] = useState(false)
+
+  useEffect(() => {
+    if (localStorage.getItem(dismissStorageKey) === "1") setDismissed(true)
+  }, [dismissStorageKey])
 
   const steps: Step[] = [
     {
