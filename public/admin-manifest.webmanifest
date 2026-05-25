@@ -1,0 +1,24 @@
+{
+  "name": "Kira Admin",
+  "short_name": "Kira Admin",
+  "description": "Painel administrativo do Kira",
+  "start_url": "/admin",
+  "scope": "/admin",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#fdfcfc",
+  "theme_color": "#b8526e",
+  "icons": [
+    {
+      "src": "/brand/kira-bonsai-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/brand/kira-bonsai-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
