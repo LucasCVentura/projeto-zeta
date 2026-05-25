@@ -4,6 +4,7 @@ import { Header } from "@/components/layout/header"
 import { AuthSessionProvider } from "@/components/layout/session-provider"
 import { TrialBanner } from "@/components/subscription/trial-banner"
 import { NavProgress } from "@/components/layout/nav-progress"
+import { SidebarProvider } from "@/components/layout/sidebar-context"
 import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import { headers } from "next/headers"
@@ -62,6 +63,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   return (
     <AuthSessionProvider>
+      <SidebarProvider>
       <NavProgress />
       <div className="flex h-dvh overflow-hidden bg-background">
         <div className="hidden lg:flex lg:shrink-0">
@@ -76,6 +78,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         </div>
         <MobileNav />
       </div>
+      </SidebarProvider>
     </AuthSessionProvider>
   )
 }

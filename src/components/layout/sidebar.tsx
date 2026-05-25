@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils"
 import { useTheme } from "@/hooks/use-theme"
 import { mediaUrl } from "@/lib/media-url"
 import { KiraMark } from "@/components/ui/kira-mark"
+import { useSidebar } from "./sidebar-context"
 import Image from "next/image"
 import { useState, useRef, useEffect } from "react"
 
@@ -70,9 +71,9 @@ const navItems = [
     href: "/ajuda",
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
-        <circle cx="12" cy="12" r="10" />
+        <circle cx="12" cy="12" r="9" />
         <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
-        <line x1="12" y1="17" x2="12.01" y2="17" />
+        <circle cx="12" cy="17" r="0.5" fill="currentColor" />
       </svg>
     ),
   },
@@ -91,36 +92,58 @@ const navItems = [
 export function Sidebar() {
   const pathname = usePathname()
   const { isDark, toggle, mounted } = useTheme()
+  const { collapsed, toggle: toggleSidebar } = useSidebar()
 
   return (
-    <aside className="flex h-full w-60 flex-col border-r border-border bg-sidebar">
+    <aside
+      className={cn(
+        "flex h-full flex-col border-r border-border bg-sidebar transition-all duration-200",
+        collapsed ? "w-16" : "w-60"
+      )}
+    >
       {/* Logo */}
-      <div className="flex h-16 items-center gap-2.5 border-b border-border px-5">
-        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-primary/10">
-          <KiraMark size={24} />
+      <div className="flex h-16 items-center border-b border-border px-3">
+        <div className={cn("flex items-center gap-2.5 flex-1 min-w-0", collapsed && "justify-center")}>
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-primary/10">
+            <KiraMark size={24} />
+          </div>
+          {!collapsed && <span className="font-semibold tracking-tight truncate">Kira</span>}
         </div>
-        <span className="font-semibold tracking-tight">Kira</span>
+        <button
+          onClick={toggleSidebar}
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+          title={collapsed ? "Expandir menu" : "Recolher menu"}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            {collapsed
+              ? <path d="M9 18l6-6-6-6" />
+              : <path d="M15 18l-6-6 6-6" />
+            }
+          </svg>
+        </button>
       </div>
 
       {/* Nav */}
-      <nav className="flex flex-1 flex-col gap-1 p-3">
+      <nav className="flex flex-1 flex-col gap-1 p-3 min-h-0 overflow-y-auto">
         {navItems.map((item) => {
           const active = pathname === item.href || pathname.startsWith(item.href + "/")
           return (
             <Link
               key={item.href}
               href={item.href}
+              title={collapsed ? item.label : undefined}
               className={cn(
                 "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                collapsed && "justify-center px-0",
                 active
                   ? "bg-primary/10 text-primary"
                   : "text-muted-foreground hover:bg-accent hover:text-foreground"
               )}
             >
-              <span className={cn(active ? "text-primary" : "text-muted-foreground")}>
+              <span className={cn("shrink-0", active ? "text-primary" : "text-muted-foreground")}>
                 {item.icon}
               </span>
-              {item.label}
+              {!collapsed && item.label}
             </Link>
           )
         })}
@@ -131,7 +154,11 @@ export function Sidebar() {
         <button
           onClick={toggle}
           suppressHydrationWarning
-          className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+          title={collapsed ? (mounted ? (isDark ? "Modo claro" : "Modo escuro") : "Modo escuro") : undefined}
+          className={cn(
+            "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors",
+            collapsed && "justify-center px-0"
+          )}
         >
           {!mounted ? (
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
@@ -140,29 +167,25 @@ export function Sidebar() {
           ) : isDark ? (
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
               <circle cx="12" cy="12" r="5" />
-              <line x1="12" y1="1" x2="12" y2="3" />
-              <line x1="12" y1="21" x2="12" y2="23" />
-              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
-              <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
-              <line x1="1" y1="12" x2="3" y2="12" />
-              <line x1="21" y1="12" x2="23" y2="12" />
-              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
-              <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+              <line x1="12" y1="1" x2="12" y2="3" /><line x1="12" y1="21" x2="12" y2="23" />
+              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" /><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+              <line x1="1" y1="12" x2="3" y2="12" /><line x1="21" y1="12" x2="23" y2="12" />
+              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" /><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
             </svg>
           ) : (
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
               <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
             </svg>
           )}
-          {mounted ? (isDark ? "Modo claro" : "Modo escuro") : "Modo escuro"}
+          {!collapsed && (mounted ? (isDark ? "Modo claro" : "Modo escuro") : "Modo escuro")}
         </button>
-        <UserMenu />
+        <UserMenu collapsed={collapsed} />
       </div>
     </aside>
   )
 }
 
-function UserMenu() {
+function UserMenu({ collapsed }: { collapsed: boolean }) {
   const { data: session } = useSession()
   const name = session?.user?.name ?? "Minha conta"
   const image = session?.user?.image
@@ -191,49 +214,46 @@ function UserMenu() {
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 hover:bg-accent transition-colors"
+        title={collapsed ? name : undefined}
+        className={cn(
+          "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 hover:bg-accent transition-colors",
+          collapsed && "justify-center px-0"
+        )}
       >
         <div className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/15 text-sm font-semibold text-primary overflow-hidden">
           {image ? (
             <Image src={mediaUrl(image) + (avatarTs ? `?t=${avatarTs}` : "")} alt={name} fill className="object-cover" sizes="32px" unoptimized />
           ) : initials}
         </div>
-        <div className="min-w-0 flex-1 text-left">
-          <p className="truncate text-sm font-medium">{name}</p>
-          <p className="truncate text-xs text-muted-foreground">Minha conta</p>
-        </div>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0 text-muted-foreground">
-          <path d="M6 9l6-6 6 6M6 15l6 6 6-6" />
-        </svg>
+        {!collapsed && (
+          <>
+            <div className="min-w-0 flex-1 text-left">
+              <p className="truncate text-sm font-medium">{name}</p>
+              <p className="truncate text-xs text-muted-foreground">Minha conta</p>
+            </div>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0 text-muted-foreground">
+              <path d="M6 9l6-6 6 6M6 15l6 6 6-6" />
+            </svg>
+          </>
+        )}
       </button>
 
       {open && (
-        <div className="absolute bottom-full left-0 right-0 mb-1 rounded-lg border bg-popover shadow-lg overflow-hidden z-50">
-          <Link
-            href="/perfil"
-            onClick={() => setOpen(false)}
-            className="flex items-center gap-2.5 px-3 py-2.5 text-sm hover:bg-accent transition-colors"
-          >
+        <div className="absolute bottom-full left-0 right-0 mb-1 rounded-lg border bg-popover shadow-lg overflow-hidden z-50 min-w-40">
+          <Link href="/perfil" onClick={() => setOpen(false)} className="flex items-center gap-2.5 px-3 py-2.5 text-sm hover:bg-accent transition-colors">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
               <circle cx="12" cy="8" r="4" /><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
             </svg>
             Ver perfil
           </Link>
-          <Link
-            href="/configuracoes"
-            onClick={() => setOpen(false)}
-            className="flex items-center gap-2.5 px-3 py-2.5 text-sm hover:bg-accent transition-colors"
-          >
+          <Link href="/configuracoes" onClick={() => setOpen(false)} className="flex items-center gap-2.5 px-3 py-2.5 text-sm hover:bg-accent transition-colors">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
               <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/>
             </svg>
             Configurações
           </Link>
           <div className="border-t" />
-          <button
-            onClick={() => signOut({ callbackUrl: "/login" })}
-            className="flex w-full items-center gap-2.5 px-3 py-2.5 text-sm text-destructive hover:bg-destructive/10 transition-colors"
-          >
+          <button onClick={() => signOut({ callbackUrl: "/login" })} className="flex w-full items-center gap-2.5 px-3 py-2.5 text-sm text-destructive hover:bg-destructive/10 transition-colors">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
               <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" />
             </svg>
