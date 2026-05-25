@@ -12,7 +12,7 @@ const features = [
       </svg>
     ),
     title: "Agenda inteligente",
-    description: "Gerencie horários, confirmações e lembretes automáticos sem complicação.",
+    description: "Gerencie horários e envie lembretes e confirmações automáticas via WhatsApp para seus clientes.",
   },
   {
     icon: (
@@ -508,6 +508,7 @@ export default function LandingPage() {
             <ul className="space-y-2.5 text-left">
               {[
                 "Agenda e gestão de horários",
+                "Notificações automáticas via WhatsApp",
                 "Clientes e prontuários ilimitados",
                 "Fotos com apoio de IA",
                 "Controle financeiro completo",
