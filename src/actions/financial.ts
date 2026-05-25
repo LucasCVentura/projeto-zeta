@@ -7,7 +7,6 @@ import { requireSession } from "@/lib/session"
 import { can } from "@/lib/permissions"
 import { revalidatePath } from "next/cache"
 import type { ActionResult } from "./auth"
-import { sendPostConsultationMessage } from "./whatsapp"
 
 export async function completeAppointmentWithRevenueAction(data: {
   appointmentId: string
@@ -98,34 +97,6 @@ export async function completeAppointmentWithRevenueAction(data: {
   revalidatePath("/agenda")
   revalidatePath("/dashboard")
   revalidatePath("/estoque")
-
-  // Envia mensagem pós-consulta WhatsApp (fire-and-forget)
-  if (process.env.WHATSAPP_ENABLED === "true") try {
-    if (appt?.clientId) {
-      const [clientData] = await db
-        .select({ name: clients.name, phone: clients.phone })
-        .from(clients)
-        .where(eq(clients.id, appt.clientId))
-        .limit(1)
-
-      const [org] = await db
-        .select({ name: organizations.name, googleReviewUrl: organizations.googleReviewUrl })
-        .from(organizations)
-        .where(eq(organizations.id, organizationId))
-        .limit(1)
-
-      if (clientData?.phone) {
-        await sendPostConsultationMessage({
-          clientPhone: clientData.phone,
-          clientName: clientData.name,
-          orgName: org?.name ?? "Clínica",
-          googleReviewUrl: org?.googleReviewUrl,
-        })
-      }
-    }
-  } catch {
-    // Falha silenciosa
-  }
 
   return { success: true }
 }

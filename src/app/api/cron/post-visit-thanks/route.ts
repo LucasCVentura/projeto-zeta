@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { db } from "@/db"
 import { appointments, clients, organizations } from "@/db/schema"
-import { eq, and, isNotNull, or } from "drizzle-orm"
-import { sendReminderWithConfirmation } from "@/actions/whatsapp"
+import { eq, and, isNotNull } from "drizzle-orm"
+import { sendPostVisitThanks } from "@/actions/whatsapp"
 
 export async function GET(req: NextRequest) {
   const authHeader = req.headers.get("authorization")
@@ -10,29 +10,24 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  const twoDaysFromNow = new Date()
-  twoDaysFromNow.setDate(twoDaysFromNow.getDate() + 2)
-  const targetDate = twoDaysFromNow.toISOString().split("T")[0]
+  const yesterday = new Date()
+  yesterday.setDate(yesterday.getDate() - 1)
+  const yesterdayStr = yesterday.toISOString().split("T")[0]
 
   const rows = await db
     .select({
-      id: appointments.id,
-      startTime: appointments.startTime,
-      procedure: appointments.procedure,
-      clientPackageId: appointments.clientPackageId,
-      organizationId: appointments.organizationId,
       clientName: clients.name,
       clientPhone: clients.phone,
       orgName: organizations.name,
-      orgAddress: organizations.address,
+      googleReviewUrl: organizations.googleReviewUrl,
     })
     .from(appointments)
     .innerJoin(clients, eq(clients.id, appointments.clientId))
     .innerJoin(organizations, eq(organizations.id, appointments.organizationId))
     .where(
       and(
-        eq(appointments.date, targetDate),
-        or(eq(appointments.status, "waiting"), eq(appointments.status, "confirmed")),
+        eq(appointments.date, yesterdayStr),
+        eq(appointments.status, "completed"),
         isNotNull(clients.phone)
       )
     )
@@ -41,19 +36,13 @@ export async function GET(req: NextRequest) {
 
   if (process.env.WHATSAPP_ENABLED === "true") {
     for (const row of rows) {
-      if (!row.clientPhone) continue
+      if (!row.clientPhone || !row.googleReviewUrl) continue
       try {
-        await sendReminderWithConfirmation({
+        await sendPostVisitThanks({
           clientPhone: row.clientPhone,
           clientName: row.clientName,
-          date: targetDate,
-          startTime: row.startTime,
-          procedure: row.procedure ?? undefined,
           orgName: row.orgName,
-          orgAddress: row.orgAddress,
-          appointmentId: row.id,
-          clientPackageId: row.clientPackageId,
-          organizationId: row.organizationId,
+          googleReviewUrl: row.googleReviewUrl,
         })
         sent++
       } catch {
@@ -62,5 +51,5 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({ ok: true, sent, date: targetDate })
+  return NextResponse.json({ ok: true, sent, date: yesterdayStr })
 }

@@ -666,6 +666,26 @@ export type ClientDocument = typeof clientDocuments.$inferSelect
 
 // ── push_subscriptions ────────────────────────────────────────────────────────
 
+// ── whatsapp_pending_confirmations ────────────────────────────────────────────
+
+export const whatsappPendingConfirmations = pgTable("whatsapp_pending_confirmations", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+
+  messageId: text("message_id").notNull().unique(),
+  appointmentId: text("appointment_id").references(() => appointments.id, { onDelete: "cascade" }),
+  clientPackageId: text("client_package_id").references(() => clientPackages.id, { onDelete: "cascade" }),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organizations.id, { onDelete: "cascade" }),
+
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  expiresAt: timestamp("expires_at").notNull(),
+})
+
+// ── push_subscriptions ────────────────────────────────────────────────────────
+
 export const pushSubscriptions = pgTable("push_subscriptions", {
   id: text("id")
     .primaryKey()

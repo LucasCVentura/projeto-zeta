@@ -1,98 +1,115 @@
 "use server"
 
-import { sendWhatsApp } from "@/lib/whatsapp-client"
-import { makeAppointmentToken, makeBatchConfirmToken } from "@/lib/appointment-tokens"
+import { db } from "@/db"
+import { whatsappPendingConfirmations, appointments } from "@/db/schema"
+import { eq, inArray } from "drizzle-orm"
+import { sendWhatsAppTemplate, sendWhatsApp } from "@/lib/whatsapp-client"
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? process.env.AUTH_URL ?? "https://app.kirasaas.com.br"
+const CONFIRMATION_TTL_DAYS = 3
 
-export async function sendAppointmentConfirmation(params: {
-  appointmentId: string
-  clientPhone: string
-  clientName: string
-  date: string       // "2026-05-23"
-  startTime: string  // "14:30"
-  procedure?: string
-  orgName: string
-  orgAddress?: string | null
-}) {
-  const { appointmentId, clientPhone, clientName, date, startTime, procedure, orgName, orgAddress } = params
+function formatDate(date: string) {
   const [year, month, day] = date.split("-")
-  const formattedDate = `${day}/${month}/${year}`
-  const proc = procedure ? `\n🩺 Procedimento: ${procedure}` : ""
-  const addr = orgAddress ? `\n📍 Endereço: ${orgAddress}` : ""
-
-  const confirmToken = makeAppointmentToken(appointmentId, "confirm")
-  const cancelToken = makeAppointmentToken(appointmentId, "cancel")
-
-  const body =
-    `Olá, ${clientName}! 👋\n\n` +
-    `Seu agendamento na *${orgName}* foi registrado. Por favor, confirme sua presença:\n\n` +
-    `📅 Data: ${formattedDate}\n` +
-    `⏰ Horário: ${startTime}${proc}${addr}\n\n` +
-    `✅ *Confirmar presença:*\n${APP_URL}/confirmar/${confirmToken}\n\n` +
-    `❌ *Não poderei comparecer:*\n${APP_URL}/recusar/${cancelToken}`
-
-  await sendWhatsApp(clientPhone, body)
+  return `${day}/${month}/${year}`
 }
 
-export async function sendAppointmentReminder(params: {
+async function storePendingConfirmation(
+  messageId: string,
+  organizationId: string,
+  appointmentId: string | null,
+  clientPackageId: string | null
+) {
+  const expiresAt = new Date()
+  expiresAt.setDate(expiresAt.getDate() + CONFIRMATION_TTL_DAYS)
+  await db.insert(whatsappPendingConfirmations).values({
+    messageId,
+    organizationId,
+    appointmentId,
+    clientPackageId,
+    expiresAt,
+  })
+}
+
+// ── Resumo de agendamento (ao criar) ─────────────────────────────────────────
+
+export async function sendBookingSummary(params: {
   clientPhone: string
   clientName: string
+  orgName: string
+  orgAddress?: string | null
   date: string
   startTime: string
-  procedure?: string
-  orgName: string
-  orgAddress?: string | null
+  procedure?: string | null
 }) {
-  const { clientPhone, clientName, date, startTime, procedure, orgName, orgAddress } = params
-  const [year, month, day] = date.split("-")
-  const formattedDate = `${day}/${month}/${year}`
-  const proc = procedure ? `\n🩺 Procedimento: ${procedure}` : ""
-  const addr = orgAddress ? `\n📍 Endereço: ${orgAddress}` : ""
+  const { clientPhone, clientName, orgName, orgAddress, date, startTime, procedure } = params
 
-  const body =
-    `Olá, ${clientName}! 🔔\n\n` +
-    `Lembrete: você tem um agendamento *amanhã* na *${orgName}*.\n\n` +
-    `📅 Data: ${formattedDate}\n` +
-    `⏰ Horário: ${startTime}${proc}${addr}\n\n` +
-    `Te esperamos! 😊`
-
-  await sendWhatsApp(clientPhone, body)
+  await sendWhatsAppTemplate(clientPhone, "kira_resumo_agendamento", [
+    clientName,
+    orgName,
+    formatDate(date),
+    startTime.slice(0, 5),
+    procedure ?? "—",
+    orgAddress ?? "—",
+  ])
 }
 
-export async function sendPackageScheduleConfirmation(params: {
-  appointmentIds: string[]
+// ── Resumo de pacote (ao agendar sessões) ─────────────────────────────────────
+
+export async function sendPackageBookingSummary(params: {
   clientPhone: string
   clientName: string
-  packageName: string
-  procedureName: string
   orgName: string
   orgAddress?: string | null
+  packageName: string
   sessions: { date: string; startTime: string }[]
 }) {
-  const { appointmentIds, clientPhone, clientName, packageName, procedureName, orgName, orgAddress, sessions } = params
+  const { clientPhone, clientName, orgName, orgAddress, packageName, sessions } = params
 
   const sessionList = sessions
-    .map((s, i) => {
-      const [year, month, day] = s.date.split("-")
-      return `  ${i + 1}. ${day}/${month}/${year} às ${s.startTime}`
-    })
+    .map((s, i) => `${i + 1}. ${formatDate(s.date)} às ${s.startTime.slice(0, 5)}`)
     .join("\n")
 
-  const addr = orgAddress ? `\n📍 ${orgAddress}` : ""
-  const confirmToken = makeBatchConfirmToken(appointmentIds)
-
-  const body =
-    `Olá, ${clientName}! 📅\n\n` +
-    `Suas sessões de *${procedureName}* (${packageName}) foram agendadas na *${orgName}*:\n\n` +
-    `${sessionList}${addr}\n\n` +
-    `Por favor, confirme todas as sessões:\n` +
-    `✅ ${APP_URL}/confirmar-sessoes/${confirmToken}`
-
-  await sendWhatsApp(clientPhone, body)
+  await sendWhatsAppTemplate(clientPhone, "kira_resumo_pacote", [
+    clientName,
+    orgName,
+    packageName,
+    sessionList,
+    orgAddress ?? "—",
+  ])
 }
 
-export async function sendPostConsultationMessage(params: {
+// ── Lembrete + confirmação (2 dias antes) ────────────────────────────────────
+
+export async function sendReminderWithConfirmation(params: {
+  clientPhone: string
+  clientName: string
+  orgName: string
+  orgAddress?: string | null
+  date: string
+  startTime: string
+  procedure?: string | null
+  appointmentId: string
+  clientPackageId?: string | null
+  organizationId: string
+}) {
+  const { clientPhone, clientName, orgName, orgAddress, date, startTime, procedure, appointmentId, clientPackageId, organizationId } = params
+
+  const result = await sendWhatsAppTemplate(clientPhone, "kira_lembrete_confirmacao", [
+    clientName,
+    orgName,
+    formatDate(date),
+    startTime.slice(0, 5),
+    procedure ?? "—",
+    orgAddress ?? "—",
+  ])
+
+  if (result?.messageId) {
+    await storePendingConfirmation(result.messageId, organizationId, appointmentId, clientPackageId ?? null)
+  }
+}
+
+// ── Agradecimento pós-consulta (1 dia após concluído) ────────────────────────
+
+export async function sendPostVisitThanks(params: {
   clientPhone: string
   clientName: string
   orgName: string
@@ -100,16 +117,55 @@ export async function sendPostConsultationMessage(params: {
 }) {
   const { clientPhone, clientName, orgName, googleReviewUrl } = params
 
-  const review = googleReviewUrl
-    ? `\n\n⭐ Sua opinião é muito importante! Deixe sua avaliação:\n${googleReviewUrl}`
-    : ""
+  await sendWhatsAppTemplate(clientPhone, "kira_agradecimento", [
+    clientName,
+    orgName,
+    googleReviewUrl ?? "",
+  ])
+}
 
-  const body =
-    `Olá, ${clientName}! 💜\n\n` +
-    `Obrigado por nos visitar hoje na *${orgName}*.\n\n` +
-    `Esperamos que tenha gostado do atendimento. Qualquer dúvida sobre o procedimento realizado, estamos à disposição.` +
-    `${review}\n\n` +
-    `Até a próxima! ✨`
+// ── Handler do webhook (botão Confirmar / Cancelar) ──────────────────────────
 
-  await sendWhatsApp(clientPhone, body)
+export async function handleWhatsAppButtonReply(messageId: string, buttonTitle: string, fromPhone: string) {
+  const [pending] = await db
+    .select()
+    .from(whatsappPendingConfirmations)
+    .where(eq(whatsappPendingConfirmations.messageId, messageId))
+    .limit(1)
+
+  if (!pending || pending.expiresAt < new Date()) return
+
+  const isConfirm = buttonTitle.toLowerCase().includes("confirmar")
+
+  if (pending.clientPackageId) {
+    const pkgAppts = await db
+      .select({ id: appointments.id })
+      .from(appointments)
+      .where(eq(appointments.clientPackageId, pending.clientPackageId))
+
+    const ids = pkgAppts.map((a) => a.id)
+    if (ids.length > 0) {
+      await db
+        .update(appointments)
+        .set({ status: isConfirm ? "confirmed" : "cancelled", updatedAt: new Date() })
+        .where(inArray(appointments.id, ids))
+    }
+
+    if (!isConfirm) {
+      await sendWhatsApp(fromPhone, "Suas sessões foram canceladas. Entre em contato com a clínica para reagendar. 😊")
+    }
+  } else if (pending.appointmentId) {
+    await db
+      .update(appointments)
+      .set({ status: isConfirm ? "confirmed" : "cancelled", updatedAt: new Date() })
+      .where(eq(appointments.id, pending.appointmentId))
+
+    if (!isConfirm) {
+      await sendWhatsApp(fromPhone, "Seu agendamento foi cancelado. Entre em contato com a clínica ou profissional para reagendar. 😊")
+    }
+  }
+
+  await db
+    .delete(whatsappPendingConfirmations)
+    .where(eq(whatsappPendingConfirmations.messageId, messageId))
 }

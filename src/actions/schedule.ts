@@ -15,7 +15,7 @@ import { generateSlots } from "@/lib/schedule"
 import { revalidatePath, revalidateTag, unstable_cache } from "next/cache"
 import type { AppointmentStatus } from "@/db/schema"
 import type { ActionResult } from "./auth"
-import { sendAppointmentConfirmation } from "./whatsapp"
+import { sendBookingSummary } from "./whatsapp"
 import { organizations } from "@/db/schema"
 
 
@@ -215,9 +215,8 @@ export async function createAppointmentAction(data: {
       .where(eq(organizations.id, organizationId))
       .limit(1)
 
-    if (clientData?.phone && inserted[0]?.id) {
-      await sendAppointmentConfirmation({
-        appointmentId: inserted[0].id,
+    if (clientData?.phone) {
+      await sendBookingSummary({
         clientPhone: clientData.phone,
         clientName: clientData.name,
         date: freeDates[0],

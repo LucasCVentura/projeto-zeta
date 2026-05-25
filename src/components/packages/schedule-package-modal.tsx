@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { createAppointmentAction } from "@/actions/schedule"
 import { suggestRecurrenceAction } from "@/actions/ai"
-import { sendPackageScheduleConfirmation } from "@/actions/whatsapp"
+import { sendPackageBookingSummary } from "@/actions/whatsapp"
 import { Sparkles, Loader2, CalendarDays } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -95,12 +95,10 @@ export function SchedulePackageModal({
         return { date: d.toISOString().split("T")[0], startTime: time }
       })
       try {
-        await sendPackageScheduleConfirmation({
-          appointmentIds: result.appointmentIds,
+        await sendPackageBookingSummary({
           clientPhone,
           clientName,
           packageName,
-          procedureName,
           orgName,
           orgAddress,
           sessions,
