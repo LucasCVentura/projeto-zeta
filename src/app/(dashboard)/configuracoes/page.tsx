@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { Calendar, Stethoscope, Building2, ChevronRight, Package, CreditCard } from "lucide-react"
+import { InstallAppButton } from "@/components/settings/install-app-button"
 
 const sections = [
   {
@@ -49,6 +50,8 @@ export default function ConfiguracoesPage() {
           </Link>
         ))}
       </div>
+
+      <InstallAppButton />
 
       <Link
         href="/configuracoes/assinatura"
