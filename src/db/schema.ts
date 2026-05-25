@@ -640,6 +640,32 @@ export type InboundEmail = typeof inboundEmails.$inferSelect
 
 // ── push_subscriptions ────────────────────────────────────────────────────────
 
+// ── client_documents ─────────────────────────────────────────────────────────
+
+export const clientDocuments = pgTable("client_documents", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organizations.id, { onDelete: "cascade" }),
+  clientId: text("client_id")
+    .notNull()
+    .references(() => clients.id, { onDelete: "cascade" }),
+
+  name: text("name").notNull(),
+  url: text("url").notNull(),
+  fileType: text("file_type").notNull(),
+  fileSize: text("file_size").notNull(),
+
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+})
+
+export type ClientDocument = typeof clientDocuments.$inferSelect
+
+// ── push_subscriptions ────────────────────────────────────────────────────────
+
 export const pushSubscriptions = pgTable("push_subscriptions", {
   id: text("id")
     .primaryKey()

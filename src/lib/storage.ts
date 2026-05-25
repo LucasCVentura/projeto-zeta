@@ -7,7 +7,12 @@ function getClient() {
   )
 }
 
-const BUCKET = "photos"
+const PHOTOS_BUCKET = "photos"
+const DOCUMENTS_BUCKET = "documents"
+
+// ── photos ────────────────────────────────────────────────────────────────────
+
+const BUCKET = PHOTOS_BUCKET
 
 export async function uploadToStorage(
   objectName: string,
@@ -43,4 +48,33 @@ export function storageUrlToObjectName(url: string): string {
 
 export function isStorageUrl(url: string): boolean {
   return url.startsWith("supabase://") || url.includes("supabase.co/storage")
+}
+
+// ── documents ─────────────────────────────────────────────────────────────────
+
+export async function uploadDocumentToStorage(
+  objectName: string,
+  buffer: Buffer,
+  contentType: string
+): Promise<string> {
+  const { error } = await getClient().storage
+    .from(DOCUMENTS_BUCKET)
+    .upload(objectName, buffer, { contentType, upsert: true })
+
+  if (error) throw new Error(`Document upload failed: ${error.message}`)
+
+  return `supabase://${DOCUMENTS_BUCKET}/${objectName}`
+}
+
+export async function deleteDocumentFromStorage(objectName: string): Promise<void> {
+  await getClient().storage.from(DOCUMENTS_BUCKET).remove([objectName])
+}
+
+export function documentStorageUrlToObjectName(url: string): string {
+  if (url.startsWith(`supabase://${DOCUMENTS_BUCKET}/`)) {
+    return url.replace(`supabase://${DOCUMENTS_BUCKET}/`, "")
+  }
+  const prefix = `${process.env.SUPABASE_URL}/storage/v1/object/public/${DOCUMENTS_BUCKET}/`
+  if (url.startsWith(prefix)) return url.slice(prefix.length)
+  return url
 }
