@@ -8,10 +8,6 @@ export default async function PerfilPage() {
 
   return (
     <div className="container-page max-w-xl py-6 space-y-6">
-      <div>
-        <h2 className="font-heading text-xl font-semibold">Meu perfil</h2>
-        <p className="text-sm text-muted-foreground mt-1">Informações pessoais e profissionais.</p>
-      </div>
       <ProfileForm user={user} />
     </div>
   )

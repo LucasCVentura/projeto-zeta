@@ -23,11 +23,6 @@ export function HelpPage() {
 
   return (
     <div className="max-w-2xl mx-auto px-5 py-10 space-y-10">
-      <div>
-        <h1 className="font-heading text-2xl font-bold">Ajuda</h1>
-        <p className="text-sm text-muted-foreground mt-1">Suporte e contato com a equipe Kira</p>
-      </div>
-
       {/* Contato */}
       <div className="rounded-xl border border-border bg-card p-6 space-y-4">
         <div className="flex items-center gap-2">

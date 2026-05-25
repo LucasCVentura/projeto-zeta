@@ -38,6 +38,22 @@ function monthLabel(key: string) {
   return `${months[Number(month) - 1]} ${year}`
 }
 
+function PhotoThumb({ url }: { url: string }) {
+  const [loaded, setLoaded] = useState(false)
+  return (
+    <>
+      {!loaded && <div className="absolute inset-0 animate-pulse bg-muted" />}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={url}
+        alt="Foto do cliente"
+        className={cn("h-full w-full object-cover transition-opacity duration-300", loaded ? "opacity-100" : "opacity-0")}
+        onLoad={() => setLoaded(true)}
+      />
+    </>
+  )
+}
+
 export function PhotoTimeline({ clientId, initialPhotos }: Props) {
   const [photos, setPhotos] = useState<ClientPhoto[]>(initialPhotos)
   const [selected, setSelected] = useState<string[]>([])
@@ -175,12 +191,7 @@ export function PhotoTimeline({ clientId, initialPhotos }: Props) {
                         )}
                         onClick={() => toggleSelect(photo.id)}
                       >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={mediaUrl(photo.url)}
-                          alt="Foto do cliente"
-                          className="h-full w-full object-cover"
-                        />
+                        <PhotoThumb url={mediaUrl(photo.url)} />
 
                         {/* Overlay selecionado */}
                         {isSelected && (

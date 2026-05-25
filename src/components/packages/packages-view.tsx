@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react"
 import { createPackageAction, updatePackageAction, deletePackageAction } from "@/actions/packages"
-import { Plus, Pencil, Trash2, Package, X, Users, CalendarPlus } from "lucide-react"
+import { Plus, Pencil, Trash2, Package, X, Users, CalendarPlus, ArrowLeft } from "lucide-react"
+import Link from "next/link"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -124,6 +125,9 @@ export function PackagesView({ packages: initialPackages, procedures }: Props) {
 
   return (
     <div className="container-page max-w-3xl py-8 space-y-6">
+      <Link href="/configuracoes" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
+        <ArrowLeft size={14} /> Configurações
+      </Link>
       <div className="flex items-center justify-between">
         <div>
           <h1 className="font-heading text-2xl font-semibold">Pacotes</h1>

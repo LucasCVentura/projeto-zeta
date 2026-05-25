@@ -91,11 +91,7 @@ export function SuppliesView({ supplies: initial }: Props) {
 
   return (
     <div className="container-page max-w-4xl py-8 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="font-heading text-2xl font-semibold">Estoque</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">Gerencie seus insumos e vincule-os a procedimentos.</p>
-        </div>
+      <div className="flex justify-end">
         <Button onClick={openNew} className="gap-1.5"><Plus size={15} /> Novo insumo</Button>
       </div>
 
