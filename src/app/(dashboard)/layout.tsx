@@ -28,7 +28,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   let trialDaysLeft: number | null = null
 
-  if (membership) {
+  // Só mostra banner de trial para o owner — membros convidados não têm trial pessoal
+  if (membership && userRole === "owner") {
     const [org] = await db
       .select({ subscriptionStatus: organizations.subscriptionStatus, trialEndsAt: organizations.trialEndsAt })
       .from(organizations)

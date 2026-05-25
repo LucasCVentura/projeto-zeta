@@ -18,6 +18,7 @@ import {
 import { useState, useEffect } from "react"
 import type { ReactNode } from "react"
 import { cn } from "@/lib/utils"
+import type { OrgRole } from "@/db/schema"
 
 type Step = {
   id: string
@@ -32,6 +33,7 @@ type Step = {
 
 type Props = {
   dismissStorageKey: string
+  role: OrgRole
   hasSchedule: boolean
   hasProcedure: boolean
   hasClient: boolean
@@ -42,6 +44,7 @@ type Props = {
 
 export function OnboardingChecklist({
   dismissStorageKey,
+  role,
   hasSchedule,
   hasProcedure,
   hasClient,
@@ -55,7 +58,7 @@ export function OnboardingChecklist({
     if (localStorage.getItem(dismissStorageKey) === "1") setDismissed(true)
   }, [dismissStorageKey])
 
-  const steps: Step[] = [
+  const allSteps: Step[] = [
     {
       id: "schedule",
       label: "Configure sua agenda",
@@ -107,6 +110,12 @@ export function OnboardingChecklist({
       time: "2 min",
     },
   ]
+
+  // Owner vê todos os steps; membros convidados só veem os operacionais
+  const ownerOnlySteps = new Set(["schedule", "procedure"])
+  const steps = role === "owner"
+    ? allSteps
+    : allSteps.filter((s) => !ownerOnlySteps.has(s.id))
 
   const completedCount = steps.filter((s) => s.done).length
   const allDone = completedCount === steps.length

@@ -7,6 +7,7 @@ import { RevenueChart, ProceduresChart, StatusChart } from "@/components/dashboa
 import { OnboardingChecklist } from "@/components/dashboard/onboarding-checklist"
 import Link from "next/link"
 import { requireSession } from "@/lib/session"
+import { can } from "@/lib/permissions"
 
 function formatCurrency(cents: number) {
   return (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
@@ -20,6 +21,7 @@ export default async function DashboardPage() {
     getOnboardingStatusAction(),
   ])
   const dismissStorageKey = `kira:onboarding-dismissed:${session.organizationId}:${session.userId}`
+  const canSeeFinancial = can(session.role, "financial:read")
 
   const stats = [
     {
@@ -37,11 +39,11 @@ export default async function DashboardPage() {
       value: String(data.confirmedToday),
       icon: CalendarCheck,
     },
-    {
+    ...(canSeeFinancial ? [{
       label: "Receita do mês",
       value: formatCurrency(data.monthRevenue),
       icon: TrendingUp,
-    },
+    }] : []),
   ]
 
   return (
@@ -58,7 +60,7 @@ export default async function DashboardPage() {
       )}
 
       {/* Onboarding — aparece até o usuário dispensar */}
-      <OnboardingChecklist dismissStorageKey={dismissStorageKey} {...onboarding} />
+      <OnboardingChecklist dismissStorageKey={dismissStorageKey} role={session.role} {...onboarding} />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {stats.map(({ label, value, icon: Icon }) => (
@@ -72,25 +74,27 @@ export default async function DashboardPage() {
         ))}
       </div>
 
-      {/* Visão da clínica */}
-      <section className="space-y-3">
-        <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <h2 className="font-heading text-xl font-semibold">Visão da clínica</h2>
-            <p className="text-sm text-muted-foreground">Receita, atendimentos e procedimentos em um só lugar.</p>
+      {/* Visão da clínica — só para quem tem acesso financeiro */}
+      {canSeeFinancial && (
+        <section className="space-y-3">
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h2 className="font-heading text-xl font-semibold">Visão da clínica</h2>
+              <p className="text-sm text-muted-foreground">Receita, atendimentos e procedimentos em um só lugar.</p>
+            </div>
+            <Link href="/financeiro" className="text-xs font-medium text-primary hover:underline underline-offset-4">
+              Ver financeiro
+            </Link>
           </div>
-          <Link href="/financeiro" className="text-xs font-medium text-primary hover:underline underline-offset-4">
-            Ver financeiro
-          </Link>
-        </div>
 
-        <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.05fr_0.95fr]">
-          <RevenueChart data={data.revenueChart} />
-          <StatusChart data={data.statusCounts} />
-        </div>
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.05fr_0.95fr]">
+            <RevenueChart data={data.revenueChart} />
+            <StatusChart data={data.statusCounts} />
+          </div>
 
-        <ProceduresChart data={data.topProcedures} />
-      </section>
+          <ProceduresChart data={data.topProcedures} />
+        </section>
+      )}
 
       {/* Atendimentos de hoje */}
       <div className="surface space-y-4">

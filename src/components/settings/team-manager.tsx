@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useState, useTransition, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { UserPlus, Trash2, X, Clock } from "lucide-react"
 import { inviteMemberAction, removeMemberAction, cancelInviteAction } from "@/actions/team"
 import type { OrgRole } from "@/db/schema"
@@ -43,9 +44,16 @@ export function TeamManager({
   pendingInvites: Invite[]
   currentUserId: string
 }) {
+  const router = useRouter()
   const [email, setEmail] = useState("")
   const [name, setName] = useState("")
   const [role, setRole] = useState<OrgRole>("professional")
+
+  // Atualiza a página a cada 15s para refletir convites aceitos
+  useEffect(() => {
+    const id = setInterval(() => router.refresh(), 15000)
+    return () => clearInterval(id)
+  }, [router])
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()

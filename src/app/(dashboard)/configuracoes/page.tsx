@@ -2,36 +2,41 @@ import Link from "next/link"
 import { Calendar, Stethoscope, Building2, ChevronRight, Package, CreditCard, Users } from "lucide-react"
 import { InstallAppButton } from "@/components/settings/install-app-button"
 import { requireSession } from "@/lib/session"
-
-const sections = [
-  {
-    title: "Agenda",
-    description: "Dias de trabalho, horários e duração dos atendimentos",
-    href: "/configuracoes/agenda",
-    icon: Calendar,
-  },
-  {
-    title: "Procedimentos",
-    description: "Catálogo de procedimentos e valores",
-    href: "/configuracoes/procedimentos",
-    icon: Stethoscope,
-  },
-  {
-    title: "Pacotes",
-    description: "Pacotes de sessões para oferecer aos clientes",
-    href: "/configuracoes/pacotes",
-    icon: Package,
-  },
-  {
-    title: "Clínica",
-    description: "Nome, contato e informações da sua clínica",
-    href: "/configuracoes/clinica",
-    icon: Building2,
-  },
-]
+import { can } from "@/lib/permissions"
 
 export default async function ConfiguracoesPage() {
   const { role } = await requireSession()
+
+  const sections = [
+    {
+      title: "Agenda",
+      description: "Dias de trabalho, horários e duração dos atendimentos",
+      href: "/configuracoes/agenda",
+      icon: Calendar,
+      show: true,
+    },
+    {
+      title: "Procedimentos",
+      description: "Catálogo de procedimentos e valores",
+      href: "/configuracoes/procedimentos",
+      icon: Stethoscope,
+      show: can(role, "org:update"),
+    },
+    {
+      title: "Pacotes",
+      description: "Pacotes de sessões para oferecer aos clientes",
+      href: "/configuracoes/pacotes",
+      icon: Package,
+      show: can(role, "org:update"),
+    },
+    {
+      title: "Clínica",
+      description: "Nome, contato e informações da sua clínica",
+      href: "/configuracoes/clinica",
+      icon: Building2,
+      show: can(role, "org:update"),
+    },
+  ].filter((s) => s.show)
 
   return (
     <div className="container-page max-w-xl py-6 space-y-6">
