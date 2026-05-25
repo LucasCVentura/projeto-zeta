@@ -10,6 +10,7 @@ import { PixInvoiceEmail } from "@/emails/pix-invoice"
 import { BoletoInvoiceEmail } from "@/emails/boleto-invoice"
 import { BoletoWelcomeEmail } from "@/emails/boleto-welcome"
 import { BoletoPaymentConfirmedEmail } from "@/emails/boleto-payment-confirmed"
+import { BoletoExpiredEmail } from "@/emails/boleto-expired"
 import { InviteEmail } from "@/emails/invite"
 import type { OrgRole } from "@/db/schema"
 
@@ -119,6 +120,15 @@ export async function sendBoletoInvoiceEmail(
     to,
     subject: "Seu boleto do Kira está disponível 🧾",
     react: createElement(BoletoInvoiceEmail, { name, amount, expiresAt, boletoNumber, voucherUrl, appUrl: APP_URL }),
+  })
+}
+
+export async function sendBoletoExpiredEmail(to: string, name: string) {
+  await resend.emails.send({
+    from: FROM_EMAIL,
+    to,
+    subject: "Seu boleto venceu — renove sua assinatura do Kira",
+    react: createElement(BoletoExpiredEmail, { name, appUrl: APP_URL }),
   })
 }
 

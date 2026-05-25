@@ -105,6 +105,16 @@ export async function POST(req: NextRequest) {
       await db.update(organizations)
         .set({ subscriptionStatus: status, stripeSubscriptionId: sub.id })
         .where(eq(organizations.id, organizationId))
+
+      if (sub.status === "past_due") {
+        try {
+          const owner = await getOrgOwner(organizationId)
+          if (owner?.email) {
+            const { sendBoletoExpiredEmail } = await import("@/lib/email")
+            await sendBoletoExpiredEmail(owner.email, owner.name ?? "")
+          }
+        } catch { /* não bloqueia */ }
+      }
       break
     }
 
