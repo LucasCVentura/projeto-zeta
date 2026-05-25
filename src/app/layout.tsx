@@ -73,7 +73,7 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <head>
-        <meta name="theme-color" content="#b8526e" />
+        <meta name="theme-color" content="#201318" />
         <script dangerouslySetInnerHTML={{ __html: `(function(){var t=localStorage.getItem('theme');var dark=!t||t==='dark';if(dark)document.documentElement.classList.add('dark');})();` }} />
         <script
           type="application/ld+json"
