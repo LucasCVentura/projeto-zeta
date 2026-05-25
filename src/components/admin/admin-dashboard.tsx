@@ -179,30 +179,39 @@ export function AdminDashboard({
     setChatLoading(false)
   }
 
+  const unreadCount = inboundEmails.filter(e => !e.read).length
+
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-5xl mx-auto px-5 py-6 sm:py-10 space-y-8">
 
         {/* Header */}
-        <div>
-          <h1 className="font-heading text-3xl font-bold">Admin</h1>
-          <p className="text-sm text-muted-foreground mt-1">Visão geral da plataforma Kira</p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-widest text-primary mb-1">Kira Admin</p>
+            <h1 className="font-heading text-2xl sm:text-3xl font-bold">Visão Geral</h1>
+          </div>
+          <div className="text-right shrink-0">
+            <p className="text-2xl font-bold tabular-nums text-green-600 dark:text-green-400">{formatBRL(metrics.mrr)}</p>
+            <p className="text-xs text-muted-foreground">MRR · {metrics.activeOrgs} ativa{metrics.activeOrgs !== 1 ? "s" : ""}</p>
+          </div>
         </div>
 
         <Tabs defaultValue="overview">
           <div className="-mx-5 px-5 overflow-x-auto sm:mx-0 sm:px-0">
-            <TabsList className="mb-6 w-max">
+            <TabsList variant="line" className="mb-6 w-max gap-0">
               <TabsTrigger value="overview">Visão Geral</TabsTrigger>
               <TabsTrigger value="clinicas">Clínicas ({orgs.length})</TabsTrigger>
               <TabsTrigger value="growth" className="flex items-center gap-1.5"><TrendingUp size={13} />Growth</TabsTrigger>
-              <TabsTrigger value="feedback" className="flex items-center gap-1.5"><MessageSquare size={13} />Feedback {feedbacks.length > 0 && <span className="ml-0.5 text-[10px] bg-primary/15 text-primary rounded-full px-1.5 py-0.5 font-medium">{feedbacks.length}</span>}</TabsTrigger>
+              <TabsTrigger value="feedback" className="flex items-center gap-1.5">
+                <MessageSquare size={13} />Feedback
+                {feedbacks.length > 0 && <span className="ml-0.5 text-[10px] bg-primary/15 text-primary rounded-full px-1.5 py-0.5 font-medium">{feedbacks.length}</span>}
+              </TabsTrigger>
               <TabsTrigger value="financeiro" className="flex items-center gap-1.5"><Wallet size={13} />Financeiro</TabsTrigger>
               <TabsTrigger value="suporte" className="flex items-center gap-1.5">
                 <Mail size={13} />Suporte
-                {inboundEmails.filter(e => !e.read).length > 0 && (
-                  <span className="ml-0.5 text-[10px] bg-destructive/15 text-destructive rounded-full px-1.5 py-0.5 font-medium">
-                    {inboundEmails.filter(e => !e.read).length}
-                  </span>
+                {unreadCount > 0 && (
+                  <span className="ml-0.5 text-[10px] bg-destructive/15 text-destructive rounded-full px-1.5 py-0.5 font-medium">{unreadCount}</span>
                 )}
               </TabsTrigger>
             </TabsList>
@@ -210,25 +219,47 @@ export function AdminDashboard({
 
           {/* Aba: Visão Geral */}
           <TabsContent value="overview" className="space-y-8">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            {/* Métricas principais */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {[
-                { label: "Total de clínicas", value: metrics.totalOrgs, icon: <Users size={16} /> },
-                { label: "Ativas", value: metrics.activeOrgs, icon: <TrendingUp size={16} /> },
-                { label: "Em trial", value: metrics.trialingOrgs, icon: <Users size={16} /> },
-                { label: "MRR", value: formatBRL(metrics.mrr), icon: <DollarSign size={16} /> },
+                { label: "Total", value: metrics.totalOrgs, icon: <Users size={18} />, color: "bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400" },
+                { label: "Ativas", value: metrics.activeOrgs, icon: <TrendingUp size={18} />, color: "bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400" },
+                { label: "Em trial", value: metrics.trialingOrgs, icon: <Activity size={18} />, color: "bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400" },
+                { label: "MRR líquido", value: formatBRL(metrics.netMrr), icon: <DollarSign size={18} />, color: "bg-primary/10 text-primary" },
               ].map((m) => (
-                <div key={m.label} className="rounded-xl border border-border bg-card p-4 space-y-2">
-                  <div className="flex items-center gap-1.5 text-muted-foreground text-xs">{m.icon}{m.label}</div>
-                  <p className="font-heading text-2xl font-bold">{m.value}</p>
+                <div key={m.label} className="rounded-xl border border-border bg-card p-4 space-y-3">
+                  <div className={cn("flex h-9 w-9 items-center justify-center rounded-lg", m.color)}>
+                    {m.icon}
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">{m.label}</p>
+                    <p className="font-heading text-xl font-bold tabular-nums">{m.value}</p>
+                  </div>
                 </div>
               ))}
             </div>
 
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <Trophy size={16} className="text-primary" />
-                <h2 className="font-semibold text-sm">Metas</h2>
+            {/* Crescimento do mês */}
+            {(metrics.newOrgsThisMonth > 0 || metrics.newOrgsLastMonth > 0) && (
+              <div className="rounded-xl border border-border bg-card p-4 flex items-center gap-4">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                  <Sprout size={18} className="text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium">Novas clínicas este mês</p>
+                  <p className="text-xs text-muted-foreground">
+                    {metrics.newOrgsLastMonth} no mês passado
+                  </p>
+                </div>
+                <p className="font-heading text-2xl font-bold text-primary shrink-0">{metrics.newOrgsThisMonth}</p>
               </div>
+            )}
+
+            {/* Metas */}
+            <div className="space-y-3">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
+                <Trophy size={13} /> Metas
+              </p>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {GOALS.map((goal) => {
                   const current = goal.metric(metrics)
@@ -236,25 +267,28 @@ export function AdminDashboard({
                   const done = pct >= 100
                   return (
                     <div key={goal.label} className={cn(
-                      "rounded-xl border p-4 space-y-2.5 transition-colors",
+                      "rounded-xl border p-4 space-y-3 transition-colors",
                       done ? "border-primary/30 bg-primary/5" : "border-border bg-card"
                     )}>
                       <div className="flex items-center justify-between">
-                        <span className="flex items-center gap-1.5 text-xs font-medium">
-                          <goal.icon size={13} className={done ? "text-primary" : "text-muted-foreground"} />
+                        <span className={cn("flex items-center gap-1.5 text-xs font-medium", done ? "text-primary" : "text-muted-foreground")}>
+                          <goal.icon size={13} />
                           {goal.label}
                         </span>
-                        {done && <Activity size={13} className="text-primary" />}
+                        {done && <span className="text-[10px] font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded-full">✓</span>}
                       </div>
-                      <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
-                        <div
-                          className={cn("h-full rounded-full transition-all", done ? "bg-primary" : "bg-primary/50")}
-                          style={{ width: `${pct}%` }}
-                        />
+                      <div className="space-y-1.5">
+                        <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+                          <div
+                            className={cn("h-full rounded-full transition-all duration-500", done ? "bg-primary" : "bg-primary/40")}
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                        <p className="text-[11px] text-muted-foreground tabular-nums">
+                          {goal.label.includes("MRR") ? formatBRL(current) : current}
+                          <span className="opacity-50"> / {goal.label.includes("MRR") ? formatBRL(goal.target) : goal.target}</span>
+                        </p>
                       </div>
-                      <p className="text-xs text-muted-foreground tabular-nums">
-                        {goal.label.includes("MRR") ? formatBRL(current) : current} / {goal.label.includes("MRR") ? formatBRL(goal.target) : goal.target}
-                      </p>
                     </div>
                   )
                 })}
@@ -265,108 +299,114 @@ export function AdminDashboard({
           {/* Aba: Clínicas */}
           <TabsContent value="clinicas">
             <div className="rounded-xl border border-border overflow-hidden divide-y divide-border">
-              {orgs.map((org) => (
-                <div key={org.id}>
-                  <button
-                    onClick={() => setExpandedOrg(expandedOrg === org.id ? null : org.id)}
-                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/30 transition-colors text-left"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium truncate">{org.name}</span>
-                        <span className={cn("text-[10px] font-medium px-1.5 py-0.5 rounded-full", statusColor(org.subscriptionStatus))}>
-                          {statusLabel(org.subscriptionStatus)}
-                        </span>
+              {orgs.length === 0 && (
+                <div className="py-12 text-center text-sm text-muted-foreground">Nenhuma clínica cadastrada.</div>
+              )}
+              {orgs.map((org) => {
+                const initials = org.name.split(" ").slice(0, 2).map(w => w[0]).join("").toUpperCase()
+                return (
+                  <div key={org.id}>
+                    <button
+                      onClick={() => setExpandedOrg(expandedOrg === org.id ? null : org.id)}
+                      className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-muted/30 transition-colors text-left"
+                    >
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
+                        {initials}
                       </div>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {org.owner?.email} · {org.clients} clientes · {org.appointments} atendimentos
-                      </p>
-                    </div>
-                    <div className="text-muted-foreground shrink-0">
-                      {expandedOrg === org.id ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                    </div>
-                  </button>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium truncate">{org.name}</span>
+                          <span className={cn("shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded-full", statusColor(org.subscriptionStatus))}>
+                            {statusLabel(org.subscriptionStatus)}
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                          {org.owner?.email} · {org.clients} clientes
+                        </p>
+                      </div>
+                      <div className="text-muted-foreground shrink-0">
+                        {expandedOrg === org.id ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                      </div>
+                    </button>
 
-                  {expandedOrg === org.id && (
-                    <div className="px-4 pb-4 pt-1 bg-muted/20 space-y-3">
-                      <div className="grid grid-cols-3 gap-3 text-xs">
-                        <div className="rounded-lg bg-background border border-border p-2.5 space-y-0.5">
-                          <p className="text-muted-foreground">Clientes</p>
-                          <p className="font-semibold text-base">{org.clients}</p>
+                    {expandedOrg === org.id && (
+                      <div className="px-4 pb-4 pt-2 bg-muted/20 space-y-3 border-t border-border/50">
+                        <div className="grid grid-cols-3 gap-2">
+                          {[
+                            { label: "Clientes", value: org.clients },
+                            { label: "Atendimentos", value: org.appointments },
+                            { label: "Fotos", value: org.photos },
+                          ].map(stat => (
+                            <div key={stat.label} className="rounded-lg bg-background border border-border p-3 text-center space-y-0.5">
+                              <p className="font-bold text-lg tabular-nums">{stat.value}</p>
+                              <p className="text-[11px] text-muted-foreground">{stat.label}</p>
+                            </div>
+                          ))}
                         </div>
-                        <div className="rounded-lg bg-background border border-border p-2.5 space-y-0.5">
-                          <p className="text-muted-foreground">Atendimentos</p>
-                          <p className="font-semibold text-base">{org.appointments}</p>
+                        <div className="rounded-lg bg-background border border-border px-3 py-2.5 text-xs space-y-1 text-muted-foreground">
+                          <p><span className="text-foreground font-medium">{org.owner?.name}</span> · {org.owner?.email}</p>
+                          <p>Cadastro: <span className="text-foreground">{new Date(org.createdAt).toLocaleDateString("pt-BR")}</span>
+                            {org.trialEndsAt && <> · Trial até <span className="text-foreground">{new Date(org.trialEndsAt).toLocaleDateString("pt-BR")}</span></>}
+                          </p>
                         </div>
-                        <div className="rounded-lg bg-background border border-border p-2.5 space-y-0.5">
-                          <p className="text-muted-foreground">Fotos</p>
-                          <p className="font-semibold text-base">{org.photos}</p>
-                        </div>
-                      </div>
-                      <div className="text-xs text-muted-foreground space-y-0.5">
-                        <p>Owner: <span className="text-foreground">{org.owner?.name} ({org.owner?.email})</span></p>
-                        <p>Cadastro: <span className="text-foreground">{new Date(org.createdAt).toLocaleDateString("pt-BR")}</span></p>
-                        {org.trialEndsAt && (
-                          <p>Trial até: <span className="text-foreground">{new Date(org.trialEndsAt).toLocaleDateString("pt-BR")}</span></p>
-                        )}
-                      </div>
-                      <div className="flex gap-2 pt-1">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={actionLoading === org.id}
-                          onClick={() => handleExtendTrial(org.id, 7)}
-                          className="text-xs h-7"
-                        >
-                          +7 dias trial
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={actionLoading === org.id}
-                          onClick={() => handleExtendTrial(org.id, 30)}
-                          className="text-xs h-7"
-                        >
-                          +30 dias trial
-                        </Button>
-                        {org.subscriptionStatus !== "canceled" && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            disabled={actionLoading === org.id}
-                            onClick={() => handleCancel(org.id)}
-                            className="text-xs h-7 text-destructive hover:text-destructive border-destructive/30 hover:border-destructive/60"
-                          >
-                            Cancelar
+                        <div className="flex flex-wrap gap-2">
+                          <Button size="sm" variant="outline" disabled={actionLoading === org.id}
+                            onClick={() => handleExtendTrial(org.id, 7)} className="text-xs h-7">
+                            +7 dias trial
                           </Button>
-                        )}
+                          <Button size="sm" variant="outline" disabled={actionLoading === org.id}
+                            onClick={() => handleExtendTrial(org.id, 30)} className="text-xs h-7">
+                            +30 dias trial
+                          </Button>
+                          {org.subscriptionStatus !== "canceled" && (
+                            <Button size="sm" variant="outline" disabled={actionLoading === org.id}
+                              onClick={() => handleCancel(org.id)}
+                              className="text-xs h-7 text-destructive hover:text-destructive border-destructive/30 hover:border-destructive/60">
+                              Cancelar
+                            </Button>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  )}
-                </div>
-              ))}
+                    )}
+                  </div>
+                )
+              })}
             </div>
           </TabsContent>
 
           {/* Aba: Growth */}
           <TabsContent value="growth">
             <div className="rounded-xl border border-border overflow-hidden flex flex-col" style={{ height: 520 }}>
+              <div className="px-4 py-3 border-b border-border flex items-center gap-2">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
+                  <TrendingUp size={14} className="text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium leading-none">Consultor de Growth</p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">Com acesso às métricas atuais do Kira</p>
+                </div>
+              </div>
               <div className="flex-1 overflow-y-auto p-4 space-y-3">
                 {messages.length === 0 && (
                   <div className="h-full flex items-center justify-center text-center px-6">
-                    <div className="space-y-2">
-                      <p className="text-sm font-medium">Olá! Sou seu consultor de growth.</p>
-                      <p className="text-xs text-muted-foreground">Tenho acesso às métricas atuais do Kira. Pergunte sobre estratégias de marketing, conversão de trials, ou qualquer coisa sobre crescimento.</p>
+                    <div className="space-y-3">
+                      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+                        <TrendingUp size={20} className="text-primary" />
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium">Pergunte sobre crescimento</p>
+                        <p className="text-xs text-muted-foreground">Conversão de trials, estratégias de marketing, análise de churn…</p>
+                      </div>
                     </div>
                   </div>
                 )}
                 {messages.map((msg, i) => (
                   <div key={i} className={cn("flex", msg.role === "user" ? "justify-end" : "justify-start")}>
                     <div className={cn(
-                      "max-w-[80%] rounded-xl px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-wrap",
+                      "max-w-[80%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-wrap",
                       msg.role === "user"
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted text-foreground"
+                        ? "bg-primary text-primary-foreground rounded-br-sm"
+                        : "bg-muted text-foreground rounded-bl-sm"
                     )}>
                       {msg.content}
                     </div>
@@ -374,8 +414,10 @@ export function AdminDashboard({
                 ))}
                 {chatLoading && (
                   <div className="flex justify-start">
-                    <div className="bg-muted rounded-xl px-3.5 py-2.5">
-                      <Loader2 size={14} className="animate-spin text-muted-foreground" />
+                    <div className="bg-muted rounded-2xl rounded-bl-sm px-3.5 py-2.5 flex items-center gap-1.5">
+                      <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/50 animate-bounce [animation-delay:0ms]" />
+                      <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/50 animate-bounce [animation-delay:150ms]" />
+                      <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/50 animate-bounce [animation-delay:300ms]" />
                     </div>
                   </div>
                 )}
@@ -397,18 +439,20 @@ export function AdminDashboard({
               </div>
             </div>
           </TabsContent>
+
           {/* Aba: Feedback */}
-          <TabsContent value="feedback" className="space-y-6">
-            {/* Resumo da IA */}
+          <TabsContent value="feedback" className="space-y-5">
             <div className="rounded-xl border border-border bg-card p-5 space-y-3">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
-                  <Activity size={15} className="text-primary" />
-                  <h2 className="font-semibold text-sm">Resumo da IA</h2>
+                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
+                    <Activity size={14} className="text-primary" />
+                  </div>
+                  <p className="text-sm font-medium">Resumo da IA</p>
                 </div>
                 {feedbackSummary && (
-                  <span className="text-[11px] text-muted-foreground">
-                    Gerado em {new Date(feedbackSummary.generatedAt).toLocaleDateString("pt-BR")} · {feedbackSummary.feedbackCount} feedbacks
+                  <span className="text-[11px] text-muted-foreground shrink-0">
+                    {new Date(feedbackSummary.generatedAt).toLocaleDateString("pt-BR")} · {feedbackSummary.feedbackCount} feedbacks
                   </span>
                 )}
               </div>
@@ -419,18 +463,23 @@ export function AdminDashboard({
               )}
             </div>
 
-            {/* Lista de feedbacks brutos */}
             <div className="space-y-2">
-              <h2 className="font-semibold text-sm text-muted-foreground">Feedbacks recebidos ({feedbacks.length})</h2>
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Feedbacks recebidos ({feedbacks.length})
+              </p>
               {feedbacks.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Nenhum feedback recebido ainda.</p>
+                <div className="rounded-xl border border-border bg-card p-8 text-center">
+                  <p className="text-sm text-muted-foreground">Nenhum feedback recebido ainda.</p>
+                </div>
               ) : (
                 <div className="rounded-xl border border-border overflow-hidden divide-y divide-border">
                   {feedbacks.map((fb) => (
-                    <div key={fb.id} className="px-4 py-3 space-y-1">
-                      <p className="text-sm">{fb.content}</p>
+                    <div key={fb.id} className="px-4 py-3.5 space-y-1.5">
+                      <p className="text-sm leading-relaxed">{fb.content}</p>
                       <p className="text-[11px] text-muted-foreground">
-                        {fb.orgName ?? "—"} · {fb.userName ?? "—"} · {new Date(fb.createdAt).toLocaleDateString("pt-BR")}
+                        <span className="font-medium text-foreground/70">{fb.orgName ?? "—"}</span>
+                        {" · "}{fb.userName ?? "—"}
+                        {" · "}{new Date(fb.createdAt).toLocaleDateString("pt-BR")}
                       </p>
                     </div>
                   ))}
@@ -440,13 +489,13 @@ export function AdminDashboard({
           </TabsContent>
 
           {/* Aba: Financeiro */}
-          <TabsContent value="financeiro" className="space-y-6">
-
-            {/* MRR Breakdown */}
+          <TabsContent value="financeiro" className="space-y-5">
             <div className="rounded-xl border border-border bg-card p-5 space-y-4">
               <div className="flex items-center gap-2">
-                <DollarSign size={15} className="text-primary" />
-                <h2 className="font-semibold text-sm">Receita Mensal</h2>
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-green-50 dark:bg-green-900/20">
+                  <DollarSign size={14} className="text-green-600 dark:text-green-400" />
+                </div>
+                <p className="text-sm font-medium">Receita Mensal</p>
               </div>
               <div className="space-y-2.5">
                 <div className="flex items-start justify-between gap-3 text-sm">
@@ -458,22 +507,18 @@ export function AdminDashboard({
                   <span className="text-destructive tabular-nums shrink-0">− {formatBRL(metrics.mrr - metrics.netMrr)}</span>
                 </div>
                 <div className="h-px bg-border" />
-                <div className="flex items-center justify-between text-sm">
-                  <span className="font-semibold">MRR líquido</span>
-                  <span className="font-bold text-green-600 dark:text-green-400 tabular-nums">{formatBRL(metrics.netMrr)}</span>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold">MRR líquido</span>
+                  <span className="text-lg font-bold text-green-600 dark:text-green-400 tabular-nums">{formatBRL(metrics.netMrr)}</span>
                 </div>
               </div>
               {metrics.activeOrgs === 0 && (
-                <p className="text-xs text-muted-foreground">Nenhuma org ativa ainda — os valores aparecerão quando houver assinantes.</p>
+                <p className="text-xs text-muted-foreground bg-muted/50 rounded-lg px-3 py-2">Nenhuma org ativa ainda — os valores aparecerão quando houver assinantes.</p>
               )}
             </div>
 
-            {/* Serviços terceiros */}
             <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <h2 className="font-semibold text-sm">Serviços terceiros</h2>
-                <span className="text-xs text-muted-foreground">(estimativa mensal)</span>
-              </div>
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Serviços terceiros</p>
               <div className="rounded-xl border border-border overflow-hidden divide-y divide-border">
                 {SERVICES.map((s) => {
                   const stripeFee = s.monthlyCost === null ? metrics.mrr - metrics.netMrr : null
@@ -481,10 +526,9 @@ export function AdminDashboard({
                   return (
                     <div key={s.name} className="flex items-center gap-3 px-4 py-3">
                       <div className="flex-1 min-w-0 space-y-0.5">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-sm font-medium">{s.name}</span>
                           <span className="text-[10px] bg-muted text-muted-foreground rounded-full px-1.5 py-0.5">{s.tier}</span>
-                          <span className="text-[10px] text-muted-foreground">{s.category}</span>
                         </div>
                         <p className="text-xs text-muted-foreground">{s.notes}</p>
                       </div>
@@ -506,18 +550,21 @@ export function AdminDashboard({
                   </span>
                 </div>
               </div>
-              <p className="text-xs text-muted-foreground">Serviços fixos atuais estão em planos gratuitos. Stripe é o único custo real — variável com a receita.</p>
+              <p className="text-xs text-muted-foreground">Stripe é o único custo real — variável com a receita.</p>
             </div>
-
           </TabsContent>
 
           {/* Aba: Suporte */}
           <TabsContent value="suporte" className="space-y-3">
             {inboundEmails.length === 0 ? (
-              <div className="rounded-xl border border-border bg-card p-8 text-center space-y-2">
-                <MailOpen size={24} className="mx-auto text-muted-foreground" />
-                <p className="text-sm text-muted-foreground">Nenhum email recebido ainda.</p>
-                <p className="text-xs text-muted-foreground">Emails enviados para <span className="font-medium">suporte@kiraclinic.com.br</span> aparecerão aqui.</p>
+              <div className="rounded-xl border border-border bg-card p-10 text-center space-y-3">
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+                  <MailOpen size={20} className="text-muted-foreground" />
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm font-medium">Caixa de entrada vazia</p>
+                  <p className="text-xs text-muted-foreground">Emails para <span className="font-medium">suporte@kiraclinic.com.br</span> aparecem aqui.</p>
+                </div>
               </div>
             ) : (
               <div className="rounded-xl border border-border overflow-hidden divide-y divide-border">
@@ -526,17 +573,18 @@ export function AdminDashboard({
                     <button
                       onClick={() => handleExpandEmail(email.id)}
                       className={cn(
-                        "w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/30 transition-colors text-left",
+                        "w-full flex items-center gap-3 px-4 py-3.5 hover:bg-muted/30 transition-colors text-left",
                         !email.read && "bg-primary/5"
                       )}
                     >
-                      <div className="shrink-0 text-muted-foreground">
-                        {email.read ? <MailOpen size={14} /> : <Mail size={14} className="text-primary" />}
+                      <div className={cn(
+                        "flex h-8 w-8 shrink-0 items-center justify-center rounded-full",
+                        email.read ? "bg-muted text-muted-foreground" : "bg-primary/10 text-primary"
+                      )}>
+                        {email.read ? <MailOpen size={14} /> : <Mail size={14} />}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className={cn("text-sm truncate", !email.read && "font-semibold")}>{email.subject}</span>
-                        </div>
+                        <span className={cn("text-sm block truncate", !email.read && "font-semibold")}>{email.subject}</span>
                         <p className="text-xs text-muted-foreground mt-0.5 truncate">
                           {email.from} · {new Date(email.receivedAt).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
                         </p>
@@ -547,7 +595,7 @@ export function AdminDashboard({
                     </button>
 
                     {expandedEmail === email.id && (
-                      <div className="px-4 pb-4 pt-2 bg-muted/20 space-y-2">
+                      <div className="px-4 pb-4 pt-2 bg-muted/20 space-y-2 border-t border-border/50">
                         <p className="text-xs text-muted-foreground">De: <span className="text-foreground">{email.from}</span></p>
                         <div className="rounded-lg bg-background border border-border p-3 text-sm whitespace-pre-wrap leading-relaxed">
                           {email.body || "(sem conteúdo)"}
