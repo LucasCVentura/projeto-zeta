@@ -26,6 +26,7 @@ type Metrics = {
   totalOrgs: number
   activeOrgs: number
   trialingOrgs: number
+  incompleteBoletoOrgs: number
   cancelledOrgs: number
   newOrgsThisMonth: number
   newOrgsLastMonth: number
@@ -92,12 +93,14 @@ function formatBRL(cents: number) {
 function statusColor(status: string) {
   if (status === "active") return "text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20"
   if (status === "trialing") return "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20"
+  if (status === "incomplete") return "text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20"
   return "text-muted-foreground bg-muted"
 }
 
 function statusLabel(status: string) {
   if (status === "active") return "Ativa"
   if (status === "trialing") return "Trial"
+  if (status === "incomplete") return "Boleto"
   if (status === "canceled") return "Cancelada"
   return status
 }
@@ -132,7 +135,7 @@ export function AdminDashboard({
   const metricsContext = `
 - Total de organizações: ${metrics.totalOrgs}
 - Ativas (pagantes): ${metrics.activeOrgs}
-- Em trial: ${metrics.trialingOrgs}
+- Em trial (inclui boleto pendente): ${metrics.trialingOrgs} (${metrics.incompleteBoletoOrgs} aguardando boleto)
 - Canceladas: ${metrics.cancelledOrgs}
 - Novas este mês: ${metrics.newOrgsThisMonth}
 - MRR atual: ${formatBRL(metrics.mrr)}
@@ -228,7 +231,13 @@ export function AdminDashboard({
               {[
                 { label: "Total", value: metrics.totalOrgs, icon: <Users size={18} />, color: "bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400" },
                 { label: "Ativas", value: metrics.activeOrgs, icon: <TrendingUp size={18} />, color: "bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400" },
-                { label: "Em trial", value: metrics.trialingOrgs, icon: <Activity size={18} />, color: "bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400" },
+                {
+                  label: "Em trial",
+                  value: metrics.trialingOrgs,
+                  sub: metrics.incompleteBoletoOrgs > 0 ? `${metrics.incompleteBoletoOrgs} boleto pendente` : null,
+                  icon: <Activity size={18} />,
+                  color: "bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400",
+                },
                 { label: "MRR líquido", value: formatBRL(metrics.netMrr), icon: <DollarSign size={18} />, color: "bg-primary/10 text-primary" },
               ].map((m) => (
                 <div key={m.label} className="rounded-xl border border-border bg-card p-4 space-y-3">
@@ -238,6 +247,9 @@ export function AdminDashboard({
                   <div>
                     <p className="text-xs text-muted-foreground">{m.label}</p>
                     <p className="font-heading text-xl font-bold tabular-nums">{m.value}</p>
+                    {"sub" in m && m.sub && (
+                      <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">{m.sub}</p>
+                    )}
                   </div>
                 </div>
               ))}

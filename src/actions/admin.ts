@@ -5,7 +5,7 @@ import {
   organizations, organizationMembers, users,
   appointments, clients, transactions, clientPhotos,
 } from "@/db/schema"
-import { eq, count, sum, gte, sql } from "drizzle-orm"
+import { eq, count, sum, gte, sql, or } from "drizzle-orm"
 import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import { revalidatePath } from "next/cache"
@@ -29,13 +29,15 @@ export async function getAdminMetricsAction() {
     totalOrgs,
     activeOrgs,
     trialingOrgs,
+    incompleteBoletoOrgs,
     cancelledOrgs,
     newOrgsThisMonth,
     allOrgs,
   ] = await Promise.all([
     db.select({ count: count() }).from(organizations).then(r => r[0].count),
     db.select({ count: count() }).from(organizations).where(eq(organizations.subscriptionStatus, "active")).then(r => r[0].count),
-    db.select({ count: count() }).from(organizations).where(eq(organizations.subscriptionStatus, "trialing")).then(r => r[0].count),
+    db.select({ count: count() }).from(organizations).where(or(eq(organizations.subscriptionStatus, "trialing"), eq(organizations.subscriptionStatus, "incomplete"))).then(r => r[0].count),
+    db.select({ count: count() }).from(organizations).where(eq(organizations.subscriptionStatus, "incomplete")).then(r => r[0].count),
     db.select({ count: count() }).from(organizations).where(eq(organizations.subscriptionStatus, "canceled")).then(r => r[0].count),
     db.select({ count: count() }).from(organizations).where(gte(organizations.createdAt, startOfMonth)).then(r => r[0].count),
     db.select({
@@ -98,6 +100,7 @@ export async function getAdminMetricsAction() {
     totalOrgs,
     activeOrgs,
     trialingOrgs,
+    incompleteBoletoOrgs,
     cancelledOrgs,
     newOrgsThisMonth,
     newOrgsLastMonth,
