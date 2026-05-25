@@ -73,9 +73,9 @@ export default function TermosPage() {
           <Section title="6. Notificações via WhatsApp">
             <p>A plataforma Kira envia mensagens automáticas via WhatsApp para os clientes finais cadastrados pelo Usuário, incluindo:</p>
             <ul>
-              <li>Confirmação de agendamento (com links para confirmar ou recusar presença)</li>
-              <li>Lembrete de consulta 24 horas antes do horário agendado</li>
-              <li>Mensagem de agradecimento pós-consulta</li>
+              <li>Resumo de agendamento ao criar ou confirmar um horário</li>
+              <li>Lembrete com botões de confirmação ou cancelamento enviado 2 dias antes do horário agendado</li>
+              <li>Mensagem de agradecimento pós-consulta com link para avaliação (quando configurado)</li>
             </ul>
             <p>O Usuário é inteiramente responsável por obter o consentimento expresso dos seus clientes finais para o recebimento dessas mensagens antes de cadastrá-los na plataforma, conforme exigido pela LGPD e pelas políticas de uso do WhatsApp Business.</p>
             <p>O Kira não se responsabiliza pelo uso indevido das funcionalidades de envio de mensagens, nem por bloqueios ou penalidades decorrentes do envio de mensagens sem consentimento.</p>
