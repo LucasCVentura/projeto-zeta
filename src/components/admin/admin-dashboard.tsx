@@ -120,16 +120,16 @@ function statusLabel(status: string) {
 
 export function AdminDashboard({
   metrics,
-  feedbacks,
+  feedbacks = [],
   feedbackSummary,
-  inboundEmails: initialInboundEmails,
-  whatsappLogs,
+  inboundEmails: initialInboundEmails = [],
+  whatsappLogs = [],
 }: {
   metrics: Metrics
-  feedbacks: FeedbackItem[]
+  feedbacks?: FeedbackItem[]
   feedbackSummary: FeedbackSummary
-  inboundEmails: InboundEmail[]
-  whatsappLogs: WhatsAppLog[]
+  inboundEmails?: InboundEmail[]
+  whatsappLogs?: WhatsAppLog[]
 }) {
   const [orgs, setOrgs] = useState(metrics.orgs)
   const [expandedOrg, setExpandedOrg] = useState<string | null>(null)

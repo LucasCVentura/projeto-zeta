@@ -17,10 +17,10 @@ export default async function AdminPage() {
   return (
     <AdminDashboard
       metrics={metrics}
-      feedbacks={feedbacks}
+      feedbacks={feedbacks ?? []}
       feedbackSummary={feedbackSummary}
-      inboundEmails={inboundEmails}
-      whatsappLogs={whatsappLogs}
+      inboundEmails={inboundEmails ?? []}
+      whatsappLogs={whatsappLogs ?? []}
     />
   )
 }

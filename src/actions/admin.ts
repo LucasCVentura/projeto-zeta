@@ -181,7 +181,9 @@ export async function getWhatsAppMessageLogsAction(limit = 200): Promise<WhatsAp
     ORDER BY l.updated_at DESC
     LIMIT ${limit}
   `)
-  return rows.rows
+  if (Array.isArray(rows)) return rows as WhatsAppMessageLog[]
+  const withRows = rows as { rows?: WhatsAppMessageLog[] }
+  return withRows.rows ?? []
 }
 
 export async function markInboundEmailReadAction(id: string) {
