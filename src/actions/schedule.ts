@@ -222,8 +222,8 @@ export async function createAppointmentAction(data: {
 
     const templateRows = await db.execute<{ bookingSummaryTemplateId: string | null }>(sql`
       SELECT booking_summary_template_id as "bookingSummaryTemplateId"
-      FROM whatsapp_template_settings
-      WHERE organization_id = ${organizationId}
+      FROM whatsapp_system_template_settings
+      WHERE singleton_key = 'default'
       LIMIT 1
     `)
     const templateFromDb = Array.isArray(templateRows)

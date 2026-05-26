@@ -194,45 +194,39 @@ export async function markInboundEmailReadAction(id: string) {
 }
 
 export type AdminWhatsAppTemplateSetting = {
-  organizationId: string
-  organizationName: string
   bookingSummaryTemplateId: string | null
 }
 
-export async function getWhatsAppTemplateSettingsAction(): Promise<AdminWhatsAppTemplateSetting[]> {
+export async function getWhatsAppTemplateSettingsAction(): Promise<AdminWhatsAppTemplateSetting> {
   await requireAdmin()
   const rows = await db.execute(sql<AdminWhatsAppTemplateSetting>`
     SELECT
-      o.id as "organizationId",
-      o.name as "organizationName",
       s.booking_summary_template_id as "bookingSummaryTemplateId"
-    FROM organizations o
-    LEFT JOIN whatsapp_template_settings s ON s.organization_id = o.id
-    ORDER BY o.created_at DESC
+    FROM whatsapp_system_template_settings s
+    WHERE s.singleton_key = 'default'
+    LIMIT 1
   `)
-  if (Array.isArray(rows)) return rows as AdminWhatsAppTemplateSetting[]
-  const withRows = rows as { rows?: AdminWhatsAppTemplateSetting[] }
-  return withRows.rows ?? []
+  const one = Array.isArray(rows) ? rows[0] : rows.rows?.[0]
+  return { bookingSummaryTemplateId: one?.bookingSummaryTemplateId ?? null }
 }
 
 export async function saveWhatsAppTemplateSettingAction(input: {
-  organizationId: string
   bookingSummaryTemplateId: string
 }) {
   await requireAdmin()
   const templateId = input.bookingSummaryTemplateId.trim() || null
   await db.execute(sql`
-    INSERT INTO whatsapp_template_settings (
-      id, organization_id, booking_summary_template_id, created_at, updated_at
+    INSERT INTO whatsapp_system_template_settings (
+      id, singleton_key, booking_summary_template_id, created_at, updated_at
     )
     VALUES (
       ${crypto.randomUUID()},
-      ${input.organizationId},
+      'default',
       ${templateId},
       now(),
       now()
     )
-    ON CONFLICT (organization_id) DO UPDATE SET
+    ON CONFLICT (singleton_key) DO UPDATE SET
       booking_summary_template_id = EXCLUDED.booking_summary_template_id,
       updated_at = now()
   `)

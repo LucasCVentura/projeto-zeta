@@ -91,8 +91,6 @@ type WhatsAppLog = {
 }
 
 type WhatsAppTemplateSetting = {
-  organizationId: string
-  organizationName: string
   bookingSummaryTemplateId: string | null
 }
 
@@ -130,14 +128,14 @@ export function AdminDashboard({
   feedbackSummary,
   inboundEmails: initialInboundEmails = [],
   whatsappLogs = [],
-  whatsappTemplateSettings = [],
+  whatsappTemplateSettings,
 }: {
   metrics: Metrics
   feedbacks?: FeedbackItem[]
   feedbackSummary: FeedbackSummary
   inboundEmails?: InboundEmail[]
   whatsappLogs?: WhatsAppLog[]
-  whatsappTemplateSettings?: WhatsAppTemplateSetting[]
+  whatsappTemplateSettings: WhatsAppTemplateSetting
 }) {
   const [orgs, setOrgs] = useState(metrics.orgs)
   const [expandedOrg, setExpandedOrg] = useState<string | null>(null)
@@ -149,10 +147,8 @@ export function AdminDashboard({
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState("")
   const [chatLoading, setChatLoading] = useState(false)
-  const [templateSavingOrgId, setTemplateSavingOrgId] = useState<string | null>(null)
-  const [templateByOrg, setTemplateByOrg] = useState<Record<string, string>>(
-    Object.fromEntries(whatsappTemplateSettings.map((s) => [s.organizationId, s.bookingSummaryTemplateId ?? ""]))
-  )
+  const [templateSaving, setTemplateSaving] = useState(false)
+  const [bookingTemplateId, setBookingTemplateId] = useState(whatsappTemplateSettings.bookingSummaryTemplateId ?? "")
   const chatEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -212,13 +208,12 @@ export function AdminDashboard({
 
   const unreadCount = inboundEmails.filter(e => !e.read).length
 
-  async function handleSaveTemplate(orgId: string) {
-    setTemplateSavingOrgId(orgId)
+  async function handleSaveTemplate() {
+    setTemplateSaving(true)
     await saveWhatsAppTemplateSettingAction({
-      organizationId: orgId,
-      bookingSummaryTemplateId: templateByOrg[orgId] ?? "",
+      bookingSummaryTemplateId: bookingTemplateId,
     })
-    setTemplateSavingOrgId(null)
+    setTemplateSaving(false)
   }
 
   return (
@@ -389,29 +384,23 @@ export function AdminDashboard({
           <TabsContent value="whatsapp-config">
             <div className="space-y-3">
               <p className="text-sm text-muted-foreground">
-                Configure o ID do template de resumo de agendamento por clínica (UUID do template na Gupshup).
+                Configure o ID global do template de resumo de agendamento (todas as clínicas usarão este ID).
               </p>
-              <div className="rounded-xl border border-border overflow-hidden divide-y divide-border">
-                {whatsappTemplateSettings.map((s) => (
-                  <div key={s.organizationId} className="p-4 space-y-2">
-                    <p className="text-sm font-medium">{s.organizationName}</p>
-                    <div className="flex flex-col sm:flex-row gap-2">
-                      <Input
-                        value={templateByOrg[s.organizationId] ?? ""}
-                        onChange={(e) =>
-                          setTemplateByOrg((prev) => ({ ...prev, [s.organizationId]: e.target.value }))
-                        }
-                        placeholder="Ex.: c6aecef6-bcb0-4fb1-8100-28c094e3bc6b"
-                      />
-                      <Button
-                        onClick={() => handleSaveTemplate(s.organizationId)}
-                        disabled={templateSavingOrgId === s.organizationId}
-                      >
-                        {templateSavingOrgId === s.organizationId ? "Salvando..." : "Salvar"}
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+              <div className="rounded-xl border border-border p-4 space-y-2">
+                <p className="text-sm font-medium">Template resumo de agendamento (global)</p>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Input
+                    value={bookingTemplateId}
+                    onChange={(e) => setBookingTemplateId(e.target.value)}
+                    placeholder="Ex.: c6aecef6-bcb0-4fb1-8100-28c094e3bc6b"
+                  />
+                  <Button
+                    onClick={() => handleSaveTemplate()}
+                    disabled={templateSaving}
+                  >
+                    {templateSaving ? "Salvando..." : "Salvar"}
+                  </Button>
+                </div>
               </div>
             </div>
           </TabsContent>

@@ -704,6 +704,20 @@ export const whatsappTemplateSettings = pgTable("whatsapp_template_settings", {
 
 export type WhatsAppTemplateSetting = typeof whatsappTemplateSettings.$inferSelect
 
+// ── whatsapp_system_template_settings ────────────────────────────────────────
+
+export const whatsappSystemTemplateSettings = pgTable("whatsapp_system_template_settings", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  singletonKey: text("singleton_key").notNull().unique(),
+  bookingSummaryTemplateId: text("booking_summary_template_id"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+})
+
+export type WhatsAppSystemTemplateSetting = typeof whatsappSystemTemplateSettings.$inferSelect
+
 // ── push_subscriptions ────────────────────────────────────────────────────────
 
 export const pushSubscriptions = pgTable("push_subscriptions", {

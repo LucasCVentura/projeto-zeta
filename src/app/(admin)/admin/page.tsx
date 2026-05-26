@@ -22,7 +22,7 @@ export default async function AdminPage() {
       feedbackSummary={feedbackSummary}
       inboundEmails={inboundEmails ?? []}
       whatsappLogs={whatsappLogs ?? []}
-      whatsappTemplateSettings={whatsappTemplateSettings ?? []}
+      whatsappTemplateSettings={whatsappTemplateSettings}
     />
   )
 }
