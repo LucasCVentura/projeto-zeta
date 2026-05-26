@@ -1,16 +1,16 @@
 import { defineConfig, devices } from "@playwright/test"
 
-const PORT = Number(process.env.E2E_PORT ?? 4173)
-const BASE_URL = process.env.E2E_BASE_URL ?? `http://127.0.0.1:${PORT}`
+const PORT = Number(process.env.E2E_PORT ?? 3000)
+const BASE_URL = process.env.E2E_BASE_URL ?? `http://localhost:${PORT}`
 
 export default defineConfig({
   testDir: "./tests/e2e",
   timeout: 30_000,
-  expect: { timeout: 7_000 },
-  fullyParallel: true,
+  expect: { timeout: 15_000 },
+  fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  workers: 1,
   reporter: process.env.CI ? "github" : "list",
   use: {
     baseURL: BASE_URL,
@@ -25,9 +25,14 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: `npm run dev -- -p ${PORT}`,
+    command: `npm run build && npm run start -- -p ${PORT}`,
     url: BASE_URL,
     reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
+    timeout: 180_000,
+    env: {
+      ...process.env,
+      AUTH_URL: BASE_URL,
+      NEXTAUTH_URL: BASE_URL,
+    },
   },
 })

@@ -13,9 +13,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "e2e": "bash -lc 'set -a; [ -f .env.e2e ] && source .env.e2e; set +a; playwright test'",
-    "e2e:list": "bash -lc 'set -a; [ -f .env.e2e ] && source .env.e2e; set +a; playwright test --list'",
-    "e2e:ui": "bash -lc 'set -a; [ -f .env.e2e ] && source .env.e2e; set +a; playwright test --ui'",
+    "e2e": "bash -lc 'set -a; [ -f .env.local ] && source .env.local; [ -f .env.e2e ] && source .env.e2e; set +a; node scripts/e2e-prepare-user.mjs && playwright test'",
+    "e2e:list": "bash -lc 'set -a; [ -f .env.local ] && source .env.local; [ -f .env.e2e ] && source .env.e2e; set +a; node scripts/e2e-prepare-user.mjs && playwright test --list'",
+    "e2e:ui": "bash -lc 'set -a; [ -f .env.local ] && source .env.local; [ -f .env.e2e ] && source .env.e2e; set +a; node scripts/e2e-prepare-user.mjs && playwright test --ui'",
     "e2e:install": "playwright install --with-deps chromium",
     "check:migrations": "node scripts/check-migrations.mjs",
     "hooks:install": "sh scripts/setup-git-hooks.sh"

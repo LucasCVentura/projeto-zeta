@@ -1,10 +1,7 @@
 import { test, expect } from "@playwright/test"
 import { login } from "./helpers/auth"
 
-const hasE2ECreds = !!process.env.E2E_USER_EMAIL && !!process.env.E2E_USER_PASSWORD
-
 test("login com credenciais válidas", async ({ page }) => {
-  test.skip(!hasE2ECreds, "Defina E2E_USER_EMAIL e E2E_USER_PASSWORD em .env.e2e")
   await login(page)
   await expect(page.getByText(/Dashboard|Agenda|Clientes|Financeiro/i).first()).toBeVisible()
 })
