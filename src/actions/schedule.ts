@@ -17,6 +17,7 @@ import type { AppointmentStatus } from "@/db/schema"
 import type { ActionResult } from "./auth"
 import { sendBookingSummary } from "./whatsapp"
 import { organizations } from "@/db/schema"
+import { logWhatsAppSubmission } from "@/lib/whatsapp-logs"
 
 
 // ── Buscar slots do dia ───────────────────────────────────────────────────────
@@ -222,7 +223,7 @@ export async function createAppointmentAction(data: {
           organizationId,
         })
       } else {
-        await sendBookingSummary({
+        const submission = await sendBookingSummary({
           clientPhone: clientData.phone,
           clientName: clientData.name,
           date: freeDates[0],
@@ -231,6 +232,20 @@ export async function createAppointmentAction(data: {
           orgName: org?.name ?? "Clínica",
           orgAddress: org?.address,
         })
+        if (submission?.messageId) {
+          await logWhatsAppSubmission({
+            messageId: submission.messageId,
+            organizationId,
+            clientId: data.clientId,
+            destination: clientData.phone,
+            templateId: "kira_resumo_agendamento",
+            payload: {
+              date: freeDates[0],
+              startTime: data.startTime,
+              procedure: data.procedure ?? null,
+            },
+          })
+        }
         console.info("[WhatsApp] Resumo enviado.", {
           clientId: data.clientId,
           organizationId,

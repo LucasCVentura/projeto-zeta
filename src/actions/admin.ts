@@ -149,6 +149,41 @@ export async function getInboundEmailsAction() {
   return db.select().from(inboundEmails).orderBy(desc(inboundEmails.receivedAt))
 }
 
+export type WhatsAppMessageLog = {
+  id: string
+  messageId: string | null
+  organizationId: string | null
+  organizationName: string | null
+  destination: string | null
+  templateId: string | null
+  eventType: string
+  error: string | null
+  createdAt: Date
+  updatedAt: Date
+}
+
+export async function getWhatsAppMessageLogsAction(limit = 200): Promise<WhatsAppMessageLog[]> {
+  await requireAdmin()
+  const rows = await db.execute(sql<WhatsAppMessageLog>`
+    SELECT
+      l.id,
+      l.message_id as "messageId",
+      l.organization_id as "organizationId",
+      o.name as "organizationName",
+      l.destination,
+      l.template_id as "templateId",
+      l.event_type as "eventType",
+      l.error,
+      l.created_at as "createdAt",
+      l.updated_at as "updatedAt"
+    FROM whatsapp_message_logs l
+    LEFT JOIN organizations o ON o.id = l.organization_id
+    ORDER BY l.updated_at DESC
+    LIMIT ${limit}
+  `)
+  return rows.rows
+}
+
 export async function markInboundEmailReadAction(id: string) {
   await requireAdmin()
   const { inboundEmails } = await import("@/db/schema")

@@ -77,6 +77,19 @@ type InboundEmail = {
   receivedAt: Date
 }
 
+type WhatsAppLog = {
+  id: string
+  messageId: string | null
+  organizationId: string | null
+  organizationName: string | null
+  destination: string | null
+  templateId: string | null
+  eventType: string
+  error: string | null
+  createdAt: Date
+  updatedAt: Date
+}
+
 const GOALS = [
   { label: "Primeiros clientes", target: 10, icon: Sprout, metric: (m: Metrics) => m.totalOrgs },
   { label: "50 clínicas", target: 50, icon: Rocket, metric: (m: Metrics) => m.totalOrgs },
@@ -110,11 +123,13 @@ export function AdminDashboard({
   feedbacks,
   feedbackSummary,
   inboundEmails: initialInboundEmails,
+  whatsappLogs,
 }: {
   metrics: Metrics
   feedbacks: FeedbackItem[]
   feedbackSummary: FeedbackSummary
   inboundEmails: InboundEmail[]
+  whatsappLogs: WhatsAppLog[]
 }) {
   const [orgs, setOrgs] = useState(metrics.orgs)
   const [expandedOrg, setExpandedOrg] = useState<string | null>(null)
@@ -215,6 +230,7 @@ export function AdminDashboard({
                 {feedbacks.length > 0 && <span className="ml-0.5 text-[10px] bg-primary/15 text-primary rounded-full px-1.5 py-0.5 font-medium">{feedbacks.length}</span>}
               </TabsTrigger>
               <TabsTrigger value="financeiro" className="flex items-center gap-1.5"><Wallet size={13} />Financeiro</TabsTrigger>
+              <TabsTrigger value="whatsapp">WhatsApp ({whatsappLogs.length})</TabsTrigger>
               <TabsTrigger value="suporte" className="flex items-center gap-1.5">
                 <Mail size={13} />Suporte
                 {unreadCount > 0 && (
@@ -309,6 +325,42 @@ export function AdminDashboard({
                   )
                 })}
               </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="whatsapp">
+            <div className="rounded-xl border border-border overflow-hidden">
+              {whatsappLogs.length === 0 ? (
+                <div className="py-12 text-center text-sm text-muted-foreground">Nenhum log de WhatsApp ainda.</div>
+              ) : (
+                <div className="divide-y divide-border">
+                  {whatsappLogs.map((log) => (
+                    <div key={log.id} className="px-4 py-3.5 space-y-1.5">
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="text-sm font-medium truncate">{log.organizationName ?? "—"}</p>
+                        <span className={cn(
+                          "text-[10px] font-medium px-1.5 py-0.5 rounded-full shrink-0",
+                          log.eventType === "delivered" || log.eventType === "read" ? "text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-900/20" :
+                            log.eventType === "failed" ? "text-destructive bg-destructive/10" :
+                              "text-muted-foreground bg-muted"
+                        )}>
+                          {log.eventType}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Template: {log.templateId ?? "—"} · Destino: {log.destination ?? "—"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        MsgId: {log.messageId ?? "—"}
+                      </p>
+                      {log.error && <p className="text-xs text-destructive">Erro: {log.error}</p>}
+                      <p className="text-[11px] text-muted-foreground">
+                        Atualizado em {new Date(log.updatedAt).toLocaleString("pt-BR")}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </TabsContent>
 

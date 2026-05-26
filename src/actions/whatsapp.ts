@@ -39,10 +39,10 @@ export async function sendBookingSummary(params: {
   date: string
   startTime: string
   procedure?: string | null
-}) {
+}): Promise<{ messageId: string } | null> {
   const { clientPhone, clientName, orgName, orgAddress, date, startTime, procedure } = params
 
-  await sendWhatsAppTemplate(clientPhone, "kira_resumo_agendamento", [
+  return sendWhatsAppTemplate(clientPhone, "kira_resumo_agendamento", [
     clientName,
     orgName,
     formatDate(date),
