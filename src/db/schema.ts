@@ -1,5 +1,6 @@
 import {
   pgTable,
+  pgSchema,
   text,
   timestamp,
   pgEnum,
@@ -11,6 +12,8 @@ import {
   numeric,
 } from "drizzle-orm/pg-core"
 import { relations } from "drizzle-orm"
+
+const publicSchema = pgSchema("public")
 
 // ── enums ────────────────────────────────────────────────────────────────────
 
@@ -35,7 +38,7 @@ export const appointmentStatusEnum = pgEnum("appointment_status", [
 
 // ── users ────────────────────────────────────────────────────────────────────
 
-export const users = pgTable("users", {
+export const users = publicSchema.table("users", {
   id: text("id")
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
