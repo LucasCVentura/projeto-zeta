@@ -11,8 +11,14 @@ export default async function AdminPage() {
     getAllFeedbackAction(),
     getLatestFeedbackSummaryAction(),
     getInboundEmailsAction(),
-    getWhatsAppMessageLogsAction(),
-    getWhatsAppTemplateSettingsAction(),
+    getWhatsAppMessageLogsAction().catch((err) => {
+      console.error("[Admin] Falha ao carregar logs WhatsApp:", err)
+      return []
+    }),
+    getWhatsAppTemplateSettingsAction().catch((err) => {
+      console.error("[Admin] Falha ao carregar config WhatsApp:", err)
+      return { bookingSummaryTemplateId: null }
+    }),
   ])
 
   return (

@@ -199,15 +199,20 @@ export type AdminWhatsAppTemplateSetting = {
 
 export async function getWhatsAppTemplateSettingsAction(): Promise<AdminWhatsAppTemplateSetting> {
   await requireAdmin()
-  const rows = await db.execute(sql<AdminWhatsAppTemplateSetting>`
-    SELECT
-      s.booking_summary_template_id as "bookingSummaryTemplateId"
-    FROM whatsapp_system_template_settings s
-    WHERE s.singleton_key = 'default'
-    LIMIT 1
-  `)
-  const one = Array.isArray(rows) ? rows[0] : rows.rows?.[0]
-  return { bookingSummaryTemplateId: one?.bookingSummaryTemplateId ?? null }
+  try {
+    const rows = await db.execute(sql<AdminWhatsAppTemplateSetting>`
+      SELECT
+        s.booking_summary_template_id as "bookingSummaryTemplateId"
+      FROM whatsapp_system_template_settings s
+      WHERE s.singleton_key = 'default'
+      LIMIT 1
+    `)
+    const one = Array.isArray(rows) ? rows[0] : rows.rows?.[0]
+    return { bookingSummaryTemplateId: one?.bookingSummaryTemplateId ?? null }
+  } catch (err) {
+    console.error("[Admin] Falha ao carregar config global de template WhatsApp:", err)
+    return { bookingSummaryTemplateId: null }
+  }
 }
 
 export async function saveWhatsAppTemplateSettingAction(input: {
