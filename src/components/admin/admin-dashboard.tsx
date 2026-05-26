@@ -151,6 +151,7 @@ export function AdminDashboard({
   const [input, setInput] = useState("")
   const [chatLoading, setChatLoading] = useState(false)
   const [templateSaving, setTemplateSaving] = useState(false)
+  const [templateError, setTemplateError] = useState<string | null>(null)
   const [bookingTemplateId, setBookingTemplateId] = useState(whatsappTemplateSettings.bookingSummaryTemplateId ?? "")
   const [packageTemplateId, setPackageTemplateId] = useState(whatsappTemplateSettings.packageSummaryTemplateId ?? "")
   const [reminderTemplateId, setReminderTemplateId] = useState(whatsappTemplateSettings.reminderConfirmationTemplateId ?? "")
@@ -216,13 +217,19 @@ export function AdminDashboard({
 
   async function handleSaveTemplate() {
     setTemplateSaving(true)
-    await saveWhatsAppTemplateSettingAction({
-      bookingSummaryTemplateId: bookingTemplateId,
-      packageSummaryTemplateId: packageTemplateId,
-      reminderConfirmationTemplateId: reminderTemplateId,
-      postVisitTemplateId,
-    })
-    setTemplateSaving(false)
+    setTemplateError(null)
+    try {
+      await saveWhatsAppTemplateSettingAction({
+        bookingSummaryTemplateId: bookingTemplateId,
+        packageSummaryTemplateId: packageTemplateId,
+        reminderConfirmationTemplateId: reminderTemplateId,
+        postVisitTemplateId,
+      })
+    } catch {
+      setTemplateError("Não foi possível salvar agora. Tente novamente em alguns segundos.")
+    } finally {
+      setTemplateSaving(false)
+    }
   }
 
   return (
@@ -428,6 +435,9 @@ export function AdminDashboard({
                   onChange={(e) => setPostVisitTemplateId(e.target.value)}
                   placeholder="UUID do template pós-consulta"
                 />
+                {templateError && (
+                  <p className="text-xs text-destructive pt-1">{templateError}</p>
+                )}
               </div>
             </div>
           </TabsContent>
