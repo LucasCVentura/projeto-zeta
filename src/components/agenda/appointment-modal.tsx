@@ -272,7 +272,7 @@ export function AppointmentModal({ open, onClose, date, time }: Props) {
                   >
                     <span className="font-medium">{pkg.packageName}</span>
                     <span className={cn("text-xs", selectedPackageId === pkg.id ? "text-primary" : "text-muted-foreground")}>
-                      {pkg.sessionsRemaining} sessão{pkg.sessionsRemaining !== 1 ? "ões" : ""} restante{pkg.sessionsRemaining !== 1 ? "s" : ""}
+                      {pkg.sessionsRemaining} {pkg.sessionsRemaining !== 1 ? "sessões" : "sessão"} restante{pkg.sessionsRemaining !== 1 ? "s" : ""}
                     </span>
                   </button>
                 ))}
