@@ -8,6 +8,7 @@ export function KiraMark({ size = 16, className }: { size?: number; className?: 
       aria-hidden="true"
       width={size}
       height={size}
+      unoptimized
       className={className}
       style={{ width: size, height: size }}
     />
