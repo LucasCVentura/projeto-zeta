@@ -22,13 +22,26 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           password: string
         }
 
-        let user: typeof users.$inferSelect | undefined
+        let user: {
+          id: string
+          name: string
+          email: string
+          password: string | null
+          image: string | null
+        } | undefined
         try {
-          const rows = await db
-            .select()
-            .from(users)
-            .where(eq(users.email, email))
-            .limit(1)
+          const rows = await db.execute<{
+            id: string
+            name: string
+            email: string
+            password: string | null
+            image: string | null
+          }>(sql`
+            select id, name, email, password, image
+            from public.users
+            where email = ${email}
+            limit 1
+          `)
           user = rows[0]
         } catch (err) {
           try {
