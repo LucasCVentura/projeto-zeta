@@ -19,6 +19,9 @@ import { sendBookingSummary } from "./whatsapp"
 import { organizations } from "@/db/schema"
 import { logWhatsAppSubmission } from "@/lib/whatsapp-logs"
 
+const TEMPLATE_BOOKING_SUMMARY_ID =
+  process.env.GUPSHUP_TEMPLATE_KIRA_RESUMO_AGENDAMENTO_ID || "kira_resumo_agendamento"
+
 
 // ── Buscar slots do dia ───────────────────────────────────────────────────────
 
@@ -238,7 +241,7 @@ export async function createAppointmentAction(data: {
             organizationId,
             clientId: data.clientId,
             destination: clientData.phone,
-            templateId: "kira_resumo_agendamento",
+            templateId: TEMPLATE_BOOKING_SUMMARY_ID,
             payload: {
               date: freeDates[0],
               startTime: data.startTime,

@@ -6,11 +6,24 @@ import { eq, inArray } from "drizzle-orm"
 import { sendWhatsAppTemplate, sendWhatsApp } from "@/lib/whatsapp-client"
 
 const CONFIRMATION_TTL_DAYS = 3
+const TEMPLATE_BOOKING_SUMMARY_ID =
+  process.env.GUPSHUP_TEMPLATE_KIRA_RESUMO_AGENDAMENTO_ID || "kira_resumo_agendamento"
+const TEMPLATE_PACKAGE_SUMMARY_ID =
+  process.env.GUPSHUP_TEMPLATE_KIRA_RESUMO_PACOTE_ID || "kira_resumo_pacote"
+const TEMPLATE_REMINDER_CONFIRMATION_ID =
+  process.env.GUPSHUP_TEMPLATE_KIRA_LEMBRETE_CONFIRMACAO_ID || "kira_lembrete_confirmacao"
+const TEMPLATE_POST_VISIT_ID =
+  process.env.GUPSHUP_TEMPLATE_KIRA_AGRADECIMENTO_ID || "kira_agradecimento"
 
 function formatDate(date: string) {
   const [year, month, day] = date.split("-")
   void year
   return `${day}/${month}`
+}
+
+function safeParam(value: string | null | undefined, fallback: string) {
+  const text = (value ?? "").replace(/\s+/g, " ").trim()
+  return text.length > 0 ? text : fallback
 }
 
 async function storePendingConfirmation(
@@ -43,13 +56,13 @@ export async function sendBookingSummary(params: {
 }): Promise<{ messageId: string } | null> {
   const { clientPhone, clientName, orgName, orgAddress, date, startTime, procedure } = params
 
-  return sendWhatsAppTemplate(clientPhone, "kira_resumo_agendamento", [
-    clientName,
-    orgName,
+  return sendWhatsAppTemplate(clientPhone, TEMPLATE_BOOKING_SUMMARY_ID, [
+    safeParam(clientName, "Cliente"),
+    safeParam(orgName, "Clinica"),
     formatDate(date),
     startTime.slice(0, 5),
-    procedure ?? "—",
-    orgAddress ?? "—",
+    safeParam(procedure, "Sem procedimento"),
+    safeParam(orgAddress, "Sem endereco"),
   ])
 }
 
@@ -69,12 +82,12 @@ export async function sendPackageBookingSummary(params: {
     .map((s, i) => `${i + 1}. ${formatDate(s.date)} às ${s.startTime.slice(0, 5)}`)
     .join("\n")
 
-  await sendWhatsAppTemplate(clientPhone, "kira_resumo_pacote", [
-    clientName,
-    orgName,
-    packageName,
+  await sendWhatsAppTemplate(clientPhone, TEMPLATE_PACKAGE_SUMMARY_ID, [
+    safeParam(clientName, "Cliente"),
+    safeParam(orgName, "Clinica"),
+    safeParam(packageName, "Pacote"),
     sessionList,
-    orgAddress ?? "—",
+    safeParam(orgAddress, "Sem endereco"),
   ])
 }
 
@@ -94,13 +107,13 @@ export async function sendReminderWithConfirmation(params: {
 }) {
   const { clientPhone, clientName, orgName, orgAddress, date, startTime, procedure, appointmentId, clientPackageId, organizationId } = params
 
-  const result = await sendWhatsAppTemplate(clientPhone, "kira_lembrete_confirmacao", [
-    clientName,
-    orgName,
+  const result = await sendWhatsAppTemplate(clientPhone, TEMPLATE_REMINDER_CONFIRMATION_ID, [
+    safeParam(clientName, "Cliente"),
+    safeParam(orgName, "Clinica"),
     formatDate(date),
     startTime.slice(0, 5),
-    procedure ?? "—",
-    orgAddress ?? "—",
+    safeParam(procedure, "Sem procedimento"),
+    safeParam(orgAddress, "Sem endereco"),
   ])
 
   if (result?.messageId) {
@@ -118,10 +131,10 @@ export async function sendPostVisitThanks(params: {
 }) {
   const { clientPhone, clientName, orgName, googleReviewUrl } = params
 
-  await sendWhatsAppTemplate(clientPhone, "kira_agradecimento", [
-    clientName,
-    orgName,
-    googleReviewUrl ?? "",
+  await sendWhatsAppTemplate(clientPhone, TEMPLATE_POST_VISIT_ID, [
+    safeParam(clientName, "Cliente"),
+    safeParam(orgName, "Clinica"),
+    safeParam(googleReviewUrl, ""),
   ])
 }
 
