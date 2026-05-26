@@ -1,6 +1,6 @@
 import NextAuth from "next-auth"
 import Credentials from "next-auth/providers/credentials"
-import { eq } from "drizzle-orm"
+import { eq, sql } from "drizzle-orm"
 import { compare } from "bcryptjs"
 import { db } from "@/db"
 import { users } from "@/db/schema"
@@ -22,11 +22,34 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           password: string
         }
 
-        const [user] = await db
-          .select()
-          .from(users)
-          .where(eq(users.email, email))
-          .limit(1)
+        let user: typeof users.$inferSelect | undefined
+        try {
+          const rows = await db
+            .select()
+            .from(users)
+            .where(eq(users.email, email))
+            .limit(1)
+          user = rows[0]
+        } catch (err) {
+          try {
+            const diag = await db.execute(sql<{
+              dbName: string
+              schemaName: string | null
+              userRole: string
+              usersTable: string | null
+            }>`
+              select
+                current_database() as "dbName",
+                current_schema() as "schemaName",
+                current_user as "userRole",
+                to_regclass('public.users')::text as "usersTable"
+            `)
+            console.error("[auth][db-diag]", diag[0] ?? null)
+          } catch (diagErr) {
+            console.error("[auth][db-diag-error]", diagErr)
+          }
+          throw err
+        }
 
         if (!user || !user.password) return null
 
