@@ -1,6 +1,6 @@
 import NextAuth from "next-auth"
 import Credentials from "next-auth/providers/credentials"
-import { eq, sql } from "drizzle-orm"
+import { eq } from "drizzle-orm"
 import { compare } from "bcryptjs"
 import { db } from "@/db"
 import { users } from "@/db/schema"
@@ -22,47 +22,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           password: string
         }
 
-        let user: {
-          id: string
-          name: string
-          email: string
-          password: string | null
-          image: string | null
-        } | undefined
-        try {
-          const rows = await db.execute<{
-            id: string
-            name: string
-            email: string
-            password: string | null
-            image: string | null
-          }>(sql`
-            select id, name, email, password, image
-            from public.users
-            where email = ${email}
-            limit 1
-          `)
-          user = rows[0]
-        } catch (err) {
-          try {
-            const diag = await db.execute(sql<{
-              dbName: string
-              schemaName: string | null
-              userRole: string
-              usersTable: string | null
-            }>`
-              select
-                current_database() as "dbName",
-                current_schema() as "schemaName",
-                current_user as "userRole",
-                to_regclass('public.users')::text as "usersTable"
-            `)
-            console.error("[auth][db-diag]", diag[0] ?? null)
-          } catch (diagErr) {
-            console.error("[auth][db-diag-error]", diagErr)
-          }
-          throw err
-        }
+        const [user] = await db
+          .select()
+          .from(users)
+          .where(eq(users.email, email))
+          .limit(1)
 
         if (!user || !user.password) return null
 

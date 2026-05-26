@@ -7,8 +7,9 @@ const globalForDb = globalThis as unknown as { pgClient: postgres.Sql | undefine
 const client = globalForDb.pgClient ?? postgres(process.env.DATABASE_URL!, {
   max: 10,
   prepare: false,
-  // Defensive fix for pooler/envs where search_path may not include public.
-  options: "-c search_path=public",
+  connection: {
+    options: "-c search_path=public",
+  },
 })
 
 if (process.env.NODE_ENV !== "production") globalForDb.pgClient = client
