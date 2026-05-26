@@ -9,6 +9,9 @@ function normalizePhone(to: string): string | null {
 export async function sendWhatsApp(to: string, body: string): Promise<void> {
   const destination = normalizePhone(to)
   if (!destination) return
+  if (!process.env.GUPSHUP_API_KEY || !process.env.GUPSHUP_SENDER || !process.env.GUPSHUP_APP_NAME) {
+    throw new Error("Missing Gupshup env vars (GUPSHUP_API_KEY, GUPSHUP_SENDER, GUPSHUP_APP_NAME)")
+  }
 
   const params = new URLSearchParams({
     channel: "whatsapp",
@@ -34,6 +37,9 @@ export async function sendWhatsAppTemplate(
 ): Promise<{ messageId: string } | null> {
   const destination = normalizePhone(to)
   if (!destination) return null
+  if (!process.env.GUPSHUP_API_KEY || !process.env.GUPSHUP_SENDER || !process.env.GUPSHUP_APP_NAME) {
+    throw new Error("Missing Gupshup env vars (GUPSHUP_API_KEY, GUPSHUP_SENDER, GUPSHUP_APP_NAME)")
+  }
 
   const params = new URLSearchParams({
     channel: "whatsapp",
@@ -53,5 +59,5 @@ export async function sendWhatsAppTemplate(
 
   const data = await res.json() as { status: string; messageId?: string }
   if (data.status === "submitted" && data.messageId) return { messageId: data.messageId }
-  return null
+  throw new Error(`Gupshup template not submitted (status=${data.status}, template=${templateId}, destination=${destination})`)
 }

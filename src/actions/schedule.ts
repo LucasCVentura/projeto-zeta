@@ -201,33 +201,50 @@ export async function createAppointmentAction(data: {
   revalidateTag(`client-${data.clientId}`, {})
   revalidatePath("/agenda")
 
-  // Envia confirmação WhatsApp para o primeiro agendamento (fire-and-forget)
-  if (process.env.WHATSAPP_ENABLED === "true") try {
-    const [clientData] = await db
-      .select({ name: clients.name, phone: clients.phone })
-      .from(clients)
-      .where(eq(clients.id, data.clientId))
-      .limit(1)
+  // Envia confirmação WhatsApp para o primeiro agendamento
+  if (process.env.WHATSAPP_ENABLED === "true") {
+    try {
+      const [clientData] = await db
+        .select({ name: clients.name, phone: clients.phone })
+        .from(clients)
+        .where(eq(clients.id, data.clientId))
+        .limit(1)
 
-    const [org] = await db
-      .select({ name: organizations.name, address: organizations.address })
-      .from(organizations)
-      .where(eq(organizations.id, organizationId))
-      .limit(1)
+      const [org] = await db
+        .select({ name: organizations.name, address: organizations.address })
+        .from(organizations)
+        .where(eq(organizations.id, organizationId))
+        .limit(1)
 
-    if (clientData?.phone) {
-      await sendBookingSummary({
-        clientPhone: clientData.phone,
-        clientName: clientData.name,
-        date: freeDates[0],
-        startTime: data.startTime,
-        procedure: data.procedure,
-        orgName: org?.name ?? "Clínica",
-        orgAddress: org?.address,
-      })
+      if (!clientData?.phone) {
+        console.info("[WhatsApp] Resumo não enviado: cliente sem telefone.", {
+          clientId: data.clientId,
+          organizationId,
+        })
+      } else {
+        await sendBookingSummary({
+          clientPhone: clientData.phone,
+          clientName: clientData.name,
+          date: freeDates[0],
+          startTime: data.startTime,
+          procedure: data.procedure,
+          orgName: org?.name ?? "Clínica",
+          orgAddress: org?.address,
+        })
+        console.info("[WhatsApp] Resumo enviado.", {
+          clientId: data.clientId,
+          organizationId,
+          date: freeDates[0],
+          startTime: data.startTime,
+        })
+      }
+    } catch (err) {
+      console.error("[WhatsApp] Erro ao enviar resumo de agendamento:", err)
     }
-  } catch (err) {
-    console.error("[WhatsApp] Erro ao enviar resumo de agendamento:", err)
+  } else {
+    console.info("[WhatsApp] Resumo não enviado: WHATSAPP_ENABLED != true.", {
+      value: process.env.WHATSAPP_ENABLED ?? null,
+    })
   }
 
   return { success: true, skipped, appointmentIds: inserted.map((r) => r.id) }
