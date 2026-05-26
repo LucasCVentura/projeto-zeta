@@ -7,11 +7,24 @@ export function PwaAutoUpdate() {
     if (!("serviceWorker" in navigator)) return
     const appVersion = process.env.NEXT_PUBLIC_APP_VERSION ?? "dev"
     const swUrl = `/sw.js?v=${encodeURIComponent(appVersion)}`
+    const refreshKey = `kira:pwa:reloaded:${appVersion}`
+    const checkIntervalMs = 60_000
 
     let refreshing = false
+    let lastCheckAt = 0
+
+    // Reset da trava quando muda a versão publicada.
+    const previousVersion = sessionStorage.getItem("kira:pwa:version")
+    if (previousVersion !== appVersion) {
+      sessionStorage.setItem("kira:pwa:version", appVersion)
+      sessionStorage.removeItem(refreshKey)
+    }
+
     const onControllerChange = () => {
       if (refreshing) return
+      if (sessionStorage.getItem(refreshKey) === "1") return
       refreshing = true
+      sessionStorage.setItem(refreshKey, "1")
       window.location.reload()
     }
 
@@ -47,6 +60,10 @@ export function PwaAutoUpdate() {
     }
 
     const checkForUpdate = () => {
+      if (document.visibilityState !== "visible") return
+      const now = Date.now()
+      if (now - lastCheckAt < checkIntervalMs) return
+      lastCheckAt = now
       regRef?.update().catch(() => { /* best-effort */ })
     }
 
