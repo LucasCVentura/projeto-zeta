@@ -13,7 +13,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "check:migrations": "node scripts/check-migrations.mjs"
+    "check:migrations": "node scripts/check-migrations.mjs",
+    "hooks:install": "sh scripts/setup-git-hooks.sh"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",
