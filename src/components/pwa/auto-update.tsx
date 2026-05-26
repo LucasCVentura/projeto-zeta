@@ -5,6 +5,8 @@ import { useEffect } from "react"
 export function PwaAutoUpdate() {
   useEffect(() => {
     if (!("serviceWorker" in navigator)) return
+    const appVersion = process.env.NEXT_PUBLIC_APP_VERSION ?? "dev"
+    const swUrl = `/sw.js?v=${encodeURIComponent(appVersion)}`
 
     let refreshing = false
     const onControllerChange = () => {
@@ -25,7 +27,7 @@ export function PwaAutoUpdate() {
 
     const setup = async () => {
       try {
-        const reg = await navigator.serviceWorker.register("/sw.js")
+        const reg = await navigator.serviceWorker.register(swUrl)
         regRef = reg
         await reg.update()
         askUpdate(reg)
