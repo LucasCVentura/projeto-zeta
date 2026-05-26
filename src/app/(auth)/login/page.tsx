@@ -6,10 +6,10 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { useSearchParams } from "next/navigation"
+import { signIn } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { loginAction } from "@/actions/auth"
 
 const schema = z.object({
   email: z.string().email("E-mail inválido"),
@@ -44,16 +44,33 @@ function LoginForm() {
     setIsLoading(true)
     setError(null)
 
-    const result = await loginAction(data)
-
-    if (!result.success) {
-      setError(result.error)
+    const loginTimeout = setTimeout(() => {
+      setError("Login demorou mais que o esperado. Tente novamente.")
       setIsLoading(false)
-      return
-    }
+    }, 15000)
 
-    // Navegação hard evita inconsistências de cache/sessão após login em alguns PWAs
-    window.location.assign(next)
+    try {
+      const result = await signIn("credentials", {
+        email: data.email,
+        password: data.password,
+        redirect: false,
+        callbackUrl: next,
+      })
+
+      if (!result || result.error) {
+        setError("E-mail ou senha incorretos.")
+        setIsLoading(false)
+        return
+      }
+
+      // Navegação hard evita inconsistências de cache/sessão após login em alguns PWAs
+      window.location.assign(result.url ?? next)
+    } catch {
+      setError("Não foi possível entrar agora. Tente novamente.")
+      setIsLoading(false)
+    } finally {
+      clearTimeout(loginTimeout)
+    }
   }
 
   return (
