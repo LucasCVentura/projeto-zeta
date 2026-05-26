@@ -9,7 +9,8 @@ const CONFIRMATION_TTL_DAYS = 3
 
 function formatDate(date: string) {
   const [year, month, day] = date.split("-")
-  return `${day}/${month}/${year}`
+  void year
+  return `${day}/${month}`
 }
 
 async function storePendingConfirmation(
