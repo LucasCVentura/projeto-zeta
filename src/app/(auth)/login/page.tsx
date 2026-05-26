@@ -5,7 +5,7 @@ import { useState, Suspense } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -30,9 +30,9 @@ function LoginForm() {
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const router = useRouter()
   const searchParams = useSearchParams()
-  const next = searchParams.get("next") ?? "/dashboard"
+  const rawNext = searchParams.get("callbackUrl") ?? searchParams.get("next") ?? "/dashboard"
+  const next = rawNext.startsWith("/") ? rawNext : "/dashboard"
 
   const {
     register,
@@ -52,7 +52,8 @@ function LoginForm() {
       return
     }
 
-    router.push(next)
+    // Navegação hard evita inconsistências de cache/sessão após login em alguns PWAs
+    window.location.assign(next)
   }
 
   return (
@@ -146,4 +147,3 @@ function LoginForm() {
     </div>
   )
 }
-

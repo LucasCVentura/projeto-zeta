@@ -100,7 +100,15 @@ export function MobileNav({ role }: { role: OrgRole }) {
     return () => document.removeEventListener("mousedown", handleClick)
   }, [menuOpen])
 
-  useEffect(() => { setMenuOpen(false) }, [pathname])
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setMenuOpen(false))
+    return () => cancelAnimationFrame(id)
+  }, [pathname])
+
+  async function handleLogout() {
+    const res = await signOut({ redirect: false, callbackUrl: "/login" })
+    window.location.assign(res?.url ?? "/login")
+  }
 
   return (
     <>
@@ -198,7 +206,7 @@ export function MobileNav({ role }: { role: OrgRole }) {
           <div className="border-t border-border my-1" />
 
           <button
-            onClick={() => signOut({ callbackUrl: "/login" })}
+            onClick={handleLogout}
             className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm text-destructive hover:bg-destructive/10 transition-colors"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
