@@ -49,7 +49,12 @@ export default function EditarAnamnesePage() {
 
   useEffect(() => {
     getClientAction(id).then((result) => {
-      if (!result) return
+      if (!result) {
+        setIsLoading(false)
+        setError("Cliente não encontrado ou sem acesso.")
+        router.replace("/clientes")
+        return
+      }
       setClientName(result.client.name)
       if (result.anamnesis) {
         setData({
@@ -71,7 +76,7 @@ export default function EditarAnamnesePage() {
       }
       setIsLoading(false)
     })
-  }, [id])
+  }, [id, router])
 
   function set<K extends keyof AnamnesisData>(key: K, value: AnamnesisData[K]) {
     setData((prev) => ({ ...prev, [key]: value }))

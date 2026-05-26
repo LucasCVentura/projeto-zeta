@@ -4,11 +4,16 @@ import { NextResponse } from "next/server"
 const publicRoutes = ["/", "/login", "/register", "/forgot-password", "/reset-password", "/assinar", "/termos", "/privacidade", "/api/webhooks", "/confirmar", "/recusar", "/confirmar-sessoes"]
 const authRoutes = ["/login", "/register"]
 
+function matchesRoute(pathname: string, route: string) {
+  if (route === "/") return pathname === "/"
+  return pathname === route || pathname.startsWith(`${route}/`)
+}
+
 export default auth((req) => {
   const { nextUrl, auth: session } = req
   const isLoggedIn = !!session?.user
-  const isPublic = publicRoutes.some((r) => nextUrl.pathname.startsWith(r))
-  const isAuthRoute = authRoutes.some((r) => nextUrl.pathname.startsWith(r))
+  const isPublic = publicRoutes.some((r) => matchesRoute(nextUrl.pathname, r))
+  const isAuthRoute = authRoutes.some((r) => matchesRoute(nextUrl.pathname, r))
 
   // Usuário logado tentando acessar login/register → manda pro dashboard
   if (isLoggedIn && isAuthRoute) {
