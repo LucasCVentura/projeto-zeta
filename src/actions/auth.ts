@@ -131,7 +131,10 @@ export async function loginAction(data: {
     return { success: true }
   } catch (err) {
     if (err instanceof AuthError) {
-      return { success: false, error: "E-mail ou senha incorretos." }
+      if (err.type === "CredentialsSignin") {
+        return { success: false, error: "E-mail ou senha incorretos." }
+      }
+      return { success: false, error: "Falha ao autenticar. Tente novamente em instantes." }
     }
     throw err
   }
