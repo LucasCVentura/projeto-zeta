@@ -712,6 +712,9 @@ export const whatsappSystemTemplateSettings = pgTable("whatsapp_system_template_
     .$defaultFn(() => crypto.randomUUID()),
   singletonKey: text("singleton_key").notNull().unique(),
   bookingSummaryTemplateId: text("booking_summary_template_id"),
+  packageSummaryTemplateId: text("package_summary_template_id"),
+  reminderConfirmationTemplateId: text("reminder_confirmation_template_id"),
+  postVisitTemplateId: text("post_visit_template_id"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 })

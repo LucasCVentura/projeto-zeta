@@ -17,7 +17,12 @@ export default async function AdminPage() {
     }),
     getWhatsAppTemplateSettingsAction().catch((err) => {
       console.error("[Admin] Falha ao carregar config WhatsApp:", err)
-      return { bookingSummaryTemplateId: null }
+      return {
+        bookingSummaryTemplateId: null,
+        packageSummaryTemplateId: null,
+        reminderConfirmationTemplateId: null,
+        postVisitTemplateId: null,
+      }
     }),
   ])
 

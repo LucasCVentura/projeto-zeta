@@ -92,6 +92,9 @@ type WhatsAppLog = {
 
 type WhatsAppTemplateSetting = {
   bookingSummaryTemplateId: string | null
+  packageSummaryTemplateId: string | null
+  reminderConfirmationTemplateId: string | null
+  postVisitTemplateId: string | null
 }
 
 const GOALS = [
@@ -149,6 +152,9 @@ export function AdminDashboard({
   const [chatLoading, setChatLoading] = useState(false)
   const [templateSaving, setTemplateSaving] = useState(false)
   const [bookingTemplateId, setBookingTemplateId] = useState(whatsappTemplateSettings.bookingSummaryTemplateId ?? "")
+  const [packageTemplateId, setPackageTemplateId] = useState(whatsappTemplateSettings.packageSummaryTemplateId ?? "")
+  const [reminderTemplateId, setReminderTemplateId] = useState(whatsappTemplateSettings.reminderConfirmationTemplateId ?? "")
+  const [postVisitTemplateId, setPostVisitTemplateId] = useState(whatsappTemplateSettings.postVisitTemplateId ?? "")
   const chatEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -212,6 +218,9 @@ export function AdminDashboard({
     setTemplateSaving(true)
     await saveWhatsAppTemplateSettingAction({
       bookingSummaryTemplateId: bookingTemplateId,
+      packageSummaryTemplateId: packageTemplateId,
+      reminderConfirmationTemplateId: reminderTemplateId,
+      postVisitTemplateId,
     })
     setTemplateSaving(false)
   }
@@ -401,6 +410,24 @@ export function AdminDashboard({
                     {templateSaving ? "Salvando..." : "Salvar"}
                   </Button>
                 </div>
+                <p className="text-sm font-medium pt-2">Template resumo de pacote (global)</p>
+                <Input
+                  value={packageTemplateId}
+                  onChange={(e) => setPackageTemplateId(e.target.value)}
+                  placeholder="UUID do template de resumo de pacote"
+                />
+                <p className="text-sm font-medium pt-2">Template lembrete + confirmação (global)</p>
+                <Input
+                  value={reminderTemplateId}
+                  onChange={(e) => setReminderTemplateId(e.target.value)}
+                  placeholder="UUID do template de lembrete/confirmacao"
+                />
+                <p className="text-sm font-medium pt-2">Template pós-consulta (global)</p>
+                <Input
+                  value={postVisitTemplateId}
+                  onChange={(e) => setPostVisitTemplateId(e.target.value)}
+                  placeholder="UUID do template pós-consulta"
+                />
               </div>
             </div>
           </TabsContent>

@@ -195,6 +195,9 @@ export async function markInboundEmailReadAction(id: string) {
 
 export type AdminWhatsAppTemplateSetting = {
   bookingSummaryTemplateId: string | null
+  packageSummaryTemplateId: string | null
+  reminderConfirmationTemplateId: string | null
+  postVisitTemplateId: string | null
 }
 
 export async function getWhatsAppTemplateSettingsAction(): Promise<AdminWhatsAppTemplateSetting> {
@@ -203,36 +206,61 @@ export async function getWhatsAppTemplateSettingsAction(): Promise<AdminWhatsApp
     const rows = await db.execute(sql<AdminWhatsAppTemplateSetting>`
       SELECT
         s.booking_summary_template_id as "bookingSummaryTemplateId"
+        ,s.package_summary_template_id as "packageSummaryTemplateId"
+        ,s.reminder_confirmation_template_id as "reminderConfirmationTemplateId"
+        ,s.post_visit_template_id as "postVisitTemplateId"
       FROM whatsapp_system_template_settings s
       WHERE s.singleton_key = 'default'
       LIMIT 1
     `)
     const one = Array.isArray(rows) ? rows[0] : rows.rows?.[0]
-    return { bookingSummaryTemplateId: one?.bookingSummaryTemplateId ?? null }
+    return {
+      bookingSummaryTemplateId: one?.bookingSummaryTemplateId ?? null,
+      packageSummaryTemplateId: one?.packageSummaryTemplateId ?? null,
+      reminderConfirmationTemplateId: one?.reminderConfirmationTemplateId ?? null,
+      postVisitTemplateId: one?.postVisitTemplateId ?? null,
+    }
   } catch (err) {
     console.error("[Admin] Falha ao carregar config global de template WhatsApp:", err)
-    return { bookingSummaryTemplateId: null }
+    return {
+      bookingSummaryTemplateId: null,
+      packageSummaryTemplateId: null,
+      reminderConfirmationTemplateId: null,
+      postVisitTemplateId: null,
+    }
   }
 }
 
 export async function saveWhatsAppTemplateSettingAction(input: {
   bookingSummaryTemplateId: string
+  packageSummaryTemplateId: string
+  reminderConfirmationTemplateId: string
+  postVisitTemplateId: string
 }) {
   await requireAdmin()
-  const templateId = input.bookingSummaryTemplateId.trim() || null
+  const bookingTemplateId = input.bookingSummaryTemplateId.trim() || null
+  const packageTemplateId = input.packageSummaryTemplateId.trim() || null
+  const reminderTemplateId = input.reminderConfirmationTemplateId.trim() || null
+  const postVisitTemplateId = input.postVisitTemplateId.trim() || null
   await db.execute(sql`
     INSERT INTO whatsapp_system_template_settings (
-      id, singleton_key, booking_summary_template_id, created_at, updated_at
+      id, singleton_key, booking_summary_template_id, package_summary_template_id, reminder_confirmation_template_id, post_visit_template_id, created_at, updated_at
     )
     VALUES (
       ${crypto.randomUUID()},
       'default',
-      ${templateId},
+      ${bookingTemplateId},
+      ${packageTemplateId},
+      ${reminderTemplateId},
+      ${postVisitTemplateId},
       now(),
       now()
     )
     ON CONFLICT (singleton_key) DO UPDATE SET
       booking_summary_template_id = EXCLUDED.booking_summary_template_id,
+      package_summary_template_id = EXCLUDED.package_summary_template_id,
+      reminder_confirmation_template_id = EXCLUDED.reminder_confirmation_template_id,
+      post_visit_template_id = EXCLUDED.post_visit_template_id,
       updated_at = now()
   `)
   revalidatePath("/admin")

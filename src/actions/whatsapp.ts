@@ -2,7 +2,7 @@
 
 import { db } from "@/db"
 import { whatsappPendingConfirmations, appointments } from "@/db/schema"
-import { eq, inArray } from "drizzle-orm"
+import { eq, inArray, sql } from "drizzle-orm"
 import { sendWhatsAppTemplate, sendWhatsApp } from "@/lib/whatsapp-client"
 
 const CONFIRMATION_TTL_DAYS = 3
@@ -14,6 +14,40 @@ const TEMPLATE_REMINDER_CONFIRMATION_ID =
   process.env.GUPSHUP_TEMPLATE_KIRA_LEMBRETE_CONFIRMACAO_ID || "kira_lembrete_confirmacao"
 const TEMPLATE_POST_VISIT_ID =
   process.env.GUPSHUP_TEMPLATE_KIRA_AGRADECIMENTO_ID || "kira_agradecimento"
+
+async function getGlobalTemplateIds() {
+  try {
+    const rows = await db.execute<{
+      bookingSummaryTemplateId: string | null
+      packageSummaryTemplateId: string | null
+      reminderConfirmationTemplateId: string | null
+      postVisitTemplateId: string | null
+    }>(sql`
+      SELECT
+        booking_summary_template_id as "bookingSummaryTemplateId",
+        package_summary_template_id as "packageSummaryTemplateId",
+        reminder_confirmation_template_id as "reminderConfirmationTemplateId",
+        post_visit_template_id as "postVisitTemplateId"
+      FROM whatsapp_system_template_settings
+      WHERE singleton_key = 'default'
+      LIMIT 1
+    `)
+    const one = Array.isArray(rows) ? rows[0] : rows.rows?.[0]
+    return {
+      bookingSummaryTemplateId: one?.bookingSummaryTemplateId?.trim() || TEMPLATE_BOOKING_SUMMARY_ID,
+      packageSummaryTemplateId: one?.packageSummaryTemplateId?.trim() || TEMPLATE_PACKAGE_SUMMARY_ID,
+      reminderConfirmationTemplateId: one?.reminderConfirmationTemplateId?.trim() || TEMPLATE_REMINDER_CONFIRMATION_ID,
+      postVisitTemplateId: one?.postVisitTemplateId?.trim() || TEMPLATE_POST_VISIT_ID,
+    }
+  } catch {
+    return {
+      bookingSummaryTemplateId: TEMPLATE_BOOKING_SUMMARY_ID,
+      packageSummaryTemplateId: TEMPLATE_PACKAGE_SUMMARY_ID,
+      reminderConfirmationTemplateId: TEMPLATE_REMINDER_CONFIRMATION_ID,
+      postVisitTemplateId: TEMPLATE_POST_VISIT_ID,
+    }
+  }
+}
 
 function formatDate(date: string) {
   const [year, month, day] = date.split("-")
@@ -56,8 +90,9 @@ export async function sendBookingSummary(params: {
   templateId?: string
 }): Promise<{ messageId: string } | null> {
   const { clientPhone, clientName, orgName, orgAddress, date, startTime, procedure, templateId } = params
+  const templates = await getGlobalTemplateIds()
 
-  return sendWhatsAppTemplate(clientPhone, templateId || TEMPLATE_BOOKING_SUMMARY_ID, [
+  return sendWhatsAppTemplate(clientPhone, templateId || templates.bookingSummaryTemplateId, [
     safeParam(clientName, "Cliente"),
     safeParam(orgName, "Clinica"),
     formatDate(date),
@@ -78,12 +113,13 @@ export async function sendPackageBookingSummary(params: {
   sessions: { date: string; startTime: string }[]
 }) {
   const { clientPhone, clientName, orgName, orgAddress, packageName, sessions } = params
+  const templates = await getGlobalTemplateIds()
 
   const sessionList = sessions
     .map((s, i) => `${i + 1}. ${formatDate(s.date)} às ${s.startTime.slice(0, 5)}`)
     .join("\n")
 
-  await sendWhatsAppTemplate(clientPhone, TEMPLATE_PACKAGE_SUMMARY_ID, [
+  await sendWhatsAppTemplate(clientPhone, templates.packageSummaryTemplateId, [
     safeParam(clientName, "Cliente"),
     safeParam(orgName, "Clinica"),
     safeParam(packageName, "Pacote"),
@@ -107,8 +143,9 @@ export async function sendReminderWithConfirmation(params: {
   organizationId: string
 }) {
   const { clientPhone, clientName, orgName, orgAddress, date, startTime, procedure, appointmentId, clientPackageId, organizationId } = params
+  const templates = await getGlobalTemplateIds()
 
-  const result = await sendWhatsAppTemplate(clientPhone, TEMPLATE_REMINDER_CONFIRMATION_ID, [
+  const result = await sendWhatsAppTemplate(clientPhone, templates.reminderConfirmationTemplateId, [
     safeParam(clientName, "Cliente"),
     safeParam(orgName, "Clinica"),
     formatDate(date),
@@ -131,8 +168,9 @@ export async function sendPostVisitThanks(params: {
   googleReviewUrl?: string | null
 }) {
   const { clientPhone, clientName, orgName, googleReviewUrl } = params
+  const templates = await getGlobalTemplateIds()
 
-  await sendWhatsAppTemplate(clientPhone, TEMPLATE_POST_VISIT_ID, [
+  await sendWhatsAppTemplate(clientPhone, templates.postVisitTemplateId, [
     safeParam(clientName, "Cliente"),
     safeParam(orgName, "Clinica"),
     safeParam(googleReviewUrl, ""),
