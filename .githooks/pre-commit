@@ -1,0 +1,17 @@
+#!/bin/sh
+set -e
+ROOT="$(git rev-parse --show-toplevel)"
+cd "$ROOT"
+
+echo "── pre-commit ─────────────────────────────────────────"
+
+echo "→ Validando migrations vs schema..."
+node scripts/check-migrations.mjs || exit 1
+
+echo "→ Verificando tabelas no banco de produção..."
+node scripts/check-prod-db.mjs || exit 1
+
+echo "→ Rodando testes com cobertura..."
+npx vitest run --coverage || exit 1
+
+echo "✓ Tudo ok, pode commitar!"
