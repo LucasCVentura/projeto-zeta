@@ -226,8 +226,8 @@ export async function createAppointmentAction(data: {
         orgAddress: org?.address,
       })
     }
-  } catch {
-    // Falha silenciosa — não bloqueia o agendamento
+  } catch (err) {
+    console.error("[WhatsApp] Erro ao enviar resumo de agendamento:", err)
   }
 
   return { success: true, skipped, appointmentIds: inserted.map((r) => r.id) }
