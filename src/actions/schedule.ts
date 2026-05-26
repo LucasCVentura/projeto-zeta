@@ -8,7 +8,7 @@ import {
   clients,
   procedures,
 } from "@/db/schema"
-import { eq, and } from "drizzle-orm"
+import { eq, and, sql } from "drizzle-orm"
 import { requireSession } from "@/lib/session"
 import { can } from "@/lib/permissions"
 import { generateSlots } from "@/lib/schedule"
@@ -214,13 +214,26 @@ export async function createAppointmentAction(data: {
         .where(eq(clients.id, data.clientId))
         .limit(1)
 
-      const [org] = await db
-        .select({ name: organizations.name, address: organizations.address })
-        .from(organizations)
-        .where(eq(organizations.id, organizationId))
-        .limit(1)
+    const [org] = await db
+      .select({ name: organizations.name, address: organizations.address })
+      .from(organizations)
+      .where(eq(organizations.id, organizationId))
+      .limit(1)
 
-      if (!clientData?.phone) {
+    const templateRows = await db.execute<{ bookingSummaryTemplateId: string | null }>(sql`
+      SELECT booking_summary_template_id as "bookingSummaryTemplateId"
+      FROM whatsapp_template_settings
+      WHERE organization_id = ${organizationId}
+      LIMIT 1
+    `)
+    const templateFromDb = Array.isArray(templateRows)
+      ? templateRows[0]?.bookingSummaryTemplateId
+      : templateRows.rows?.[0]?.bookingSummaryTemplateId
+    const bookingTemplateId = (templateFromDb && templateFromDb.trim().length > 0)
+      ? templateFromDb.trim()
+      : TEMPLATE_BOOKING_SUMMARY_ID
+
+    if (!clientData?.phone) {
         console.info("[WhatsApp] Resumo não enviado: cliente sem telefone.", {
           clientId: data.clientId,
           organizationId,
@@ -234,6 +247,7 @@ export async function createAppointmentAction(data: {
           procedure: data.procedure,
           orgName: org?.name ?? "Clínica",
           orgAddress: org?.address,
+          templateId: bookingTemplateId,
         })
         if (submission?.messageId) {
           await logWhatsAppSubmission({
@@ -241,7 +255,7 @@ export async function createAppointmentAction(data: {
             organizationId,
             clientId: data.clientId,
             destination: clientData.phone,
-            templateId: TEMPLATE_BOOKING_SUMMARY_ID,
+            templateId: bookingTemplateId,
             payload: {
               date: freeDates[0],
               startTime: data.startTime,

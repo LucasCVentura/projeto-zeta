@@ -684,6 +684,26 @@ export const whatsappPendingConfirmations = pgTable("whatsapp_pending_confirmati
   expiresAt: timestamp("expires_at").notNull(),
 })
 
+// ── whatsapp_template_settings ───────────────────────────────────────────────
+
+export const whatsappTemplateSettings = pgTable("whatsapp_template_settings", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organizations.id, { onDelete: "cascade" })
+    .unique(),
+
+  bookingSummaryTemplateId: text("booking_summary_template_id"),
+
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+})
+
+export type WhatsAppTemplateSetting = typeof whatsappTemplateSettings.$inferSelect
+
 // ── push_subscriptions ────────────────────────────────────────────────────────
 
 export const pushSubscriptions = pgTable("push_subscriptions", {

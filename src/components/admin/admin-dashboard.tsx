@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { extendTrialAction, cancelOrgAction, adminChatAction, markInboundEmailReadAction } from "@/actions/admin"
+import { extendTrialAction, cancelOrgAction, adminChatAction, markInboundEmailReadAction, saveWhatsAppTemplateSettingAction } from "@/actions/admin"
 import { Send, Loader2, Trophy, TrendingUp, Users, DollarSign, ChevronDown, ChevronUp, Sprout, Rocket, Gem, Coins, Star, Activity, MessageSquare, Mail, MailOpen, Wallet } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -90,6 +90,12 @@ type WhatsAppLog = {
   updatedAt: Date
 }
 
+type WhatsAppTemplateSetting = {
+  organizationId: string
+  organizationName: string
+  bookingSummaryTemplateId: string | null
+}
+
 const GOALS = [
   { label: "Primeiros clientes", target: 10, icon: Sprout, metric: (m: Metrics) => m.totalOrgs },
   { label: "50 clínicas", target: 50, icon: Rocket, metric: (m: Metrics) => m.totalOrgs },
@@ -124,12 +130,14 @@ export function AdminDashboard({
   feedbackSummary,
   inboundEmails: initialInboundEmails = [],
   whatsappLogs = [],
+  whatsappTemplateSettings = [],
 }: {
   metrics: Metrics
   feedbacks?: FeedbackItem[]
   feedbackSummary: FeedbackSummary
   inboundEmails?: InboundEmail[]
   whatsappLogs?: WhatsAppLog[]
+  whatsappTemplateSettings?: WhatsAppTemplateSetting[]
 }) {
   const [orgs, setOrgs] = useState(metrics.orgs)
   const [expandedOrg, setExpandedOrg] = useState<string | null>(null)
@@ -141,6 +149,10 @@ export function AdminDashboard({
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState("")
   const [chatLoading, setChatLoading] = useState(false)
+  const [templateSavingOrgId, setTemplateSavingOrgId] = useState<string | null>(null)
+  const [templateByOrg, setTemplateByOrg] = useState<Record<string, string>>(
+    Object.fromEntries(whatsappTemplateSettings.map((s) => [s.organizationId, s.bookingSummaryTemplateId ?? ""]))
+  )
   const chatEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -200,6 +212,15 @@ export function AdminDashboard({
 
   const unreadCount = inboundEmails.filter(e => !e.read).length
 
+  async function handleSaveTemplate(orgId: string) {
+    setTemplateSavingOrgId(orgId)
+    await saveWhatsAppTemplateSettingAction({
+      organizationId: orgId,
+      bookingSummaryTemplateId: templateByOrg[orgId] ?? "",
+    })
+    setTemplateSavingOrgId(null)
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-5xl mx-auto px-5 py-6 sm:py-10 space-y-8">
@@ -231,6 +252,7 @@ export function AdminDashboard({
               </TabsTrigger>
               <TabsTrigger value="financeiro" className="flex items-center gap-1.5"><Wallet size={13} />Financeiro</TabsTrigger>
               <TabsTrigger value="whatsapp">WhatsApp ({whatsappLogs.length})</TabsTrigger>
+              <TabsTrigger value="whatsapp-config">Config WhatsApp</TabsTrigger>
               <TabsTrigger value="suporte" className="flex items-center gap-1.5">
                 <Mail size={13} />Suporte
                 {unreadCount > 0 && (
@@ -361,6 +383,36 @@ export function AdminDashboard({
                   ))}
                 </div>
               )}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="whatsapp-config">
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Configure o ID do template de resumo de agendamento por clínica (UUID do template na Gupshup).
+              </p>
+              <div className="rounded-xl border border-border overflow-hidden divide-y divide-border">
+                {whatsappTemplateSettings.map((s) => (
+                  <div key={s.organizationId} className="p-4 space-y-2">
+                    <p className="text-sm font-medium">{s.organizationName}</p>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <Input
+                        value={templateByOrg[s.organizationId] ?? ""}
+                        onChange={(e) =>
+                          setTemplateByOrg((prev) => ({ ...prev, [s.organizationId]: e.target.value }))
+                        }
+                        placeholder="Ex.: c6aecef6-bcb0-4fb1-8100-28c094e3bc6b"
+                      />
+                      <Button
+                        onClick={() => handleSaveTemplate(s.organizationId)}
+                        disabled={templateSavingOrgId === s.organizationId}
+                      >
+                        {templateSavingOrgId === s.organizationId ? "Salvando..." : "Salvar"}
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </TabsContent>
 
