@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { cn } from "@/lib/utils"
 
 type SupplyRow = {
@@ -38,6 +39,8 @@ export function SuppliesView({ supplies: initial }: Props) {
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<SupplyRow | null>(null)
   const [loading, setLoading] = useState(false)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
 
   // form fields
   const [name, setName] = useState("")
@@ -82,15 +85,26 @@ export function SuppliesView({ supplies: initial }: Props) {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Remover este insumo?")) return
+    setDeletingId(id)
     await deleteSupplyAction(id)
     setSupplies((prev) => prev.filter((s) => s.id !== id))
+    setDeletingId(null)
+    setPendingDeleteId(null)
   }
 
   const lowStock = supplies.filter((s) => parseFloat(s.currentStock) <= parseFloat(s.minStock) && parseFloat(s.minStock) > 0)
 
   return (
     <div className="container-page max-w-4xl py-8 space-y-6">
+      <ConfirmDialog
+        open={!!pendingDeleteId}
+        title="Remover insumo"
+        description="Esse insumo será removido do estoque."
+        confirmLabel="Remover"
+        loading={!!pendingDeleteId && deletingId === pendingDeleteId}
+        onCancel={() => setPendingDeleteId(null)}
+        onConfirm={() => pendingDeleteId && handleDelete(pendingDeleteId)}
+      />
       <div className="flex justify-end">
         <Button onClick={openNew} className="gap-1.5"><Plus size={15} /> Novo insumo</Button>
       </div>
@@ -195,7 +209,7 @@ export function SuppliesView({ supplies: initial }: Props) {
                           <button onClick={() => openEdit(s)} className="flex h-7 w-7 items-center justify-center rounded-lg hover:bg-accent transition-colors text-muted-foreground hover:text-foreground">
                             <Pencil size={13} />
                           </button>
-                          <button onClick={() => handleDelete(s.id)} className="flex h-7 w-7 items-center justify-center rounded-lg hover:bg-destructive/10 transition-colors text-muted-foreground hover:text-destructive">
+                          <button onClick={() => setPendingDeleteId(s.id)} className="flex h-7 w-7 items-center justify-center rounded-lg hover:bg-destructive/10 transition-colors text-muted-foreground hover:text-destructive">
                             <Trash2 size={13} />
                           </button>
                         </div>

@@ -9,6 +9,7 @@ import { PhotoCarousel } from "./photo-carousel"
 import { Trash2, Loader2, Play, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { mediaUrl } from "@/lib/media-url"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import type { ClientPhoto } from "@/db/schema"
 
 type Props = {
@@ -60,6 +61,7 @@ export function PhotoTimeline({ clientId, initialPhotos }: Props) {
   const [comparing, setComparing] = useState(false)
   const [deleting, setDeleting] = useState<string | null>(null)
   const [carouselIndex, setCarouselIndex] = useState<number | null>(null)
+  const [pendingDeletePhoto, setPendingDeletePhoto] = useState<ClientPhoto | null>(null)
 
   const chronological = [...photos].sort((a, b) => a.takenAt.localeCompare(b.takenAt))
   const selectMode = selected.length > 0
@@ -76,12 +78,12 @@ export function PhotoTimeline({ clientId, initialPhotos }: Props) {
   }
 
   async function handleDelete(photo: ClientPhoto) {
-    if (!confirm("Remover esta foto?")) return
     setDeleting(photo.id)
     await deleteClientPhotoAction(photo.id, clientId)
     setPhotos((prev) => prev.filter((p) => p.id !== photo.id))
     setSelected((prev) => prev.filter((id) => id !== photo.id))
     setDeleting(null)
+    setPendingDeletePhoto(null)
   }
 
   const selectedPhotos = photos.filter((p) => selected.includes(p.id))
@@ -104,9 +106,19 @@ export function PhotoTimeline({ clientId, initialPhotos }: Props) {
         />
       )}
 
+      <ConfirmDialog
+        open={!!pendingDeletePhoto}
+        title="Remover foto"
+        description="Essa foto será removida da evolução fotográfica."
+        confirmLabel="Remover"
+        loading={!!pendingDeletePhoto && deleting === pendingDeletePhoto.id}
+        onCancel={() => setPendingDeletePhoto(null)}
+        onConfirm={() => pendingDeletePhoto && handleDelete(pendingDeletePhoto)}
+      />
+
       <div className="space-y-4">
         {/* Toolbar */}
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <PhotoUpload clientId={clientId} onUploaded={refresh} />
             {photos.length >= 2 && !selectMode && (
@@ -214,7 +226,7 @@ export function PhotoTimeline({ clientId, initialPhotos }: Props) {
                         {/* Botão excluir — sempre visível, some quando em modo seleção */}
                         {!selectMode && (
                           <button
-                            onClick={(e) => { e.stopPropagation(); handleDelete(photo) }}
+                            onClick={(e) => { e.stopPropagation(); setPendingDeletePhoto(photo) }}
                             disabled={deleting === photo.id}
                             className="absolute top-1.5 right-1.5 flex h-7 w-7 items-center justify-center rounded-lg bg-black/50 text-white hover:bg-destructive transition-colors disabled:opacity-40"
                           >

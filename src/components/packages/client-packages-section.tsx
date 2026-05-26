@@ -5,6 +5,7 @@ import { assignPackageToClientAction, removeClientPackageAction } from "@/action
 import { Package, Plus, CalendarDays, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { cn } from "@/lib/utils"
 import { SchedulePackageModal } from "./schedule-package-modal"
 
@@ -52,16 +53,23 @@ export function ClientPackagesSection({ clientId, clientPhone, clientName, clien
   const [purchasedAt, setPurchasedAt] = useState(() => new Date().toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" }))
   const [loading, setLoading] = useState(false)
   const [removingId, setRemovingId] = useState<string | null>(null)
+  const [pendingRemoveId, setPendingRemoveId] = useState<string | null>(null)
+  const [removeError, setRemoveError] = useState<string | null>(null)
 
   const activePackages = availablePackages.filter((p) => p.active)
 
   async function handleRemove(clientPackageId: string) {
-    if (!confirm("Remover este pacote? A transação financeira também será excluída.")) return
+    setRemoveError(null)
     setRemovingId(clientPackageId)
     const result = await removeClientPackageAction(clientPackageId)
-    if (!result.success) { alert(result.error); setRemovingId(null); return }
+    if (!result.success) {
+      setRemoveError(result.error)
+      setRemovingId(null)
+      return
+    }
     setPackages((prev) => prev.filter((p) => p.id !== clientPackageId))
     setRemovingId(null)
+    setPendingRemoveId(null)
   }
 
   async function handleAssign(e: React.FormEvent) {
@@ -90,6 +98,15 @@ export function ClientPackagesSection({ clientId, clientPhone, clientName, clien
 
   return (
     <>
+    <ConfirmDialog
+      open={!!pendingRemoveId}
+      title="Remover pacote da cliente"
+      description="Esse pacote e a transação financeira vinculada serão excluídos."
+      confirmLabel="Remover"
+      loading={!!pendingRemoveId && removingId === pendingRemoveId}
+      onCancel={() => setPendingRemoveId(null)}
+      onConfirm={() => pendingRemoveId && handleRemove(pendingRemoveId)}
+    />
     {schedulingPkg && (
       <SchedulePackageModal
         open={!!schedulingPkg}
@@ -107,6 +124,7 @@ export function ClientPackagesSection({ clientId, clientPhone, clientName, clien
       />
     )}
     <div className="surface space-y-4">
+      {removeError && <p className="text-xs text-destructive">{removeError}</p>}
       <div className="flex items-center justify-between">
         <p className="text-sm font-medium">Pacotes</p>
         {activePackages.length > 0 && (
@@ -187,7 +205,7 @@ export function ClientPackagesSection({ clientId, clientPhone, clientName, clien
                     {pkg.sessionsUsed === 0 && (
                       <button
                         type="button"
-                        onClick={() => handleRemove(pkg.id)}
+                        onClick={() => setPendingRemoveId(pkg.id)}
                         disabled={removingId === pkg.id}
                         className="text-muted-foreground hover:text-destructive transition-colors disabled:opacity-40"
                         title="Remover pacote"

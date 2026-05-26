@@ -100,7 +100,7 @@ export function PhotoUpload({ clientId, onUploaded }: Props) {
   }
 
   return (
-    <div className="surface space-y-4">
+    <div className="surface basis-full space-y-4">
       <div className="flex items-center justify-between">
         <p className="text-sm font-medium">Adicionar fotos</p>
         <button onClick={handleClose} className="text-muted-foreground hover:text-foreground transition-colors">
@@ -111,17 +111,17 @@ export function PhotoUpload({ clientId, onUploaded }: Props) {
       {error && <p className="text-xs text-destructive">{error}</p>}
 
       {/* Seletores */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
         <button
           onClick={() => cameraRef.current?.click()}
-          className="flex flex-col items-center gap-2 rounded-xl border-2 border-dashed border-border py-5 text-muted-foreground hover:border-primary/40 hover:text-primary transition-colors"
+          className="flex flex-col items-center gap-2 rounded-xl border-2 border-dashed border-border py-8 text-muted-foreground hover:border-primary/40 hover:text-primary transition-colors"
         >
           <Camera size={20} />
           <span className="text-xs font-medium">Câmera</span>
         </button>
         <button
           onClick={() => fileRef.current?.click()}
-          className="flex flex-col items-center gap-2 rounded-xl border-2 border-dashed border-border py-5 text-muted-foreground hover:border-primary/40 hover:text-primary transition-colors"
+          className="flex flex-col items-center gap-2 rounded-xl border-2 border-dashed border-border py-8 text-muted-foreground hover:border-primary/40 hover:text-primary transition-colors"
         >
           <ImagePlus size={20} />
           <span className="text-xs font-medium">Galeria</span>

@@ -4,6 +4,7 @@ import { useState, useTransition, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { UserPlus, Trash2, X, Clock } from "lucide-react"
 import { inviteMemberAction, removeMemberAction, cancelInviteAction } from "@/actions/team"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import type { OrgRole } from "@/db/schema"
 
 const roleLabels: Record<OrgRole, string> = {
@@ -56,6 +57,7 @@ export function TeamManager({
   }, [router])
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
+  const [pendingRemove, setPendingRemove] = useState<{ userId: string; name: string } | null>(null)
   const [isPending, startTransition] = useTransition()
 
   function handleInvite(e: React.FormEvent) {
@@ -75,11 +77,11 @@ export function TeamManager({
     })
   }
 
-  function handleRemove(userId: string, name: string) {
-    if (!confirm(`Remover ${name} da equipe?`)) return
+  function handleRemove(userId: string) {
     startTransition(async () => {
       const result = await removeMemberAction(userId)
       if (!result.success) setError(result.error)
+      setPendingRemove(null)
     })
   }
 
@@ -91,6 +93,15 @@ export function TeamManager({
 
   return (
     <div className="space-y-6">
+      <ConfirmDialog
+        open={!!pendingRemove}
+        title="Remover membro"
+        description={pendingRemove ? `Remover ${pendingRemove.name} da equipe?` : ""}
+        confirmLabel="Remover"
+        loading={isPending}
+        onCancel={() => setPendingRemove(null)}
+        onConfirm={() => pendingRemove && handleRemove(pendingRemove.userId)}
+      />
       {/* Membros atuais */}
       <div className="surface space-y-4">
         <h3 className="text-sm font-semibold">Membros da equipe</h3>
@@ -109,7 +120,7 @@ export function TeamManager({
               </span>
               {m.userId !== currentUserId && m.role !== "owner" && (
                 <button
-                  onClick={() => handleRemove(m.userId, m.name)}
+                  onClick={() => setPendingRemove({ userId: m.userId, name: m.name })}
                   disabled={isPending}
                   className="shrink-0 flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors disabled:opacity-50"
                   title="Remover membro"

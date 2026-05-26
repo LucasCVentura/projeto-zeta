@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react"
 import { FileText, Trash2, Upload, Download, File, X, ZoomIn } from "lucide-react"
 import { uploadClientDocumentAction, deleteClientDocumentAction } from "@/actions/documents"
 import { mediaUrl } from "@/lib/media-url"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import type { ClientDocument } from "@/db/schema"
 
 type Props = {
@@ -99,6 +100,8 @@ export function ClientDocumentsSection({ clientId, documents: initialDocs }: Pro
   const [name, setName] = useState("")
   const [file, setFile] = useState<File | null>(null)
   const [viewing, setViewing] = useState<ClientDocument | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
   async function handleUpload(e: React.FormEvent) {
@@ -138,14 +141,25 @@ export function ClientDocumentsSection({ clientId, documents: initialDocs }: Pro
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Remover este documento?")) return
+    setDeletingId(id)
     await deleteClientDocumentAction(id, clientId)
     setDocs((prev) => prev.filter((d) => d.id !== id))
+    setDeletingId(null)
+    setPendingDeleteId(null)
   }
 
   return (
     <>
       {viewing && <DocViewer doc={viewing} onClose={() => setViewing(null)} />}
+      <ConfirmDialog
+        open={!!pendingDeleteId}
+        title="Remover documento"
+        description="Esse documento será removido da ficha da cliente."
+        confirmLabel="Remover"
+        loading={!!pendingDeleteId && deletingId === pendingDeleteId}
+        onCancel={() => setPendingDeleteId(null)}
+        onConfirm={() => pendingDeleteId && handleDelete(pendingDeleteId)}
+      />
 
       <div className="surface space-y-4">
         <div className="flex items-center justify-between">
@@ -234,7 +248,7 @@ export function ClientDocumentsSection({ clientId, documents: initialDocs }: Pro
                     <Download size={14} />
                   </a>
                   <button
-                    onClick={() => handleDelete(doc.id)}
+                    onClick={() => setPendingDeleteId(doc.id)}
                     className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
                     title="Remover"
                   >

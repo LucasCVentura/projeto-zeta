@@ -6,6 +6,7 @@ import { Send, Loader2, Trophy, TrendingUp, Users, DollarSign, ChevronDown, Chev
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { cn } from "@/lib/utils"
 import { PushToggle } from "./push-toggle"
 
@@ -156,6 +157,7 @@ export function AdminDashboard({
   const [packageTemplateId, setPackageTemplateId] = useState(whatsappTemplateSettings.packageSummaryTemplateId ?? "")
   const [reminderTemplateId, setReminderTemplateId] = useState(whatsappTemplateSettings.reminderConfirmationTemplateId ?? "")
   const [postVisitTemplateId, setPostVisitTemplateId] = useState(whatsappTemplateSettings.postVisitTemplateId ?? "")
+  const [pendingCancelOrg, setPendingCancelOrg] = useState<{ id: string; name: string } | null>(null)
   const chatEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -185,11 +187,11 @@ export function AdminDashboard({
   }
 
   async function handleCancel(orgId: string) {
-    if (!confirm("Cancelar essa organização?")) return
     setActionLoading(orgId)
     await cancelOrgAction(orgId)
     setOrgs(prev => prev.map(o => o.id === orgId ? { ...o, subscriptionStatus: "canceled" } : o))
     setActionLoading(null)
+    setPendingCancelOrg(null)
   }
 
   async function handleExpandEmail(id: string) {
@@ -234,6 +236,15 @@ export function AdminDashboard({
 
   return (
     <div className="min-h-screen bg-background">
+      <ConfirmDialog
+        open={!!pendingCancelOrg}
+        title="Cancelar organização"
+        description={pendingCancelOrg ? `Confirmar cancelamento da organização ${pendingCancelOrg.name}?` : ""}
+        confirmLabel="Cancelar organização"
+        loading={!!pendingCancelOrg && actionLoading === pendingCancelOrg.id}
+        onCancel={() => setPendingCancelOrg(null)}
+        onConfirm={() => pendingCancelOrg && handleCancel(pendingCancelOrg.id)}
+      />
       <div className="max-w-5xl mx-auto px-5 py-6 sm:py-10 space-y-8">
 
         {/* Header */}
@@ -506,7 +517,7 @@ export function AdminDashboard({
                           </Button>
                           {org.subscriptionStatus !== "canceled" && (
                             <Button size="sm" variant="outline" disabled={actionLoading === org.id}
-                              onClick={() => handleCancel(org.id)}
+                              onClick={() => setPendingCancelOrg({ id: org.id, name: org.name })}
                               className="text-xs h-7 text-destructive hover:text-destructive border-destructive/30 hover:border-destructive/60">
                               Cancelar
                             </Button>

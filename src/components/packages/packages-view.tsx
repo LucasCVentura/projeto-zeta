@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { cn } from "@/lib/utils"
 
 type PackageRow = {
@@ -54,6 +55,8 @@ export function PackagesView({ packages: initialPackages, procedures }: Props) {
   }
   const [editing, setEditing] = useState<PackageRow | null>(null)
   const [loading, setLoading] = useState(false)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
 
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
@@ -118,13 +121,24 @@ export function PackagesView({ packages: initialPackages, procedures }: Props) {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Remover este pacote?")) return
+    setDeletingId(id)
     await deletePackageAction(id)
     setPackages((prev) => prev.filter((p) => p.id !== id))
+    setDeletingId(null)
+    setPendingDeleteId(null)
   }
 
   return (
     <div className="container-page max-w-3xl py-8 space-y-6">
+      <ConfirmDialog
+        open={!!pendingDeleteId}
+        title="Remover pacote"
+        description="Esse pacote será removido da clínica."
+        confirmLabel="Remover"
+        loading={!!pendingDeleteId && deletingId === pendingDeleteId}
+        onCancel={() => setPendingDeleteId(null)}
+        onConfirm={() => pendingDeleteId && handleDelete(pendingDeleteId)}
+      />
       <Link href="/configuracoes" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
         <ArrowLeft size={14} /> Configurações
       </Link>
@@ -277,7 +291,7 @@ export function PackagesView({ packages: initialPackages, procedures }: Props) {
                 <button onClick={() => openEdit(pkg)} className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-accent transition-colors text-muted-foreground hover:text-foreground">
                   <Pencil size={14} />
                 </button>
-                <button onClick={() => handleDelete(pkg.id)} className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-destructive/10 transition-colors text-muted-foreground hover:text-destructive">
+                <button onClick={() => setPendingDeleteId(pkg.id)} className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-destructive/10 transition-colors text-muted-foreground hover:text-destructive">
                   <Trash2 size={14} />
                 </button>
               </div>

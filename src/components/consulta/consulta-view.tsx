@@ -9,6 +9,7 @@ import { CompleteAppointmentModal } from "@/components/agenda/complete-appointme
 import { ArrowLeft, Camera, CheckCircle2, Save, Images, RotateCcw, Check, Trash2 } from "lucide-react"
 import { StatusBadge } from "@/components/agenda/status-badge"
 import { Button } from "@/components/ui/button"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { cn } from "@/lib/utils"
 import { mediaUrl } from "@/lib/media-url"
 import Link from "next/link"
@@ -53,6 +54,8 @@ export function ConsultaView({ appointment, allClientPhotos: initialPhotos }: Pr
   const [comparing, setComparing] = useState(false)
 
   const [isUploading, setIsUploading] = useState(false)
+  const [deletingPhotoId, setDeletingPhotoId] = useState<string | null>(null)
+  const [pendingDeletePhotoId, setPendingDeletePhotoId] = useState<string | null>(null)
   const [completeModal, setCompleteModal] = useState(false)
   const [pendingFile, setPendingFile] = useState<File | null>(null)
   const [pendingPreview, setPendingPreview] = useState<string | null>(null)
@@ -124,10 +127,13 @@ export function ConsultaView({ appointment, allClientPhotos: initialPhotos }: Pr
   }
 
   async function handleDeletePhoto(photoId: string) {
+    setDeletingPhotoId(photoId)
     await deleteClientPhotoAction(photoId, appointment.clientId)
     setSessionPhotoIds((prev) => prev.filter((id) => id !== photoId))
     setSelected((prev) => prev.filter((id) => id !== photoId))
     await refreshPhotos()
+    setDeletingPhotoId(null)
+    setPendingDeletePhotoId(null)
   }
 
   async function saveNotes() {
@@ -213,6 +219,16 @@ export function ConsultaView({ appointment, allClientPhotos: initialPhotos }: Pr
           onClose={() => { setComparing(false); setSelected([]); setSelectMode(false) }}
         />
       )}
+
+      <ConfirmDialog
+        open={!!pendingDeletePhotoId}
+        title="Excluir foto"
+        description="Essa foto será removida do prontuário."
+        confirmLabel="Excluir"
+        loading={!!pendingDeletePhotoId && deletingPhotoId === pendingDeletePhotoId}
+        onCancel={() => setPendingDeletePhotoId(null)}
+        onConfirm={() => pendingDeletePhotoId && handleDeletePhoto(pendingDeletePhotoId)}
+      />
 
       <CompleteAppointmentModal
         open={completeModal}
@@ -335,8 +351,9 @@ export function ConsultaView({ appointment, allClientPhotos: initialPhotos }: Pr
                   isDisabled={selectMode && selected.length >= 3 && !selected.includes(photo.id)}
                   selectMode={selectMode}
                   selectedIndex={selected.indexOf(photo.id)}
+                  deleting={deletingPhotoId === photo.id}
                   onSelect={() => toggleSelect(photo.id)}
-                  onDelete={() => handleDeletePhoto(photo.id)}
+                  onDelete={() => setPendingDeletePhotoId(photo.id)}
                 />
               ))}
             </div>
@@ -364,8 +381,9 @@ export function ConsultaView({ appointment, allClientPhotos: initialPhotos }: Pr
                   isDisabled={selectMode && selected.length >= 3 && !selected.includes(photo.id)}
                   selectMode={selectMode}
                   selectedIndex={selected.indexOf(photo.id)}
+                  deleting={deletingPhotoId === photo.id}
                   onSelect={() => toggleSelect(photo.id)}
-                  onDelete={() => handleDeletePhoto(photo.id)}
+                  onDelete={() => setPendingDeletePhotoId(photo.id)}
                 />
               ))}
             </div>
@@ -417,23 +435,20 @@ export function ConsultaView({ appointment, allClientPhotos: initialPhotos }: Pr
 }
 
 function PhotoThumb({
-  photo, isSelected, isDisabled, selectMode, selectedIndex, onSelect, onDelete,
+  photo, isSelected, isDisabled, selectMode, selectedIndex, deleting, onSelect, onDelete,
 }: {
   photo: ClientPhoto
   isSelected: boolean
   isDisabled: boolean
   selectMode: boolean
   selectedIndex: number
+  deleting: boolean
   onSelect: () => void
   onDelete: () => void
 }) {
-  const [deleting, setDeleting] = useState(false)
-
-  async function handleDelete(e: React.MouseEvent) {
+  function handleDelete(e: React.MouseEvent) {
     e.stopPropagation()
-    if (!confirm("Excluir esta foto?")) return
-    setDeleting(true)
-    await onDelete()
+    onDelete()
   }
 
   return (
