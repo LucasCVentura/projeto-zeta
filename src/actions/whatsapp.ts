@@ -115,17 +115,33 @@ export async function sendPackageBookingSummary(params: {
   const { clientPhone, clientName, orgName, orgAddress, packageName, sessions } = params
   const templates = await getGlobalTemplateIds()
 
-  const sessionList = sessions
-    .map((s, i) => `${i + 1}. ${formatDate(s.date)} às ${s.startTime.slice(0, 5)}`)
-    .join("\n")
+  const normalized = sessions.map((s, i) => `${i + 1}. ${formatDate(s.date)} às ${s.startTime.slice(0, 5)}`)
+  const listWithEscapedBreaks = normalized.join("\\n").slice(0, 900)
+  const listInlineFallback = normalized.join(" | ").slice(0, 900)
 
-  await sendWhatsAppTemplate(clientPhone, templates.packageSummaryTemplateId, [
-    safeParam(clientName, "Cliente"),
-    safeParam(orgName, "Clinica"),
-    safeParam(packageName, "Pacote"),
-    sessionList,
-    safeParam(orgAddress, "Sem endereco"),
-  ])
+  try {
+    await sendWhatsAppTemplate(clientPhone, templates.packageSummaryTemplateId, [
+      safeParam(clientName, "Cliente"),
+      safeParam(orgName, "Clinica"),
+      safeParam(packageName, "Pacote"),
+      listWithEscapedBreaks,
+      safeParam(orgAddress, "Sem endereco"),
+    ])
+  } catch (err) {
+    // Alguns templates no provedor rejeitam quebra de linha em variável dinâmica.
+    // Faz retry em linha única para reduzir chance de #132018.
+    console.warn("[WhatsApp] Retry resumo pacote sem quebra de linha.", {
+      templateId: templates.packageSummaryTemplateId,
+      reason: err instanceof Error ? err.message : String(err),
+    })
+    await sendWhatsAppTemplate(clientPhone, templates.packageSummaryTemplateId, [
+      safeParam(clientName, "Cliente"),
+      safeParam(orgName, "Clinica"),
+      safeParam(packageName, "Pacote"),
+      listInlineFallback,
+      safeParam(orgAddress, "Sem endereco"),
+    ])
+  }
 }
 
 // ── Lembrete + confirmação (2 dias antes) ────────────────────────────────────

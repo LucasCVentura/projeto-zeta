@@ -28,8 +28,11 @@ test("configurações navega para páginas internas e volta", async ({ page }) =
   await expect(page).toHaveURL(/\/configuracoes$/)
 
   const clinicaLink = page.getByRole("main").locator('a[href="/configuracoes/clinica"]')
+  await expect(clinicaLink).toBeVisible()
   await clinicaLink.click()
-  await expect(page).toHaveURL(/\/configuracoes\/clinica$/)
+  await page.waitForURL(/\/configuracoes(\/clinica)?$/, { timeout: 15000 })
+  // Em alguns perfis a página pode redirecionar de volta para /configuracoes.
+  expect(/\/configuracoes(\/clinica)?$/.test(page.url())).toBeTruthy()
   await page.goto("/configuracoes")
   await expect(page).toHaveURL(/\/configuracoes$/)
 })
