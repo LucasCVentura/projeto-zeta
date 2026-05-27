@@ -490,6 +490,8 @@ function PhotoThumb({
           <button
             onClick={handleDelete}
             disabled={deleting}
+            aria-label="Remover foto"
+            title="Remover foto"
             className="absolute top-1.5 right-1.5 flex h-6 w-6 items-center justify-center rounded-md bg-black/40 text-white/70 hover:bg-red-600 hover:text-white transition-colors disabled:opacity-50"
           >
             <Trash2 size={11} />

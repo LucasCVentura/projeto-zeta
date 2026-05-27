@@ -30,14 +30,27 @@ function getInitials(name: string) {
 
 export default async function ClientePerfilPage({ params }: Props) {
   const { id } = await params
-  const [data, clientPackages, allPackages, org, documents] = await Promise.all([
-    getClientAction(id),
-    getClientPackagesAction(id),
-    getPackagesAction(),
-    getOrganizationAction(),
-    getClientDocumentsAction(id),
-  ])
+  const data = await getClientAction(id)
   if (!data) notFound()
+
+  const [clientPackages, allPackages, org, documents] = await Promise.all([
+    getClientPackagesAction(id).catch((error) => {
+      console.error("[clientes/:id] getClientPackagesAction failed", { clientId: id, error })
+      return []
+    }),
+    getPackagesAction().catch((error) => {
+      console.error("[clientes/:id] getPackagesAction failed", { clientId: id, error })
+      return []
+    }),
+    getOrganizationAction().catch((error) => {
+      console.error("[clientes/:id] getOrganizationAction failed", { clientId: id, error })
+      return null
+    }),
+    getClientDocumentsAction(id).catch((error) => {
+      console.error("[clientes/:id] getClientDocumentsAction failed", { clientId: id, error })
+      return []
+    }),
+  ])
 
   const { client, anamnesis, history } = data
 
