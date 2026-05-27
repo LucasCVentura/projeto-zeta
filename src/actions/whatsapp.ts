@@ -66,7 +66,6 @@ async function storePendingConfirmation(
   appointmentId: string | null,
   clientPackageId: string | null
 ) {
-  console.log("[WhatsApp][Store] storing pending confirmation", { messageId, appointmentId, clientPackageId })
   const expiresAt = new Date()
   expiresAt.setDate(expiresAt.getDate() + CONFIRMATION_TTL_DAYS)
   await db.insert(whatsappPendingConfirmations).values({
@@ -76,7 +75,6 @@ async function storePendingConfirmation(
     clientPackageId,
     expiresAt,
   })
-  console.log("[WhatsApp][Store] stored OK", { messageId })
 }
 
 // ── Resumo de agendamento (ao criar) ─────────────────────────────────────────
@@ -160,11 +158,8 @@ export async function sendReminderWithConfirmation(params: {
     safeParam(orgAddress, "Sem endereco"),
   ])
 
-  console.log("[WhatsApp][Reminder] sendWhatsAppTemplate result", { messageId: result?.messageId ?? null, appointmentId })
   if (result?.messageId) {
     await storePendingConfirmation(result.messageId, organizationId, appointmentId, clientPackageId ?? null)
-  } else {
-    console.warn("[WhatsApp][Reminder] messageId ausente, pending confirmation NÃO salvo", { appointmentId })
   }
 }
 
@@ -189,31 +184,16 @@ export async function sendPostVisitThanks(params: {
 // ── Handler do webhook (botão Confirmar / Cancelar) ──────────────────────────
 
 export async function handleWhatsAppButtonReply(messageId: string, buttonTitle: string, fromPhone: string) {
-  const dbUrl = process.env.DATABASE_URL ?? ""
-  const dbHost = dbUrl.split("@")[1]?.split("/")[0] ?? "unknown"
-  console.log("[WhatsApp][Handler] lookup messageId:", messageId, "| db host:", dbHost)
-
-  const rawRows = await db.execute<{ message_id: string }>(
-    sql`SELECT message_id FROM whatsapp_pending_confirmations WHERE message_id = ${messageId}`
-  )
-  const rawHit = Array.isArray(rawRows) ? rawRows[0] : rawRows.rows?.[0]
-  console.log("[WhatsApp][Handler] raw SQL result:", rawHit ?? "NOT FOUND")
-
   const [pending] = await db
     .select()
     .from(whatsappPendingConfirmations)
     .where(eq(whatsappPendingConfirmations.messageId, messageId))
     .limit(1)
 
-  console.log("[WhatsApp][Handler] pending found:", pending ?? "NOT FOUND")
   if (!pending) return
-  if (pending.expiresAt < new Date()) {
-    console.log("[WhatsApp][Handler] expired:", pending.expiresAt)
-    return
-  }
+  if (pending.expiresAt < new Date()) return
 
   const isConfirm = buttonTitle.toLowerCase().includes("confirmar")
-  console.log("[WhatsApp][Handler] isConfirm:", isConfirm, "appointmentId:", pending.appointmentId)
 
   if (pending.clientPackageId) {
     const pkgAppts = await db
@@ -222,7 +202,6 @@ export async function handleWhatsAppButtonReply(messageId: string, buttonTitle: 
       .where(eq(appointments.clientPackageId, pending.clientPackageId))
 
     const ids = pkgAppts.map((a) => a.id)
-    console.log("[WhatsApp][Handler] package update: ids=", ids, "status=", isConfirm ? "confirmed" : "cancelled")
     if (ids.length > 0) {
       await db
         .update(appointments)
@@ -234,21 +213,16 @@ export async function handleWhatsAppButtonReply(messageId: string, buttonTitle: 
       await sendWhatsApp(fromPhone, "Suas sessões foram canceladas. Entre em contato com a clínica para reagendar. 😊")
     }
   } else if (pending.appointmentId) {
-    const newStatus = isConfirm ? "confirmed" : "cancelled"
-    console.log("[WhatsApp][Handler] single appt update:", pending.appointmentId, "→", newStatus)
-    const updated = await db
+    await db
       .update(appointments)
-      .set({ status: newStatus, updatedAt: new Date() })
+      .set({ status: isConfirm ? "confirmed" : "cancelled", updatedAt: new Date() })
       .where(eq(appointments.id, pending.appointmentId))
-      .returning({ id: appointments.id, status: appointments.status })
-    console.log("[WhatsApp][Handler] update result:", updated)
 
     if (!isConfirm) {
       await sendWhatsApp(fromPhone, "Seu agendamento foi cancelado. Entre em contato com a clínica ou profissional para reagendar. 😊")
     }
   }
 
-  console.log("[WhatsApp][Handler] deleting pending", messageId)
   await db
     .delete(whatsappPendingConfirmations)
     .where(eq(whatsappPendingConfirmations.messageId, messageId))
