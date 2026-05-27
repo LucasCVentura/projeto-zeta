@@ -8,7 +8,7 @@ import {
   clients,
   procedures,
 } from "@/db/schema"
-import { eq, and, sql } from "drizzle-orm"
+import { eq, and, sql, inArray } from "drizzle-orm"
 import { requireSession } from "@/lib/session"
 import { can } from "@/lib/permissions"
 import { generateSlots } from "@/lib/schedule"
@@ -110,7 +110,7 @@ export async function createAppointmentAction(data: {
   clientPackageId?: string
   notes?: string
   recurrence?: { frequency: "weekly" | "biweekly" | "monthly"; count: number }
-}): Promise<ActionResult & { skipped?: number; appointmentIds?: string[] }> {
+}): Promise<ActionResult & { skipped?: number; appointmentIds?: string[]; scheduledSessions?: { date: string; startTime: string }[] }> {
   const { userId, organizationId, role } = await requireSession()
 
   if (!can(role, "schedule:create")) {
@@ -198,15 +198,15 @@ export async function createAppointmentAction(data: {
       status: "waiting" as const,
       createdById: userId,
     }))
-  ).returning({ id: appointments.id })
+  ).returning({ id: appointments.id, date: appointments.date, startTime: appointments.startTime })
 
   revalidateTag(`dashboard-${userId}-${organizationId}`, {})
   revalidateTag(`clients-${organizationId}`, {})
   revalidateTag(`client-${data.clientId}`, {})
   revalidatePath("/agenda")
 
-  // Envia confirmação WhatsApp para o primeiro agendamento
-  if (process.env.WHATSAPP_ENABLED === "true") {
+  // Envia confirmação WhatsApp para o primeiro agendamento (somente agendamento avulso).
+  if (process.env.WHATSAPP_ENABLED === "true" && !data.clientPackageId) {
     try {
       const [clientData] = await db
         .select({ name: clients.name, phone: clients.phone })
@@ -279,7 +279,50 @@ export async function createAppointmentAction(data: {
     })
   }
 
-  return { success: true, skipped, appointmentIds: inserted.map((r) => r.id) }
+  return {
+    success: true,
+    skipped,
+    appointmentIds: inserted.map((r) => r.id),
+    scheduledSessions: inserted.map((r) => ({ date: r.date, startTime: r.startTime.slice(0, 5) })),
+  }
+}
+
+export async function checkPackageScheduleConflictsAction(data: {
+  date: string
+  startTime: string
+  recurrence?: { frequency: "weekly" | "biweekly" | "monthly"; count: number }
+}) {
+  const { userId, organizationId } = await requireSession()
+
+  const dates: string[] = [data.date]
+  if (data.recurrence) {
+    const { frequency, count } = data.recurrence
+    const intervalDays = frequency === "weekly" ? 7 : frequency === "biweekly" ? 14 : 30
+    for (let i = 1; i < count; i++) {
+      const d = new Date(data.date + "T12:00:00")
+      if (frequency === "monthly") {
+        d.setMonth(d.getMonth() + i)
+      } else {
+        d.setDate(d.getDate() + intervalDays * i)
+      }
+      dates.push(d.toISOString().split("T")[0])
+    }
+  }
+
+  const rows = await db
+    .select({ date: appointments.date })
+    .from(appointments)
+    .where(
+      and(
+        eq(appointments.organizationId, organizationId),
+        eq(appointments.professionalId, userId),
+        eq(appointments.startTime, data.startTime),
+        inArray(appointments.date, dates)
+      )
+    )
+
+  const occupiedSet = new Set(rows.map((r) => r.date))
+  return dates.map((date) => ({ date, occupied: occupiedSet.has(date) }))
 }
 
 // ── Atualizar status ──────────────────────────────────────────────────────────

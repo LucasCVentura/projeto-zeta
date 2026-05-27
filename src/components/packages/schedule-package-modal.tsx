@@ -1,11 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { createAppointmentAction } from "@/actions/schedule"
+import { checkPackageScheduleConflictsAction, createAppointmentAction } from "@/actions/schedule"
 import { suggestRecurrenceAction } from "@/actions/ai"
 import { sendPackageBookingSummary } from "@/actions/whatsapp"
 import { Sparkles, Loader2, CalendarDays } from "lucide-react"
@@ -50,6 +50,34 @@ export function SchedulePackageModal({
   const [aiExplanation, setAiExplanation] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+  const [conflicts, setConflicts] = useState<{ date: string; occupied: boolean }[]>([])
+  const [checkingConflicts, setCheckingConflicts] = useState(false)
+
+  useEffect(() => {
+    if (!open) return
+    let active = true
+
+    async function run() {
+      setCheckingConflicts(true)
+      try {
+        const result = await checkPackageScheduleConflictsAction({
+          date,
+          startTime: `${time}:00`,
+          recurrence: count > 1 ? { frequency, count } : undefined,
+        })
+        if (active) setConflicts(result)
+      } catch {
+        if (active) setConflicts([])
+      } finally {
+        if (active) setCheckingConflicts(false)
+      }
+    }
+
+    run()
+    return () => {
+      active = false
+    }
+  }, [open, date, time, frequency, count])
 
   async function handleAiSuggest() {
     setAiLoading(true)
@@ -83,17 +111,7 @@ export function SchedulePackageModal({
     if (!result.success) { setError(result.error ?? "Erro ao agendar."); return }
 
     // Envia WhatsApp com todas as sessões se cliente tiver telefone
-    if (process.env.NEXT_PUBLIC_WHATSAPP_ENABLED === "true" && clientPhone && result.appointmentIds && result.appointmentIds.length > 0) {
-      const intervalDays = frequency === "weekly" ? 7 : frequency === "biweekly" ? 14 : 30
-      const sessions = result.appointmentIds.map((_, i) => {
-        const d = new Date(date + "T12:00:00")
-        if (frequency === "monthly") {
-          d.setMonth(d.getMonth() + i)
-        } else {
-          d.setDate(d.getDate() + intervalDays * i)
-        }
-        return { date: d.toISOString().split("T")[0], startTime: time }
-      })
+    if (clientPhone && result.scheduledSessions && result.scheduledSessions.length > 0) {
       try {
         await sendPackageBookingSummary({
           clientPhone,
@@ -101,7 +119,7 @@ export function SchedulePackageModal({
           packageName,
           orgName,
           orgAddress,
-          sessions,
+          sessions: result.scheduledSessions,
         })
       } catch { /* silencioso */ }
     }
@@ -206,6 +224,35 @@ export function SchedulePackageModal({
               )}
             </div>
           )}
+
+          <div className="space-y-1.5">
+            <Label className="text-xs">Prévia dos horários</Label>
+            <div className="rounded-lg border border-border bg-background/60 p-2 max-h-32 overflow-auto">
+              {checkingConflicts ? (
+                <p className="text-xs text-muted-foreground">Verificando conflitos...</p>
+              ) : conflicts.length === 0 ? (
+                <p className="text-xs text-muted-foreground">Sem prévia no momento.</p>
+              ) : (
+                <div className="space-y-1">
+                  {conflicts.map((item, idx) => (
+                    <div key={`${item.date}-${idx}`} className="flex items-center justify-between text-xs">
+                      <span>
+                        {new Date(`${item.date}T12:00:00`).toLocaleDateString("pt-BR")} às {time}
+                      </span>
+                      <span className={item.occupied ? "text-destructive" : "text-emerald-500"}>
+                        {item.occupied ? "ocupado" : "livre"}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            {!checkingConflicts && conflicts.some((c) => c.occupied) && (
+              <p className="text-[11px] text-muted-foreground">
+                Sessões em horário ocupado serão puladas automaticamente no agendamento.
+              </p>
+            )}
+          </div>
 
           <div className="space-y-1.5">
             <Label className="text-xs">Observação <span className="text-muted-foreground font-normal">— opcional</span></Label>
