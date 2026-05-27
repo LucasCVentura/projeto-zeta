@@ -226,3 +226,28 @@ export async function handleWhatsAppButtonReply(messageId: string, buttonTitle: 
     .delete(whatsappPendingConfirmations)
     .where(eq(whatsappPendingConfirmations.messageId, messageId))
 }
+
+// Fallback para clientes que enviam quick reply como texto sem context.id/gsId.
+// Nesse caso, tentamos resolver pelo telefone de origem e pelo pending mais recente ainda válido.
+export async function handleWhatsAppReplyByPhone(buttonTitle: string, fromPhone: string) {
+  const digits = (fromPhone || "").replace(/\D/g, "")
+  if (!digits) return
+
+  const rows = await db.execute<{
+    messageId: string
+  }>(sql`
+    SELECT p.message_id as "messageId"
+    FROM whatsapp_pending_confirmations p
+    JOIN appointments a ON a.id = p.appointment_id
+    JOIN clients c ON c.id = a.client_id
+    WHERE p.expires_at > now()
+      AND regexp_replace(coalesce(c.phone, ''), '[^0-9]', '', 'g') = ${digits}
+    ORDER BY p.created_at DESC
+    LIMIT 1
+  `)
+
+  const pending = Array.isArray(rows) ? rows[0] : rows.rows?.[0]
+  if (!pending?.messageId) return
+
+  await handleWhatsAppButtonReply(pending.messageId, buttonTitle, fromPhone)
+}
