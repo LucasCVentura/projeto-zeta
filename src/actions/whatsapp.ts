@@ -184,15 +184,22 @@ export async function sendPostVisitThanks(params: {
 // ── Handler do webhook (botão Confirmar / Cancelar) ──────────────────────────
 
 export async function handleWhatsAppButtonReply(messageId: string, buttonTitle: string, fromPhone: string) {
+  console.log("[WhatsApp][Handler] lookup messageId:", messageId)
   const [pending] = await db
     .select()
     .from(whatsappPendingConfirmations)
     .where(eq(whatsappPendingConfirmations.messageId, messageId))
     .limit(1)
 
-  if (!pending || pending.expiresAt < new Date()) return
+  console.log("[WhatsApp][Handler] pending found:", pending ?? "NOT FOUND")
+  if (!pending) return
+  if (pending.expiresAt < new Date()) {
+    console.log("[WhatsApp][Handler] expired:", pending.expiresAt)
+    return
+  }
 
   const isConfirm = buttonTitle.toLowerCase().includes("confirmar")
+  console.log("[WhatsApp][Handler] isConfirm:", isConfirm, "appointmentId:", pending.appointmentId)
 
   if (pending.clientPackageId) {
     const pkgAppts = await db
