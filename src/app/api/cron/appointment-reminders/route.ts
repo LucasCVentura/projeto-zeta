@@ -10,6 +10,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
+  const dbUrl = process.env.DATABASE_URL ?? ""
+  const dbHost = dbUrl.split("@")[1]?.split("/")[0] ?? "unknown"
+  console.log("[Cron][Reminders] db host:", dbHost)
+
   const twoDaysFromNow = new Date()
   twoDaysFromNow.setDate(twoDaysFromNow.getDate() + 2)
   const targetDate = twoDaysFromNow.toISOString().split("T")[0]
