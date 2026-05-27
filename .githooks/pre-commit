@@ -14,4 +14,7 @@ node scripts/check-prod-db.mjs || exit 1
 echo "→ Rodando testes com cobertura..."
 npx vitest run --coverage || exit 1
 
+echo "→ Rodando suíte E2E completa..."
+npm run e2e:full || exit 1
+
 echo "✓ Tudo ok, pode commitar!"
