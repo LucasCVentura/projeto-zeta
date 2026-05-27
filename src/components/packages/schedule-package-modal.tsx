@@ -24,6 +24,7 @@ type Props = {
   sessionsRemaining: number
   orgName: string
   orgAddress?: string
+  onScheduled?: (scheduledCount: number) => void
 }
 
 const FREQUENCY_OPTIONS = [
@@ -36,7 +37,7 @@ type Frequency = "weekly" | "biweekly" | "monthly"
 
 export function SchedulePackageModal({
   open, onClose, clientId, clientPhone, clientName = "", clientPackageId, packageName,
-  procedureId, procedureName, sessionsRemaining, orgName, orgAddress,
+  procedureId, procedureName, sessionsRemaining, orgName, orgAddress, onScheduled,
 }: Props) {
   const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" })
 
@@ -109,6 +110,7 @@ export function SchedulePackageModal({
     })
     setLoading(false)
     if (!result.success) { setError(result.error ?? "Erro ao agendar."); return }
+    const scheduledCount = result.scheduledSessions?.length ?? 0
 
     // Envia WhatsApp com todas as sessões se cliente tiver telefone
     if (clientPhone && result.scheduledSessions && result.scheduledSessions.length > 0) {
@@ -122,6 +124,10 @@ export function SchedulePackageModal({
           sessions: result.scheduledSessions,
         })
       } catch { /* silencioso */ }
+    }
+
+    if (scheduledCount > 0) {
+      onScheduled?.(scheduledCount)
     }
 
     setSuccess(true)

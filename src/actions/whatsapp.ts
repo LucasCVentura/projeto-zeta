@@ -113,35 +113,23 @@ export async function sendPackageBookingSummary(params: {
   sessions: { date: string; startTime: string }[]
 }) {
   const { clientPhone, clientName, orgName, orgAddress, packageName, sessions } = params
-  const templates = await getGlobalTemplateIds()
 
-  const normalized = sessions.map((s, i) => `${i + 1}. ${formatDate(s.date)} às ${s.startTime.slice(0, 5)}`)
-  const listWithEscapedBreaks = normalized.join("\\n").slice(0, 900)
-  const listInlineFallback = normalized.join(" | ").slice(0, 900)
+  const sessionList = sessions
+    .map((s, i) => `${i + 1}. ${formatDate(s.date)} às ${s.startTime.slice(0, 5)}`)
+    .join("\n")
 
-  try {
-    await sendWhatsAppTemplate(clientPhone, templates.packageSummaryTemplateId, [
-      safeParam(clientName, "Cliente"),
-      safeParam(orgName, "Clinica"),
-      safeParam(packageName, "Pacote"),
-      listWithEscapedBreaks,
-      safeParam(orgAddress, "Sem endereco"),
-    ])
-  } catch (err) {
-    // Alguns templates no provedor rejeitam quebra de linha em variável dinâmica.
-    // Faz retry em linha única para reduzir chance de #132018.
-    console.warn("[WhatsApp] Retry resumo pacote sem quebra de linha.", {
-      templateId: templates.packageSummaryTemplateId,
-      reason: err instanceof Error ? err.message : String(err),
-    })
-    await sendWhatsAppTemplate(clientPhone, templates.packageSummaryTemplateId, [
-      safeParam(clientName, "Cliente"),
-      safeParam(orgName, "Clinica"),
-      safeParam(packageName, "Pacote"),
-      listInlineFallback,
-      safeParam(orgAddress, "Sem endereco"),
-    ])
-  }
+  const message = [
+    `Olá, ${safeParam(clientName, "Cliente")}!`,
+    `Suas sessões de ${safeParam(packageName, "Pacote")} na ${safeParam(orgName, "Clínica")} foram agendadas. ✅`,
+    "",
+    sessionList || "Sem sessões listadas.",
+    "",
+    `📍 Endereço: ${safeParam(orgAddress, "Sem endereço")}`,
+    "",
+    "Te esperamos! 💜",
+  ].join("\n")
+
+  await sendWhatsApp(clientPhone, message)
 }
 
 // ── Lembrete + confirmação (2 dias antes) ────────────────────────────────────

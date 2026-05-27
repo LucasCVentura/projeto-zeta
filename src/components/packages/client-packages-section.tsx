@@ -121,6 +121,20 @@ export function ClientPackagesSection({ clientId, clientPhone, clientName, clien
         sessionsRemaining={schedulingPkg.sessionsRemaining}
         orgName={orgName}
         orgAddress={orgAddress}
+        onScheduled={(scheduledCount) => {
+          setPackages((prev) =>
+            prev.map((pkg) => {
+              if (pkg.id !== schedulingPkg.id) return pkg
+              const nextUsed = Math.min(pkg.totalSessions, pkg.sessionsUsed + scheduledCount)
+              return {
+                ...pkg,
+                sessionsUsed: nextUsed,
+                sessionsRemaining: Math.max(0, pkg.totalSessions - nextUsed),
+                isActive: nextUsed < pkg.totalSessions,
+              }
+            })
+          )
+        }}
       />
     )}
     <div className="surface space-y-4">
