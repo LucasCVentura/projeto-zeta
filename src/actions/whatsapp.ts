@@ -66,6 +66,7 @@ async function storePendingConfirmation(
   appointmentId: string | null,
   clientPackageId: string | null
 ) {
+  console.log("[WhatsApp][Store] storing pending confirmation", { messageId, appointmentId, clientPackageId })
   const expiresAt = new Date()
   expiresAt.setDate(expiresAt.getDate() + CONFIRMATION_TTL_DAYS)
   await db.insert(whatsappPendingConfirmations).values({
@@ -75,6 +76,7 @@ async function storePendingConfirmation(
     clientPackageId,
     expiresAt,
   })
+  console.log("[WhatsApp][Store] stored OK", { messageId })
 }
 
 // ── Resumo de agendamento (ao criar) ─────────────────────────────────────────
@@ -158,8 +160,11 @@ export async function sendReminderWithConfirmation(params: {
     safeParam(orgAddress, "Sem endereco"),
   ])
 
+  console.log("[WhatsApp][Reminder] sendWhatsAppTemplate result", { messageId: result?.messageId ?? null, appointmentId })
   if (result?.messageId) {
     await storePendingConfirmation(result.messageId, organizationId, appointmentId, clientPackageId ?? null)
+  } else {
+    console.warn("[WhatsApp][Reminder] messageId ausente, pending confirmation NÃO salvo", { appointmentId })
   }
 }
 
@@ -208,6 +213,7 @@ export async function handleWhatsAppButtonReply(messageId: string, buttonTitle: 
       .where(eq(appointments.clientPackageId, pending.clientPackageId))
 
     const ids = pkgAppts.map((a) => a.id)
+    console.log("[WhatsApp][Handler] package update: ids=", ids, "status=", isConfirm ? "confirmed" : "cancelled")
     if (ids.length > 0) {
       await db
         .update(appointments)
@@ -219,16 +225,21 @@ export async function handleWhatsAppButtonReply(messageId: string, buttonTitle: 
       await sendWhatsApp(fromPhone, "Suas sessões foram canceladas. Entre em contato com a clínica para reagendar. 😊")
     }
   } else if (pending.appointmentId) {
-    await db
+    const newStatus = isConfirm ? "confirmed" : "cancelled"
+    console.log("[WhatsApp][Handler] single appt update:", pending.appointmentId, "→", newStatus)
+    const updated = await db
       .update(appointments)
-      .set({ status: isConfirm ? "confirmed" : "cancelled", updatedAt: new Date() })
+      .set({ status: newStatus, updatedAt: new Date() })
       .where(eq(appointments.id, pending.appointmentId))
+      .returning({ id: appointments.id, status: appointments.status })
+    console.log("[WhatsApp][Handler] update result:", updated)
 
     if (!isConfirm) {
       await sendWhatsApp(fromPhone, "Seu agendamento foi cancelado. Entre em contato com a clínica ou profissional para reagendar. 😊")
     }
   }
 
+  console.log("[WhatsApp][Handler] deleting pending", messageId)
   await db
     .delete(whatsappPendingConfirmations)
     .where(eq(whatsappPendingConfirmations.messageId, messageId))

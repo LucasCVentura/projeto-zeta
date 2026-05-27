@@ -56,8 +56,8 @@ export async function GET(req: NextRequest) {
           organizationId: row.organizationId,
         })
         sent++
-      } catch {
-        // log silencioso por cliente
+      } catch (err) {
+        console.error("[Cron][Reminders] erro ao enviar lembrete", { appointmentId: row.id, error: err })
       }
     }
   }
