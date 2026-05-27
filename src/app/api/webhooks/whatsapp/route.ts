@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { handleWhatsAppButtonReply } from "@/actions/whatsapp"
+import { handleWhatsAppButtonReply, handleWhatsAppReplyByPhone } from "@/actions/whatsapp"
 import { logWhatsAppEvent } from "@/lib/whatsapp-logs"
 
 export async function POST(req: NextRequest) {
@@ -43,10 +43,19 @@ export async function POST(req: NextRequest) {
         title: buttonTitle,
       })
       await handleWhatsAppButtonReply(contextMessageId, buttonTitle, payload.source)
+    } else if (buttonTitle && /(confirmar|cancelar)/i.test(buttonTitle)) {
+      // Alguns clientes enviam a resposta rápida como texto, sem context.id/gsId.
+      console.log("[WhatsApp][Webhook] text reply fallback", {
+        replyType,
+        source: payload.source,
+        title: buttonTitle,
+      })
+      await handleWhatsAppReplyByPhone(buttonTitle, payload.source)
     }
 
     return NextResponse.json({ ok: true })
-  } catch {
+  } catch (err) {
+    console.error("[WhatsApp][Webhook] erro no processamento", err)
     return NextResponse.json({ ok: true })
   }
 }
