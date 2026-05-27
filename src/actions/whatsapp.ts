@@ -189,7 +189,16 @@ export async function sendPostVisitThanks(params: {
 // ── Handler do webhook (botão Confirmar / Cancelar) ──────────────────────────
 
 export async function handleWhatsAppButtonReply(messageId: string, buttonTitle: string, fromPhone: string) {
-  console.log("[WhatsApp][Handler] lookup messageId:", messageId)
+  const dbUrl = process.env.DATABASE_URL ?? ""
+  const dbHost = dbUrl.split("@")[1]?.split("/")[0] ?? "unknown"
+  console.log("[WhatsApp][Handler] lookup messageId:", messageId, "| db host:", dbHost)
+
+  const rawRows = await db.execute<{ message_id: string }>(
+    sql`SELECT message_id FROM whatsapp_pending_confirmations WHERE message_id = ${messageId}`
+  )
+  const rawHit = Array.isArray(rawRows) ? rawRows[0] : rawRows.rows?.[0]
+  console.log("[WhatsApp][Handler] raw SQL result:", rawHit ?? "NOT FOUND")
+
   const [pending] = await db
     .select()
     .from(whatsappPendingConfirmations)
