@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
 const schema = z.object({
-  email: z.string().email("E-mail inválido"),
+  email: z.string().trim().email("E-mail inválido"),
   password: z.string().min(6, "Senha deve ter ao menos 6 caracteres"),
 })
 
@@ -51,7 +51,7 @@ function LoginForm() {
 
     try {
       const result = await signIn("credentials", {
-        email: data.email,
+        email: data.email.trim(),
         password: data.password,
         redirect: false,
         callbackUrl: next,

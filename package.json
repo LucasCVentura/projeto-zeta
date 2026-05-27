@@ -13,6 +13,12 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "e2e": "npm run e2e:full",
+    "e2e:full": "bash -lc 'set -a; [ -f .env.local ] && source .env.local; [ -f .env.e2e ] && source .env.e2e; set +a; node scripts/e2e-prepare-user.mjs && playwright test'",
+    "e2e:smoke": "bash -lc 'set -a; [ -f .env.local ] && source .env.local; [ -f .env.e2e ] && source .env.e2e; set +a; node scripts/e2e-prepare-user.mjs && playwright test -c playwright.smoke.config.ts'",
+    "e2e:list": "bash -lc 'set -a; [ -f .env.local ] && source .env.local; [ -f .env.e2e ] && source .env.e2e; set +a; node scripts/e2e-prepare-user.mjs && playwright test --list'",
+    "e2e:ui": "bash -lc 'set -a; [ -f .env.local ] && source .env.local; [ -f .env.e2e ] && source .env.e2e; set +a; node scripts/e2e-prepare-user.mjs && playwright test --ui'",
+    "e2e:install": "playwright install --with-deps chromium",
     "check:migrations": "node scripts/check-migrations.mjs",
     "hooks:install": "sh scripts/setup-git-hooks.sh"
   },
@@ -49,6 +55,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
     "@tailwindcss/postcss": "^4",
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20",
