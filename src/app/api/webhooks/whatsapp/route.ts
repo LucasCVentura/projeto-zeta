@@ -24,13 +24,25 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    // Botão de quick reply clicado
-    if (payload.type === "button_reply" && payload.context?.id && payload.payload?.title) {
-      await handleWhatsAppButtonReply(
-        payload.context.id,
-        payload.payload.title,
-        payload.source
-      )
+    // Botão de quick reply clicado.
+    // Gupshup pode enviar o ID da mensagem original em context.gsId (id Gupshup)
+    // ou context.id (id WhatsApp). Nosso pending usa messageId da Gupshup.
+    const replyType = (payload.type || "").toLowerCase()
+    const contextMessageId = payload.context?.gsId ?? payload.context?.id ?? null
+    const buttonTitle =
+      payload.payload?.title ??
+      payload.payload?.text ??
+      payload.payload?.postbackText ??
+      null
+
+    if ((replyType === "button_reply" || replyType === "quick_reply") && contextMessageId && buttonTitle) {
+      console.log("[WhatsApp][Webhook] button reply received", {
+        replyType,
+        contextMessageId,
+        source: payload.source,
+        title: buttonTitle,
+      })
+      await handleWhatsAppButtonReply(contextMessageId, buttonTitle, payload.source)
     }
 
     return NextResponse.json({ ok: true })
@@ -54,12 +66,15 @@ type GupshupWebhookPayload = {
     type: string
     payload?: {
       title?: string
+      text?: string
+      postbackText?: string
       id?: string
       reason?: string
       code?: string | number
     }
     context?: {
       id: string
+      gsId?: string
     }
   }
 }
