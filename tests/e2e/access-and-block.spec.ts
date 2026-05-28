@@ -31,6 +31,7 @@ test("bloqueia horário na agenda", async ({ page }) => {
   await login(page)
   for (const date of nextBusinessDates(30, 40)) {
     await page.goto(`/agenda?data=${date}`)
+    await page.waitForLoadState("networkidle")
 
     const acceptCookies = page.getByRole("button", { name: /Entendi/i })
     if (await acceptCookies.isVisible()) await acceptCookies.click()

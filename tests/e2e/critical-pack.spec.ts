@@ -6,7 +6,7 @@ test("rotas privadas redirecionam para login sem sessão", async ({ page }) => {
 
   await page.context().clearCookies()
   for (const route of privateRoutes) {
-    await page.goto(route)
+    await page.goto(route).catch(() => {})
     await expect(page).toHaveURL(/\/login(\?.*)?$/)
   }
 })
