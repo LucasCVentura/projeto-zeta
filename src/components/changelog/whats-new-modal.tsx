@@ -10,6 +10,8 @@ type Props = {
   hasNew: boolean
   entries: ChangelogEntry[]
   collapsed?: boolean
+  onOpen?: () => void
+  triggerClassName?: string
 }
 
 const TYPE_CONFIG = {
@@ -18,7 +20,7 @@ const TYPE_CONFIG = {
   fix:         { label: "Fix",      icon: Wrench,   className: "bg-amber-500/10 text-amber-400" },
 }
 
-export function WhatsNewModal({ hasNew: initialHasNew, entries, collapsed }: Props) {
+export function WhatsNewModal({ hasNew: initialHasNew, entries, collapsed, onOpen, triggerClassName }: Props) {
   const [open, setOpen] = useState(false)
   const [hasNew, setHasNew] = useState(initialHasNew)
   const [visible, setVisible] = useState(false)
@@ -31,6 +33,7 @@ export function WhatsNewModal({ hasNew: initialHasNew, entries, collapsed }: Pro
 
   function handleOpen() {
     setOpen(true)
+    onOpen?.()
     if (hasNew) {
       setHasNew(false)
       startTransition(() => { markChangelogSeenAction() })
@@ -51,7 +54,8 @@ export function WhatsNewModal({ hasNew: initialHasNew, entries, collapsed }: Pro
         title={collapsed ? "Novidades" : undefined}
         className={cn(
           "relative flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors",
-          collapsed && "justify-center px-0"
+          collapsed && "justify-center px-0",
+          triggerClassName
         )}
       >
         <span className="relative shrink-0">
