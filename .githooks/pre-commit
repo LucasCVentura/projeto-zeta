@@ -5,6 +5,9 @@ cd "$ROOT"
 
 echo "── pre-commit ─────────────────────────────────────────"
 
+echo "→ Verificando entrada no changelog para versão atual..."
+node scripts/check-changelog.mjs || exit 1
+
 echo "→ Validando migrations vs schema..."
 node scripts/check-migrations.mjs || exit 1
 

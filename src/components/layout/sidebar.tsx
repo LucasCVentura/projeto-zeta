@@ -12,6 +12,8 @@ import Image from "next/image"
 import { useState, useRef, useEffect } from "react"
 import { can } from "@/lib/permissions"
 import type { OrgRole } from "@/db/schema"
+import { WhatsNewModal } from "@/components/changelog/whats-new-modal"
+import type { ChangelogEntry } from "@/lib/changelog"
 
 const allNavItems = [
   {
@@ -98,7 +100,7 @@ const allNavItems = [
   },
 ]
 
-export function Sidebar({ role }: { role: OrgRole }) {
+export function Sidebar({ role, changelogHasNew, changelogEntries }: { role: OrgRole; changelogHasNew: boolean; changelogEntries: ChangelogEntry[] }) {
   const pathname = usePathname()
   const { isDark, toggle, mounted } = useTheme()
   const { collapsed, toggle: toggleSidebar } = useSidebar()
@@ -192,6 +194,7 @@ export function Sidebar({ role }: { role: OrgRole }) {
           )}
           {!collapsed && (mounted ? (isDark ? "Modo claro" : "Modo escuro") : "Modo escuro")}
         </button>
+        <WhatsNewModal hasNew={changelogHasNew} entries={changelogEntries} collapsed={collapsed} />
         <UserMenu collapsed={collapsed} />
       </div>
     </aside>
