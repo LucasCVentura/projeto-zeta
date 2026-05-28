@@ -85,7 +85,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
             {children}
           </main>
         </div>
-        <MobileNav role={userRole} />
+        <MobileNav role={userRole} changelogHasNew={hasNew} changelogEntries={entries} />
       </div>
       </SidebarProvider>
     </AuthSessionProvider>

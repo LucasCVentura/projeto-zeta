@@ -10,6 +10,8 @@ import { mediaUrl } from "@/lib/media-url"
 import Image from "next/image"
 import { can } from "@/lib/permissions"
 import type { OrgRole } from "@/db/schema"
+import { WhatsNewModal } from "@/components/changelog/whats-new-modal"
+import type { ChangelogEntry } from "@/lib/changelog"
 
 const allNavItems = [
   {
@@ -73,7 +75,7 @@ const allNavItems = [
   },
 ]
 
-export function MobileNav({ role }: { role: OrgRole }) {
+export function MobileNav({ role, changelogHasNew, changelogEntries }: { role: OrgRole; changelogHasNew: boolean; changelogEntries: ChangelogEntry[] }) {
   const pathname = usePathname()
   const [menuOpen, setMenuOpen] = useState(false)
   const { data: session } = useSession()
@@ -202,6 +204,13 @@ export function MobileNav({ role }: { role: OrgRole }) {
             )}
             {mounted ? (isDark ? "Modo claro" : "Modo escuro") : "Modo escuro"}
           </button>
+
+          <WhatsNewModal
+            hasNew={changelogHasNew}
+            entries={changelogEntries}
+            onOpen={() => setMenuOpen(false)}
+            triggerClassName="rounded-xl px-4 py-3 font-normal"
+          />
 
           <div className="border-t border-border my-1" />
 
