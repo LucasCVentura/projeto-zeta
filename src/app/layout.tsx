@@ -59,6 +59,20 @@ export const metadata: Metadata = {
     type: "website",
     locale: "pt_BR",
     siteName: "Kira",
+    images: [
+      {
+        url: "/og?title=Sistema+para+Cl%C3%ADnica+de+Est%C3%A9tica&sub=Organize+agenda%2C+prontu%C3%A1rios%2C+fotos+e+financeiro.",
+        width: 1200,
+        height: 630,
+        alt: "Kira — Sistema para Clínica de Estética",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Kira — Sistema para Clínica de Estética",
+    description: "Organize agenda, clientes, prontuários, fotos, financeiro, estoque e pacotes em uma plataforma feita para a rotina da estética e da beleza.",
+    images: ["/og?title=Sistema+para+Cl%C3%ADnica+de+Est%C3%A9tica&sub=Organize+agenda%2C+prontu%C3%A1rios%2C+fotos+e+financeiro."],
   },
 };
 
