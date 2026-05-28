@@ -73,7 +73,7 @@ export function WhatsNewModal({ hasNew: initialHasNew, entries, collapsed, onOpe
       {/* Modal */}
       {open && (
         <div
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 pb-20 sm:pb-4"
           onClick={(e) => e.target === e.currentTarget && handleClose()}
         >
           <div
@@ -81,7 +81,7 @@ export function WhatsNewModal({ hasNew: initialHasNew, entries, collapsed, onOpe
             style={{ opacity: visible ? 1 : 0 }}
           />
           <div
-            className="relative w-full max-w-lg rounded-2xl bg-card border border-border shadow-xl flex flex-col max-h-[80vh] transition-all duration-200"
+            className="relative w-full max-w-lg rounded-2xl bg-card border border-border shadow-xl flex flex-col max-h-[calc(100dvh-5rem)] sm:max-h-[80vh] transition-all duration-200"
             style={{
               opacity: visible ? 1 : 0,
               transform: visible ? "translateY(0) scale(1)" : "translateY(16px) scale(0.97)",
