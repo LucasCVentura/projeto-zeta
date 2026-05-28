@@ -13,6 +13,7 @@ import { db } from "@/db"
 import { organizationMembers, organizations } from "@/db/schema"
 import { eq, and } from "drizzle-orm"
 import type { OrgRole } from "@/db/schema"
+import { getChangelogStateAction } from "@/actions/changelog"
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const session = await auth()
@@ -66,6 +67,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
     }
   }
 
+  const { hasNew, entries } = await getChangelogStateAction()
+
   return (
     <AuthSessionProvider>
       <SidebarProvider>
@@ -73,7 +76,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <NavProgress />
       <div className="flex h-dvh overflow-hidden bg-background">
         <div className="hidden lg:flex lg:shrink-0">
-          <Sidebar role={userRole} />
+          <Sidebar role={userRole} changelogHasNew={hasNew} changelogEntries={entries} />
         </div>
         <div className="flex flex-1 flex-col overflow-hidden">
           {trialDaysLeft !== null && <TrialBanner daysLeft={trialDaysLeft} />}

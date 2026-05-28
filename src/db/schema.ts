@@ -56,6 +56,8 @@ export const users = pgTable("users", {
   professionalDocumentType: text("professional_document_type"),
   instagram: text("instagram"),
 
+  lastSeenChangelog: text("last_seen_changelog"),
+
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 })

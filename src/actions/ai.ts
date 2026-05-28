@@ -2,10 +2,22 @@
 
 import Groq from "groq-sdk"
 import { db } from "@/db"
-import { appointments, clientPhotos } from "@/db/schema"
+import { appointments, clientPhotos, users } from "@/db/schema"
 import { eq, and, desc } from "drizzle-orm"
 import { requireSession } from "@/lib/session"
 import { todayBRT } from "@/lib/date"
+
+function greeting() {
+  const h = new Date().getHours()
+  if (h < 12) return "Bom dia"
+  if (h < 18) return "Boa tarde"
+  return "Boa noite"
+}
+
+async function getUserFirstName(userId: string): Promise<string> {
+  const [u] = await db.select({ name: users.name }).from(users).where(eq(users.id, userId)).limit(1)
+  return u?.name?.split(" ")[0] ?? "Doutora"
+}
 async function photoToBase64(url: string): Promise<string | null> {
   try {
     // Supabase internal URL — fetch via public URL
@@ -170,7 +182,7 @@ export async function analyzePhotoComparisonAction(photoIds: string[]): Promise<
   analysis?: string
   error?: string
 }> {
-  const { organizationId } = await requireSession()
+  const { organizationId, userId } = await requireSession()
 
   const apiKey = process.env.GROQ_API_KEY
   if (!apiKey) return { success: false, error: "GROQ_API_KEY não configurada." }
@@ -206,6 +218,7 @@ export async function analyzePhotoComparisonAction(photoIds: string[]): Promise<
     return `Foto ${i + 1}: ${d}${p.procedure ? ` — ${p.procedure}` : ""}`
   }).join("\n")
 
+  const firstName = await getUserFirstName(userId)
   const groq = new Groq({ apiKey })
 
   const chat = await groq.chat.completions.create({
@@ -216,14 +229,14 @@ export async function analyzePhotoComparisonAction(photoIds: string[]): Promise<
         content: [
           {
             type: "text",
-            text: `Você é um especialista em estética e dermatologia. Analise as fotos abaixo e descreva a evolução observada.\n\n${labels}\n\nDescreva em português, de forma objetiva e profissional: mudanças na textura da pele, tom, manchas, hidratação, firmeza ou qualquer evolução visível. Máximo 4 frases.`,
+            text: `Você é um assistente especializado em estética e dermatologia. Analise as fotos abaixo e descreva a evolução observada.\n\n${labels}\n\nResponda em português, de forma natural e direta, como se estivesse conversando com a profissional. Comece com "${greeting()}, ${firstName}!" e depois descreva em tópicos (use • no início de cada linha) as mudanças observadas: textura da pele, tom, manchas, hidratação, firmeza ou qualquer evolução visível. Sem formatação markdown como ** ou ##. Máximo 5 tópicos.`,
           },
           ...validImages,
         ],
       },
     ],
     temperature: 0.4,
-    max_tokens: 300,
+    max_tokens: 350,
   })
 
   const analysis = chat.choices[0]?.message?.content?.trim()
@@ -313,7 +326,7 @@ export async function suggestProceduresFromPhotosAction(photoIds: string[]): Pro
   analysis?: string
   error?: string
 }> {
-  const { organizationId } = await requireSession()
+  const { organizationId, userId } = await requireSession()
 
   const apiKey = process.env.GROQ_API_KEY
   if (!apiKey) return { success: false, error: "GROQ_API_KEY não configurada." }
@@ -344,6 +357,7 @@ export async function suggestProceduresFromPhotosAction(photoIds: string[]): Pro
   const validImages = imageContents.filter(Boolean)
   if (validImages.length === 0) return { success: false, error: "Não foi possível carregar as imagens." }
 
+  const firstName = await getUserFirstName(userId)
   const groq = new Groq({ apiKey })
 
   const chat = await groq.chat.completions.create({
@@ -354,20 +368,136 @@ export async function suggestProceduresFromPhotosAction(photoIds: string[]): Pro
         content: [
           {
             type: "text",
-            text: `Você é um especialista em estética e biomedicina estética. Analise as fotos do cliente e indique, de forma objetiva e profissional em português, quais procedimentos estéticos seriam mais indicados com base no que é visível nas imagens (textura de pele, manchas, flacidez, volume, rugas, poros, hidratação, etc.). Liste de 3 a 5 procedimentos com uma breve justificativa para cada. Seja direto e clínico.`,
+            text: `Você é um assistente especializado em estética e biomedicina estética. Analise as fotos e indique os procedimentos mais adequados para o que é visível nas imagens.\n\nResponda em português, de forma natural e direta, como se estivesse conversando com a profissional. Comece com "${greeting()}, ${firstName}!" e depois liste de 3 a 5 procedimentos em tópicos (use • no início de cada linha), cada um com uma justificativa curta baseada no que você observou na foto. Sem formatação markdown como ** ou ##.`,
           },
           ...validImages,
         ],
       },
     ],
     temperature: 0.4,
-    max_tokens: 400,
+    max_tokens: 450,
   })
 
   const analysis = chat.choices[0]?.message?.content?.trim()
   if (!analysis) return { success: false, error: "Não foi possível gerar indicações." }
 
   return { success: true, analysis }
+}
+
+export async function suggestProceduresWithAnnotationsAction(photoId: string): Promise<{
+  success: boolean
+  analysis?: string
+  annotatedImage?: string  // base64 PNG
+  error?: string
+}> {
+  const { organizationId, userId } = await requireSession()
+
+  const apiKey = process.env.GROQ_API_KEY
+  if (!apiKey) return { success: false, error: "GROQ_API_KEY não configurada." }
+
+  const photos = await db.select().from(clientPhotos).where(and(eq(clientPhotos.organizationId, organizationId)))
+  const photo = photos.find((p) => p.id === photoId)
+  if (!photo) return { success: false, error: "Foto não encontrada." }
+
+  const b64 = await photoToBase64(photo.url)
+  if (!b64) return { success: false, error: "Não foi possível carregar a imagem." }
+
+  const firstName = await getUserFirstName(userId)
+  const groq = new Groq({ apiKey })
+
+  // Etapa 1 — pede coordenadas + texto numa única chamada
+  const chat = await groq.chat.completions.create({
+    model: "meta-llama/llama-4-scout-17b-16e-instruct",
+    messages: [
+      {
+        role: "user",
+        content: [
+          {
+            type: "text",
+            text: `Você é um especialista em estética e biomedicina. Analise esta foto de pele e responda SOMENTE com um JSON válido, sem texto fora do JSON, no seguinte formato:
+
+{
+  "greeting": "${greeting()}, ${firstName}!",
+  "summary": "frase curta e natural descrevendo o estado geral da pele",
+  "areas": [
+    { "label": "nome da condição", "x": 45, "y": 30, "procedure": "procedimento indicado" }
+  ]
+}
+
+Onde x e y são percentuais (0-100) da posição na imagem (0,0 = canto superior esquerdo). Identifique de 3 a 5 áreas de atenção visíveis. Sem markdown, sem texto fora do JSON.`,
+          },
+          {
+            type: "image_url",
+            image_url: { url: `data:${imageMediaType(photo.url)};base64,${b64}` },
+          },
+        ],
+      },
+    ],
+    temperature: 0.2,
+    max_tokens: 600,
+  })
+
+  const raw = chat.choices[0]?.message?.content?.trim() ?? ""
+
+  let parsed: { greeting: string; summary: string; areas: { label: string; x: number; y: number; procedure: string }[] }
+  try {
+    const jsonMatch = raw.match(/\{[\s\S]*\}/)
+    parsed = JSON.parse(jsonMatch?.[0] ?? raw)
+  } catch {
+    return { success: false, error: "A IA não retornou um formato válido. Tente novamente." }
+  }
+
+  if (!parsed?.areas?.length) return { success: false, error: "Não foi possível identificar áreas na imagem." }
+
+  // Etapa 2 — compõe anotações na imagem com sharp
+  const sharp = (await import("sharp")).default
+  const imgBuf = Buffer.from(b64, "base64")
+  const meta = await sharp(imgBuf).metadata()
+  const W = meta.width ?? 800
+  const H = meta.height ?? 800
+
+  const COLORS = ["#9B7DFF", "#FF7DB8", "#7DCCFF", "#7DFFC4", "#FFD97D"]
+
+  const overlayItems = parsed.areas.flatMap((area, i) => {
+    const cx = Math.round((area.x / 100) * W)
+    const cy = Math.round((area.y / 100) * H)
+    const r = Math.round(Math.min(W, H) * 0.055)
+    const color = COLORS[i % COLORS.length]
+    const labelW = Math.min(area.label.length * 11 + 24, W - cx - 8)
+    const labelX = cx + r + 8
+    const labelY = cy - 12
+
+    return [
+      // Círculo
+      Buffer.from(`<svg width="${W}" height="${H}">
+        <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${color}" stroke-width="3" stroke-dasharray="6 3"/>
+        <circle cx="${cx}" cy="${cy}" r="4" fill="${color}"/>
+      </svg>`),
+      // Label
+      Buffer.from(`<svg width="${W}" height="${H}">
+        <rect x="${labelX}" y="${labelY}" width="${labelW}" height="26" rx="6" fill="#08060F" fill-opacity="0.82"/>
+        <text x="${labelX + 10}" y="${labelY + 18}" font-family="Arial, sans-serif" font-size="13" font-weight="700" fill="${color}">${area.label}</text>
+      </svg>`),
+    ]
+  })
+
+  const annotated = await sharp(imgBuf)
+    .composite(overlayItems.map((input) => ({ input })))
+    .png({ quality: 90 })
+    .toBuffer()
+
+  const analysis = [
+    `${parsed.greeting}\n`,
+    parsed.summary,
+    "",
+    ...parsed.areas.map((a) => `• ${a.label}: ${a.procedure}`),
+  ].join("\n")
+
+  return {
+    success: true,
+    analysis,
+    annotatedImage: `data:image/png;base64,${annotated.toString("base64")}`,
+  }
 }
 
 export async function suggestReturnDateAction(data: {

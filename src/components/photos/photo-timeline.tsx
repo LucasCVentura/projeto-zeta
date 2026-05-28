@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect, useRef } from "react"
 import { getClientPhotosAction, deleteClientPhotoAction } from "@/actions/photos"
 import { PhotoUpload } from "./photo-upload"
 import { PhotoComparison, CompareButton } from "./photo-comparison"
@@ -41,15 +41,23 @@ function monthLabel(key: string) {
 
 function PhotoThumb({ url }: { url: string }) {
   const [loaded, setLoaded] = useState(false)
+  const imgRef = useRef<HTMLImageElement>(null)
+
+  useEffect(() => {
+    if (imgRef.current?.complete) setLoaded(true)
+  }, [])
+
   return (
     <>
       {!loaded && <div className="absolute inset-0 animate-pulse bg-muted" />}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
+        ref={imgRef}
         src={url}
         alt="Foto do cliente"
         className={cn("h-full w-full object-cover transition-opacity duration-300", loaded ? "opacity-100" : "opacity-0")}
         onLoad={() => setLoaded(true)}
+        onError={() => setLoaded(true)}
       />
     </>
   )

@@ -27,8 +27,9 @@ test("cria agendamento com cliente", async ({ page }) => {
 
   await login(page)
   let foundSlot = false
-  for (const date of nextBusinessDates(10)) {
+  for (const date of nextBusinessDates(40)) {
     await page.goto(`/agenda?data=${date}`)
+    await page.waitForLoadState("networkidle")
 
     const acceptCookies = page.getByRole("button", { name: /Entendi/i })
     if (await acceptCookies.isVisible()) {
