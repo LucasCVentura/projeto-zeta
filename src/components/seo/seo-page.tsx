@@ -14,11 +14,23 @@ export type SeoPageContent = {
   workflowDescription: string
   workflow: { title: string; description: string }[]
   faqs: { question: string; answer: string }[]
+  relatedPages?: { title: string; href: string; description: string }[]
 }
 
 export function SeoPage({ content }: { content: SeoPageContent }) {
+  const faqSchema = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: content.faqs.map((faq) => ({
+      "@type": "Question",
+      name: faq.question,
+      acceptedAnswer: { "@type": "Answer", text: faq.answer },
+    })),
+  }
+
   return (
     <main className="min-h-screen bg-background text-foreground">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
       <header className="border-b border-border bg-background/90">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5">
           <Link href="/" className="flex items-center gap-3">
@@ -148,6 +160,26 @@ export function SeoPage({ content }: { content: SeoPageContent }) {
           </div>
         </div>
       </section>
+
+      {content.relatedPages && content.relatedPages.length > 0 && (
+        <section className="border-t border-border px-5 py-16">
+          <div className="mx-auto max-w-6xl">
+            <p className="mb-6 text-sm font-medium text-primary">Veja também</p>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {content.relatedPages.map((page) => (
+                <Link
+                  key={page.href}
+                  href={page.href}
+                  className="group rounded-2xl border border-border bg-card p-5 hover:border-primary/40 hover:bg-primary/5 transition-colors"
+                >
+                  <p className="font-semibold text-sm group-hover:text-primary transition-colors">{page.title}</p>
+                  <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{page.description}</p>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       <section className="px-5 py-20">
         <div className="mx-auto max-w-4xl rounded-3xl bg-primary px-8 py-14 text-center text-primary-foreground">
