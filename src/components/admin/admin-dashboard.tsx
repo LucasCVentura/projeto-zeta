@@ -2,13 +2,14 @@
 
 import { useState, useRef, useEffect } from "react"
 import { extendTrialAction, cancelOrgAction, adminChatAction, markInboundEmailReadAction, saveWhatsAppTemplateSettingAction } from "@/actions/admin"
-import { Send, Loader2, Trophy, TrendingUp, Users, DollarSign, ChevronDown, ChevronUp, Sprout, Rocket, Gem, Coins, Star, Activity, MessageSquare, Mail, MailOpen, Wallet } from "lucide-react"
+import { Send, Loader2, Trophy, TrendingUp, Users, DollarSign, ChevronDown, ChevronUp, Sprout, Rocket, Gem, Coins, Star, Activity, MessageSquare, Mail, MailOpen, Wallet, CalendarDays } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { cn } from "@/lib/utils"
 import { PushToggle } from "./push-toggle"
+import { ContentSchedule } from "./content-schedule"
 
 type Org = {
   id: string
@@ -274,6 +275,7 @@ export function AdminDashboard({
               </TabsTrigger>
               <TabsTrigger value="financeiro" className="flex items-center gap-1.5"><Wallet size={13} />Financeiro</TabsTrigger>
               <TabsTrigger value="whatsapp">WhatsApp ({whatsappLogs.length})</TabsTrigger>
+              <TabsTrigger value="conteudo" className="flex items-center gap-1.5"><CalendarDays size={13} />Conteúdo</TabsTrigger>
               <TabsTrigger value="whatsapp-config">Config WhatsApp</TabsTrigger>
               <TabsTrigger value="suporte" className="flex items-center gap-1.5">
                 <Mail size={13} />Suporte
@@ -406,6 +408,10 @@ export function AdminDashboard({
                 </div>
               )}
             </div>
+          </TabsContent>
+
+          <TabsContent value="conteudo">
+            <ContentSchedule />
           </TabsContent>
 
           <TabsContent value="whatsapp-config">
