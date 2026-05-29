@@ -4,26 +4,41 @@ import { AdminDashboard } from "@/components/admin/admin-dashboard"
 
 export const metadata = { title: "Admin — Kira" }
 export const dynamic = "force-dynamic"
+export const maxDuration = 30
+
+function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms)),
+  ])
+}
 
 export default async function AdminPage() {
   const [metrics, feedbacks, feedbackSummary, inboundEmails, whatsappLogs, whatsappTemplateSettings] = await Promise.all([
     getAdminMetricsAction(),
-    getAllFeedbackAction(),
-    getLatestFeedbackSummaryAction(),
-    getInboundEmailsAction(),
-    getWhatsAppMessageLogsAction().catch((err) => {
-      console.error("[Admin] Falha ao carregar logs WhatsApp:", err)
-      return []
-    }),
-    getWhatsAppTemplateSettingsAction().catch((err) => {
-      console.error("[Admin] Falha ao carregar config WhatsApp:", err)
-      return {
+    withTimeout(getAllFeedbackAction(), 8000, []),
+    withTimeout(getLatestFeedbackSummaryAction(), 8000, null),
+    withTimeout(getInboundEmailsAction(), 8000, []),
+    withTimeout(
+      getWhatsAppMessageLogsAction().catch(() => []),
+      8000,
+      []
+    ),
+    withTimeout(
+      getWhatsAppTemplateSettingsAction().catch(() => ({
+        bookingSummaryTemplateId: null,
+        packageSummaryTemplateId: null,
+        reminderConfirmationTemplateId: null,
+        postVisitTemplateId: null,
+      })),
+      8000,
+      {
         bookingSummaryTemplateId: null,
         packageSummaryTemplateId: null,
         reminderConfirmationTemplateId: null,
         postVisitTemplateId: null,
       }
-    }),
+    ),
   ])
 
   return (
