@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { db } from "@/db"
 import { appointments, clients, organizations } from "@/db/schema"
-import { eq, and, isNotNull, or } from "drizzle-orm"
+import { eq, and, isNotNull, isNull, or } from "drizzle-orm"
 import { sendReminderWithConfirmation } from "@/actions/whatsapp"
 
 export async function GET(req: NextRequest) {
@@ -33,7 +33,8 @@ export async function GET(req: NextRequest) {
       and(
         eq(appointments.date, targetDate),
         or(eq(appointments.status, "waiting"), eq(appointments.status, "confirmed")),
-        isNotNull(clients.phone)
+        isNotNull(clients.phone),
+        isNull(appointments.reminderSentAt)
       )
     )
 
@@ -55,6 +56,10 @@ export async function GET(req: NextRequest) {
           clientPackageId: row.clientPackageId,
           organizationId: row.organizationId,
         })
+        await db
+          .update(appointments)
+          .set({ reminderSentAt: new Date() })
+          .where(eq(appointments.id, row.id))
         sent++
       } catch (err) {
         console.error("[Cron][Reminders] erro ao enviar lembrete", { appointmentId: row.id, error: err })

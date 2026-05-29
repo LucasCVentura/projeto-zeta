@@ -238,6 +238,8 @@ export const appointments = pgTable("appointments", {
   createdById: text("created_by_id").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+
+  reminderSentAt: timestamp("reminder_sent_at"),
 })
 
 // ── procedures ────────────────────────────────────────────────────────────────
