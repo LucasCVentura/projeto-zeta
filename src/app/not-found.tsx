@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { BonsaiIcon } from "@/components/ui/bonsai-icon"
+import { NotFoundBackButton } from "@/components/not-found-back-button"
 
 export default function NotFound() {
   return (
@@ -12,12 +13,7 @@ export default function NotFound() {
       <p className="text-sm text-muted-foreground mb-8 max-w-sm">
         A página que você está procurando não existe ou foi movida.
       </p>
-      <Link
-        href="/dashboard"
-        className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
-      >
-        Voltar ao início
-      </Link>
+      <NotFoundBackButton />
     </div>
   )
 }

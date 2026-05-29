@@ -1,36 +1,96 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Kira — Sistema para Clínicas de Estética
 
-## Getting Started
+Sistema de gestão completo para profissionais de estética e biomédicos. Agenda, prontuário eletrônico, fotos de evolução, financeiro, estoque e pacotes de sessões — tudo em um plano único.
 
-First, run the development server:
+**Acesso:** [kiraclinic.com.br](https://kiraclinic.com.br)
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+---
+
+## Stack
+
+- **Framework:** Next.js 15 (App Router)
+- **UI:** Tailwind CSS + shadcn/ui
+- **Banco de dados:** PostgreSQL via Supabase + Drizzle ORM
+- **Auth:** NextAuth.js
+- **WhatsApp:** Gupshup (lembretes e confirmações automáticas)
+- **Deploy:** Vercel
+
+---
+
+## Estrutura do projeto
+
+```
+app/
+├── src/
+│   ├── app/                  # Rotas Next.js (App Router)
+│   │   ├── (auth)/           # Login, cadastro
+│   │   ├── (dashboard)/      # App autenticado
+│   │   ├── (admin)/          # Painel interno
+│   │   └── api/              # API routes (cron, webhooks, og)
+│   ├── actions/              # Server actions
+│   ├── components/           # Componentes React
+│   ├── db/                   # Schema Drizzle + conexão
+│   └── lib/                  # Utilitários, helpers
+├── drizzle/                  # Migrations SQL
+├── scripts/                  # Scripts de CI e pre-commit
+└── tests/                    # Testes E2E (Playwright) + unitários (Vitest)
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Rodando localmente
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+**Pré-requisitos:** Node 20+, PostgreSQL local (ou Supabase)
 
-## Learn More
+```bash
+cd app
+cp .env.example .env.local   # preencher as variáveis
+npm install
+npm run dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+Acesse [http://localhost:3000](http://localhost:3000).
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Migrations
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+# Gerar migration a partir do schema
+npx drizzle-kit generate
 
-## Deploy on Vercel
+# Aplicar migrations
+npx drizzle-kit migrate
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+---
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Testes
+
+```bash
+# Unitários
+npm run test
+
+# E2E (Playwright) — requer app rodando
+npm run e2e:full
+```
+
+O pre-commit hook roda ambas as suítes automaticamente, além de validar migrations e banco de produção.
+
+---
+
+## Deploy
+
+O deploy é feito automaticamente pelo Vercel a cada push na branch `main`. Migrations precisam ser aplicadas em produção manualmente antes do merge (o pre-commit hook verifica isso).
+
+---
+
+## Variáveis de ambiente
+
+| Variável | Descrição |
+|---|---|
+| `DATABASE_URL` | Conexão PostgreSQL local |
+| `PROD_DATABASE_URL` | Conexão PostgreSQL produção (Supabase) |
+| `NEXTAUTH_SECRET` | Secret do NextAuth |
+| `NEXTAUTH_URL` | URL base da aplicação |
+| `GUPSHUP_API_KEY` | Chave da API WhatsApp (Gupshup) |
+| `CRON_SECRET` | Token de autenticação dos cron jobs |
+| `WHATSAPP_ENABLED` | `true` para habilitar envio de mensagens |
