@@ -26,10 +26,15 @@ type Props = {
 
 const STATUS_OPTIONS: { value: AppointmentStatus; label: string }[] = [
   { value: "confirmed", label: "Confirmar" },
-  { value: "completed", label: "Concluído" },
   { value: "missed",    label: "Faltou" },
   { value: "cancelled", label: "Cancelar" },
 ]
+
+// Transições válidas por status atual
+const STATUS_TRANSITIONS: Partial<Record<AppointmentStatus, AppointmentStatus[]>> = {
+  waiting:   ["confirmed", "missed", "cancelled"],
+  confirmed: ["missed", "cancelled"],
+}
 
 function formatDate(dateStr: string) {
   return new Date(dateStr + "T12:00:00").toLocaleDateString("pt-BR", {
@@ -422,27 +427,29 @@ function SlotCard({
               </Link>
             )}
           </div>
-          <p className="text-xs font-medium text-muted-foreground">Alterar status</p>
-          <div className="flex flex-wrap gap-2">
-            {STATUS_OPTIONS.filter((o) => o.value !== slot.status).map((opt) => (
-              <Button
-                key={opt.value}
-                size="sm"
-                variant="outline"
-                disabled={isPending}
-                onClick={() => onStatusChange(opt.value)}
-                className={cn(
-                  opt.value === "cancelled" || opt.value === "missed"
-                    ? "border-destructive/30 text-destructive hover:bg-destructive/10"
-                    : opt.value === "confirmed"
-                    ? "border-blue-300 text-blue-700 hover:bg-blue-50"
-                    : "border-green-300 text-green-700 hover:bg-green-50"
-                )}
-              >
-                {opt.label}
-              </Button>
-            ))}
-          </div>
+          {STATUS_TRANSITIONS[slot.status] && (
+            <>
+              <p className="text-xs font-medium text-muted-foreground">Alterar status</p>
+              <div className="flex flex-wrap gap-2">
+                {STATUS_OPTIONS.filter((o) => STATUS_TRANSITIONS[slot.status]?.includes(o.value)).map((opt) => (
+                  <Button
+                    key={opt.value}
+                    size="sm"
+                    variant="outline"
+                    disabled={isPending}
+                    onClick={() => onStatusChange(opt.value)}
+                    className={cn(
+                      opt.value === "cancelled" || opt.value === "missed"
+                        ? "border-destructive/30 text-destructive hover:bg-destructive/10"
+                        : "border-blue-300 text-blue-700 hover:bg-blue-50"
+                    )}
+                  >
+                    {opt.label}
+                  </Button>
+                ))}
+              </div>
+            </>
+          )}
         </div>
       )}
 

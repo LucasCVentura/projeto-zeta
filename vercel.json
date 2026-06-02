@@ -30,6 +30,10 @@
     {
       "path": "/api/cron/post-visit-thanks",
       "schedule": "0 12 * * *"
+    },
+    {
+      "path": "/api/cron/auto-mark-missed",
+      "schedule": "0 8 * * *"
     }
   ]
 }
