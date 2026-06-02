@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import React, { useState, useEffect } from "react"
 import {
   Dialog,
   DialogContent,
@@ -13,15 +13,15 @@ import { Label } from "@/components/ui/label"
 import { completeAppointmentWithRevenueAction } from "@/actions/financial"
 import { createAppointmentAction } from "@/actions/schedule"
 import { suggestReturnDateAction } from "@/actions/ai"
-import { CheckCircle, CalendarClock, Sparkles, Loader2 } from "lucide-react"
+import { CheckCircle, CalendarClock, Sparkles, Loader2, Zap, CreditCard, CalendarRange, Banknote } from "lucide-react"
 import type { PaymentMethod } from "@/db/schema"
 
-const PAYMENT_METHODS: { value: PaymentMethod; label: string; emoji: string }[] = [
-  { value: "pix",           label: "Pix",             emoji: "⚡" },
-  { value: "cartao_debito", label: "Débito",           emoji: "💳" },
-  { value: "cartao_credito",label: "Crédito",          emoji: "💳" },
-  { value: "parcelado",     label: "Parcelado",        emoji: "📆" },
-  { value: "dinheiro",      label: "Dinheiro",         emoji: "💵" },
+const PAYMENT_METHODS: { value: PaymentMethod; label: string; icon: React.ElementType }[] = [
+  { value: "pix",            label: "Pix",       icon: Zap },
+  { value: "cartao_debito",  label: "Débito",    icon: CreditCard },
+  { value: "cartao_credito", label: "Crédito",   icon: CreditCard },
+  { value: "parcelado",      label: "Parcelado", icon: CalendarRange },
+  { value: "dinheiro",       label: "Dinheiro",  icon: Banknote },
 ]
 
 type Props = {
@@ -287,19 +287,20 @@ export function CompleteAppointmentModal({
                 <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
                   {PAYMENT_METHODS.map((method) => {
                     const active = paymentMethod === method.value
+                    const Icon = method.icon
                     return (
                       <button
                         key={method.value}
                         type="button"
                         onClick={() => setPaymentMethod(active ? null : method.value)}
                         className={[
-                          "flex flex-col items-center justify-center gap-1 rounded-xl border-2 px-2 py-3 text-center transition-all active:scale-95",
+                          "flex flex-col items-center justify-center gap-1.5 rounded-xl border-2 px-2 py-3 text-center transition-all active:scale-95",
                           active
                             ? "border-primary bg-primary/10 text-primary shadow-sm"
                             : "border-border bg-background text-muted-foreground hover:border-primary/40 hover:bg-accent",
                         ].join(" ")}
                       >
-                        <span className="text-lg leading-none">{method.emoji}</span>
+                        <Icon size={18} strokeWidth={1.8} />
                         <span className="text-[11px] font-medium leading-tight">{method.label}</span>
                       </button>
                     )

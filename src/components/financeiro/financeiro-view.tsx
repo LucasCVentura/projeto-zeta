@@ -1,8 +1,8 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import React, { useState, useEffect } from "react"
 import { getTransactionsAction } from "@/actions/financial"
-import { ChevronLeft, ChevronRight, TrendingUp } from "lucide-react"
+import { ChevronLeft, ChevronRight, TrendingUp, Zap, CreditCard, CalendarRange, Banknote } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { PaymentMethod } from "@/db/schema"
 
@@ -21,12 +21,12 @@ const MONTH_NAMES = [
   "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
 ]
 
-const PAYMENT_CONFIG: Record<PaymentMethod, { label: string; emoji: string; color: string }> = {
-  pix:            { label: "Pix",      emoji: "⚡", color: "bg-emerald-50 text-emerald-700 border-emerald-200" },
-  cartao_debito:  { label: "Débito",   emoji: "💳", color: "bg-blue-50 text-blue-700 border-blue-200" },
-  cartao_credito: { label: "Crédito",  emoji: "💳", color: "bg-violet-50 text-violet-700 border-violet-200" },
-  parcelado:      { label: "Parcelado",emoji: "📆", color: "bg-orange-50 text-orange-700 border-orange-200" },
-  dinheiro:       { label: "Dinheiro", emoji: "💵", color: "bg-yellow-50 text-yellow-700 border-yellow-200" },
+const PAYMENT_CONFIG: Record<PaymentMethod, { label: string; icon: React.ElementType; color: string }> = {
+  pix:            { label: "Pix",       icon: Zap,           color: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+  cartao_debito:  { label: "Débito",    icon: CreditCard,    color: "bg-blue-50 text-blue-700 border-blue-200" },
+  cartao_credito: { label: "Crédito",   icon: CreditCard,    color: "bg-violet-50 text-violet-700 border-violet-200" },
+  parcelado:      { label: "Parcelado", icon: CalendarRange, color: "bg-orange-50 text-orange-700 border-orange-200" },
+  dinheiro:       { label: "Dinheiro",  icon: Banknote,      color: "bg-yellow-50 text-yellow-700 border-yellow-200" },
 }
 
 function formatCurrency(cents: number) {
@@ -43,7 +43,7 @@ function PaymentBadge({ method }: { method: PaymentMethod }) {
   const cfg = PAYMENT_CONFIG[method]
   return (
     <span className={cn("inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium", cfg.color)}>
-      <span className="text-[11px] leading-none">{cfg.emoji}</span>
+      <cfg.icon size={11} strokeWidth={2} />
       {cfg.label}
     </span>
   )
@@ -78,7 +78,7 @@ function PaymentBreakdown({ rows }: { rows: Transaction[] }) {
             <div key={method} className="space-y-1">
               <div className="flex items-center justify-between text-sm">
                 <span className="flex items-center gap-1.5 font-medium">
-                  <span>{cfg.emoji}</span>
+                  <cfg.icon size={14} strokeWidth={1.8} />
                   {cfg.label}
                   <span className="text-xs text-muted-foreground font-normal">({count})</span>
                 </span>
