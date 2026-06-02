@@ -5,7 +5,7 @@ import { transactions, appointments, clientPackages, packages, supplies, procedu
 import { eq, and, gte, lte, sum, sql } from "drizzle-orm"
 import { requireSession } from "@/lib/session"
 import { can } from "@/lib/permissions"
-import { revalidatePath } from "next/cache"
+import { revalidatePath, revalidateTag } from "next/cache"
 import type { ActionResult } from "./auth"
 
 export async function completeAppointmentWithRevenueAction(data: {
@@ -99,6 +99,7 @@ export async function completeAppointmentWithRevenueAction(data: {
   revalidatePath("/agenda")
   revalidatePath("/dashboard")
   revalidatePath("/estoque")
+  if (appt?.clientId) revalidateTag(`client-${appt.clientId}`)
 
   return { success: true }
 }
