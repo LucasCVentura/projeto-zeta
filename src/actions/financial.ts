@@ -1,7 +1,7 @@
 "use server"
 
 import { db } from "@/db"
-import { transactions, appointments, clientPackages, packages, supplies, procedureSupplies, clients, organizations } from "@/db/schema"
+import { transactions, appointments, clientPackages, packages, supplies, procedureSupplies, clients, organizations, type PaymentMethod } from "@/db/schema"
 import { eq, and, gte, lte, sum, sql } from "drizzle-orm"
 import { requireSession } from "@/lib/session"
 import { can } from "@/lib/permissions"
@@ -13,6 +13,7 @@ export async function completeAppointmentWithRevenueAction(data: {
   amount: number // centavos
   description?: string
   date: string
+  paymentMethod?: PaymentMethod | null
 }): Promise<ActionResult> {
   const { userId, organizationId, role } = await requireSession()
 
@@ -50,6 +51,7 @@ export async function completeAppointmentWithRevenueAction(data: {
         amount: data.amount,
         description: data.description || null,
         date: data.date,
+        paymentMethod: data.paymentMethod ?? null,
       })
     }
 
@@ -136,6 +138,7 @@ export async function getTransactionsAction(year: number, month: number) {
       amount: transactions.amount,
       description: transactions.description,
       date: transactions.date,
+      paymentMethod: transactions.paymentMethod,
       appointmentId: transactions.appointmentId,
       txClientPackageId: transactions.clientPackageId,
       procedureId: appointments.procedureId,
@@ -215,7 +218,7 @@ export async function getTransactionsAction(year: number, month: number) {
     } else if (r.procedureId) {
       cost = supplyCostMap.get(r.procedureId) ?? 0
     }
-    return { id: r.id, amount: r.amount, description: r.description, date: r.date, appointmentId: r.appointmentId, cost }
+    return { id: r.id, amount: r.amount, description: r.description, date: r.date, appointmentId: r.appointmentId, paymentMethod: r.paymentMethod ?? null, cost }
   })
 
   const total = enriched.reduce((acc, r) => acc + r.amount, 0)
