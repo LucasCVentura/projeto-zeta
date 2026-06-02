@@ -14,6 +14,15 @@ import { completeAppointmentWithRevenueAction } from "@/actions/financial"
 import { createAppointmentAction } from "@/actions/schedule"
 import { suggestReturnDateAction } from "@/actions/ai"
 import { CheckCircle, CalendarClock, Sparkles, Loader2 } from "lucide-react"
+import type { PaymentMethod } from "@/db/schema"
+
+const PAYMENT_METHODS: { value: PaymentMethod; label: string; emoji: string }[] = [
+  { value: "pix",           label: "Pix",             emoji: "⚡" },
+  { value: "cartao_debito", label: "Débito",           emoji: "💳" },
+  { value: "cartao_credito",label: "Crédito",          emoji: "💳" },
+  { value: "parcelado",     label: "Parcelado",        emoji: "📆" },
+  { value: "dinheiro",      label: "Dinheiro",         emoji: "💵" },
+]
 
 type Props = {
   open: boolean
@@ -66,6 +75,7 @@ export function CompleteAppointmentModal({
   // step: "return" | "value"
   const [step, setStep] = useState<"return" | "value">("return")
   const [rawValue, setRawValue] = useState(() => maskPrice(procedurePrice))
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -82,6 +92,7 @@ export function CompleteAppointmentModal({
     if (open) {
       setStep(showReturnStep ? "return" : "value")
       setRawValue(maskPrice(isPackageSession ? 0 : (procedurePrice ?? 0)))
+      setPaymentMethod(null)
       setError(null)
       setReturnScheduled(false)
       setAiExplanation(null)
@@ -139,6 +150,7 @@ export function CompleteAppointmentModal({
       amount: cents,
       description: procedure,
       date,
+      paymentMethod,
     })
 
     setIsLoading(false)
@@ -263,6 +275,36 @@ export function CompleteAppointmentModal({
                 {amountCents === 0 && (
                   <p className="text-xs text-muted-foreground">Valor R$ 0,00 — o atendimento será registrado sem receita.</p>
                 )}
+              </div>
+            )}
+
+            {/* Forma de pagamento */}
+            {!isPackageSession && (
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">
+                  Forma de pagamento <span className="text-muted-foreground/60">(opcional)</span>
+                </Label>
+                <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+                  {PAYMENT_METHODS.map((method) => {
+                    const active = paymentMethod === method.value
+                    return (
+                      <button
+                        key={method.value}
+                        type="button"
+                        onClick={() => setPaymentMethod(active ? null : method.value)}
+                        className={[
+                          "flex flex-col items-center justify-center gap-1 rounded-xl border-2 px-2 py-3 text-center transition-all active:scale-95",
+                          active
+                            ? "border-primary bg-primary/10 text-primary shadow-sm"
+                            : "border-border bg-background text-muted-foreground hover:border-primary/40 hover:bg-accent",
+                        ].join(" ")}
+                      >
+                        <span className="text-lg leading-none">{method.emoji}</span>
+                        <span className="text-[11px] font-medium leading-tight">{method.label}</span>
+                      </button>
+                    )
+                  })}
+                </div>
               </div>
             )}
 

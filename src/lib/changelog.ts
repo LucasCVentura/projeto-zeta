@@ -6,6 +6,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.2.0",
+    date: "2026-06-02",
+    items: [
+      { type: "new",         text: "Forma de pagamento agora é registrada ao finalizar o atendimento (Pix, débito, crédito, parcelado ou dinheiro)" },
+      { type: "new",         text: "Financeiro: novo KPI com breakdown de receita por forma de pagamento e barra de proporção" },
+      { type: "improvement", text: "Cada lançamento no financeiro exibe um badge colorido com a forma de pagamento utilizada" },
+    ],
+  },
+  {
     version: "1.1.0",
     date: "2026-05-28",
     items: [

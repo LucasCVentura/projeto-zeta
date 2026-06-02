@@ -288,6 +288,14 @@ export const clientPhotos = pgTable("client_photos", {
 
 // ── transactions ─────────────────────────────────────────────────────────────
 
+export const paymentMethodEnum = pgEnum("payment_method", [
+  "pix",
+  "cartao_credito",
+  "cartao_debito",
+  "dinheiro",
+  "parcelado",
+])
+
 export const transactions = pgTable("transactions", {
   id: text("id")
     .primaryKey()
@@ -306,6 +314,7 @@ export const transactions = pgTable("transactions", {
   amount: integer("amount").notNull(), // centavos
   description: text("description"),
   date: date("date").notNull(),
+  paymentMethod: paymentMethodEnum("payment_method"),
 
   createdAt: timestamp("created_at").defaultNow().notNull(),
 })
@@ -554,6 +563,7 @@ export type NewClientAnamnesis = typeof clientAnamnesis.$inferInsert
 export type Procedure = typeof procedures.$inferSelect
 export type NewProcedure = typeof procedures.$inferInsert
 export type Transaction = typeof transactions.$inferSelect
+export type PaymentMethod = (typeof paymentMethodEnum.enumValues)[number]
 export type NewTransaction = typeof transactions.$inferInsert
 export type ClientPhoto = typeof clientPhotos.$inferSelect
 export type Package = typeof packages.$inferSelect
