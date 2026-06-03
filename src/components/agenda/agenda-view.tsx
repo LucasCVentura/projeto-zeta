@@ -15,6 +15,7 @@ import type { TimeSlot } from "@/lib/schedule"
 import type { AppointmentStatus } from "@/db/schema"
 
 type Procedure = { id: string; name: string; price: number | null }
+type Professional = { id: string; name: string }
 
 type Props = {
   initialDate: string
@@ -22,6 +23,8 @@ type Props = {
   hasConfig: boolean
   slotDuration: number
   procedures: Procedure[]
+  professionals?: Professional[]
+  canSelectProfessional?: boolean
 }
 
 const STATUS_OPTIONS: { value: AppointmentStatus; label: string }[] = [
@@ -61,7 +64,7 @@ function getWeekDays(dateStr: string) {
 
 const DAY_LABELS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"]
 
-export function AgendaView({ initialDate, slots: initialSlots, hasConfig, slotDuration, procedures }: Props) {
+export function AgendaView({ initialDate, slots: initialSlots, hasConfig, slotDuration, procedures, professionals = [], canSelectProfessional = false }: Props) {
   const router = useRouter()
   const [date, setDate] = useState(initialDate)
   const [slots, setSlots] = useState(initialSlots)
@@ -270,6 +273,7 @@ export function AgendaView({ initialDate, slots: initialSlots, hasConfig, slotDu
         }}
         date={date}
         time={appointmentDrawer.time}
+        professionals={canSelectProfessional ? professionals : []}
       />
 
       <BlockDrawer

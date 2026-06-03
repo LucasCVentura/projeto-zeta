@@ -46,17 +46,23 @@ export function ProceduresList({ initialProcedures }: { initialProcedures: Proce
     resolver: zodResolver(schema),
   })
 
+  const [formCommissionPct, setFormCommissionPct] = useState("")
+
   async function onCreate(data: FormData) {
     setIsLoading(true)
     const price = data.price ? parseFloat(data.price.replace(/\./g, "").replace(",", ".")) : 0
     const returnIntervalDays = formHasReturn && formReturnDays ? parseInt(formReturnDays) : null
-    const result = await createProcedureAction({ name: data.name, price, hasReturn: formHasReturn, returnIntervalDays })
+    const commissionPct = formCommissionPct ? Math.min(100, Math.max(0, parseInt(formCommissionPct))) : 0
+    const result = await createProcedureAction({ name: data.name, price, hasReturn: formHasReturn, returnIntervalDays, commissionPct })
     if (result.success) {
       const updated = await import("@/actions/procedures").then((m) => m.getProceduresAction())
       setItems(updated)
       reset()
       setFormHasReturn(false)
       setFormReturnDays("")
+      setFormHasReturn(false)
+      setFormReturnDays("")
+      setFormCommissionPct("")
       setShowForm(false)
     }
     setIsLoading(false)
@@ -89,7 +95,8 @@ export function ProceduresList({ initialProcedures }: { initialProcedures: Proce
                 setIsLoading(true)
                 const price = data.price ? parseFloat(data.price.replace(/\./g, "").replace(",", ".")) : 0
                 const returnIntervalDays = data.hasReturn && data.returnIntervalDays ? parseInt(data.returnIntervalDays) : null
-                await updateProcedureAction(proc.id, { name: data.name, price, hasReturn: data.hasReturn, returnIntervalDays })
+                const commissionPct = data.commissionPct ? Math.min(100, Math.max(0, parseInt(data.commissionPct))) : 0
+                await updateProcedureAction(proc.id, { name: data.name, price, hasReturn: data.hasReturn, returnIntervalDays, commissionPct })
                 const updated = await import("@/actions/procedures").then((m) => m.getProceduresAction())
                 setItems(updated)
                 setEditingId(null)
@@ -128,6 +135,7 @@ export function ProceduresList({ initialProcedures }: { initialProcedures: Proce
             </div>
           </div>
           <ReturnFields hasReturn={formHasReturn} returnDays={formReturnDays} onHasReturnChange={setFormHasReturn} onDaysChange={setFormReturnDays} />
+          <CommissionField value={formCommissionPct} onChange={setFormCommissionPct} />
           <div className="flex gap-2">
             <Button type="button" variant="outline" size="sm" onClick={() => { setShowForm(false); reset() }}>
               Cancelar
@@ -160,7 +168,7 @@ function ProcedureRow({
   isEditing: boolean
   onEdit: () => void
   onCancelEdit: () => void
-  onSave: (data: { name: string; price: string; hasReturn: boolean; returnIntervalDays?: string }) => void
+  onSave: (data: { name: string; price: string; hasReturn: boolean; returnIntervalDays?: string; commissionPct: string }) => void
   onDelete: () => void
   isLoading: boolean
 }) {
@@ -172,11 +180,12 @@ function ProcedureRow({
   })
   const [hasReturn, setHasReturn] = useState(procedure.hasReturn)
   const [returnDays, setReturnDays] = useState(procedure.returnIntervalDays?.toString() ?? "")
+  const [commissionPct, setCommissionPct] = useState(procedure.commissionPct > 0 ? procedure.commissionPct.toString() : "")
 
   if (isEditing) {
     return (
       <form
-        onSubmit={handleSubmit((data) => onSave({ ...data, hasReturn, returnIntervalDays: returnDays }))}
+        onSubmit={handleSubmit((data) => onSave({ ...data, hasReturn, returnIntervalDays: returnDays, commissionPct }))}
         className="surface grid grid-cols-1 sm:grid-cols-2 gap-3"
       >
         <Input placeholder="Nome" {...register("name")} />
@@ -191,6 +200,9 @@ function ProcedureRow({
         </div>
         <div className="col-span-2">
           <ReturnFields hasReturn={hasReturn} returnDays={returnDays} onHasReturnChange={setHasReturn} onDaysChange={setReturnDays} />
+        </div>
+        <div className="col-span-2">
+          <CommissionField value={commissionPct} onChange={setCommissionPct} />
         </div>
         <ProcedureSuppliesPanel procedureId={procedure.id} />
 
@@ -210,11 +222,16 @@ function ProcedureRow({
     <div className="surface flex items-center justify-between gap-4">
       <div className="min-w-0">
         <p className="font-medium text-sm truncate">{procedure.name}</p>
-        {procedure.hasReturn && (
-          <p className="text-xs text-primary/70">
-            Retorno{procedure.returnIntervalDays ? ` em ${procedure.returnIntervalDays} dias` : ""}
-          </p>
-        )}
+        <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
+          {procedure.hasReturn && (
+            <p className="text-xs text-primary/70">
+              Retorno{procedure.returnIntervalDays ? ` em ${procedure.returnIntervalDays} dias` : ""}
+            </p>
+          )}
+          {procedure.commissionPct > 0 && (
+            <p className="text-xs text-emerald-600 font-medium">{procedure.commissionPct}% comissão</p>
+          )}
+        </div>
       </div>
       <div className="flex items-center gap-3 shrink-0">
         <span className="text-sm font-semibold text-primary">
@@ -273,6 +290,38 @@ function ReturnFields({ hasReturn, returnDays, onHasReturnChange, onDaysChange }
           <span className="text-xs text-muted-foreground">dias</span>
         </div>
       )}
+    </div>
+  )
+}
+
+// ── Campo de comissão ─────────────────────────────────────────────────────────
+
+function CommissionField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  return (
+    <div className="space-y-1.5">
+      <Label className="text-sm">
+        Comissão do profissional <span className="text-muted-foreground font-normal">— opcional</span>
+      </Label>
+      <div className="flex items-center gap-2">
+        <div className="relative w-28">
+          <Input
+            type="number"
+            min={0}
+            max={100}
+            inputMode="numeric"
+            placeholder="0"
+            className="pr-8"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+          />
+          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">%</span>
+        </div>
+        {value && parseInt(value) > 0 && (
+          <span className="text-xs text-muted-foreground">
+            A cada R$ 100,00 cobrados → R$ {parseInt(value)},00 de comissão
+          </span>
+        )}
+      </div>
     </div>
   )
 }

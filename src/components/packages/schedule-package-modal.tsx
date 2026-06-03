@@ -259,7 +259,7 @@ export function SchedulePackageModal({
           <div className="flex gap-3 pt-1">
             <Button type="button" variant="outline" className="flex-1" onClick={onClose}>Cancelar</Button>
             <Button type="submit" className="flex-1" disabled={loading || success}>
-              {success ? "Agendado!" : loading ? "Agendando..." : `Agendar ${count} sessão${count !== 1 ? "ões" : ""}`}
+              {success ? "Agendado!" : loading ? "Agendando..." : `Agendar ${count} ${count === 1 ? "sessão" : "sessões"}`}
             </Button>
           </div>
         </form>

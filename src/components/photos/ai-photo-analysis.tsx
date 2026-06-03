@@ -1,9 +1,10 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { analyzePhotoComparisonAction, suggestProceduresFromPhotosAction, suggestProceduresWithAnnotationsAction } from "@/actions/ai"
 import { Sparkles, Loader2, X, ScanSearch, Crosshair } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { mediaUrl } from "@/lib/media-url"
 
 type Props = {
   selectedIds: string[]
@@ -12,19 +13,120 @@ type Props = {
 
 type Mode = "compare" | "suggest" | "annotate"
 
+type Area = { label: string; x: number; y: number; procedure: string }
+
+const COLORS = ["#9B7DFF", "#FF7DB8", "#7DCCFF", "#7DFFC4", "#FFD97D"]
+
+// ── Canvas de anotações (client-side, sem dependência de fonte do servidor) ───
+
+function AnnotatedCanvas({ imageUrl, areas }: { imageUrl: string; areas: Area[] }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const [size, setSize] = useState<{ w: number; h: number } | null>(null)
+
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext("2d")
+    if (!ctx) return
+
+    const img = new Image()
+    img.crossOrigin = "anonymous"
+    img.onload = () => {
+      canvas.width = img.naturalWidth
+      canvas.height = img.naturalHeight
+      setSize({ w: img.naturalWidth, h: img.naturalHeight })
+      ctx.drawImage(img, 0, 0)
+
+      const W = img.naturalWidth
+      const H = img.naturalHeight
+      const r = Math.round(Math.min(W, H) * 0.055)
+      const fontSize = Math.round(Math.min(W, H) * 0.018)
+      ctx.font = `700 ${fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`
+
+      areas.forEach((area, i) => {
+        const cx = Math.round((area.x / 100) * W)
+        const cy = Math.round((area.y / 100) * H)
+        const color = COLORS[i % COLORS.length]
+
+        // Círculo tracejado
+        ctx.beginPath()
+        ctx.arc(cx, cy, r, 0, Math.PI * 2)
+        ctx.strokeStyle = color
+        ctx.lineWidth = Math.max(2, Math.round(Math.min(W, H) * 0.004))
+        ctx.setLineDash([8, 4])
+        ctx.stroke()
+        ctx.setLineDash([])
+
+        // Ponto central
+        ctx.beginPath()
+        ctx.arc(cx, cy, 4, 0, Math.PI * 2)
+        ctx.fillStyle = color
+        ctx.fill()
+
+        // Linha + label
+        const labelX = cx + r + 10
+        const labelY = cy
+        const textW = ctx.measureText(area.label).width
+        const padH = fontSize * 0.55
+        const padV = fontSize * 0.4
+        const boxW = textW + padH * 2
+        const boxH = fontSize + padV * 2
+
+        // Linha de conexão
+        ctx.beginPath()
+        ctx.moveTo(cx + r, cy)
+        ctx.lineTo(labelX, cy)
+        ctx.strokeStyle = color
+        ctx.lineWidth = Math.max(1.5, Math.round(Math.min(W, H) * 0.002))
+        ctx.stroke()
+
+        // Fundo do label
+        ctx.fillStyle = "rgba(8, 6, 15, 0.85)"
+        ctx.beginPath()
+        const bx = labelX, by = labelY - boxH / 2, rr = 6
+        ctx.moveTo(bx + rr, by)
+        ctx.lineTo(bx + boxW - rr, by)
+        ctx.arcTo(bx + boxW, by, bx + boxW, by + rr, rr)
+        ctx.lineTo(bx + boxW, by + boxH - rr)
+        ctx.arcTo(bx + boxW, by + boxH, bx + boxW - rr, by + boxH, rr)
+        ctx.lineTo(bx + rr, by + boxH)
+        ctx.arcTo(bx, by + boxH, bx, by + boxH - rr, rr)
+        ctx.lineTo(bx, by + rr)
+        ctx.arcTo(bx, by, bx + rr, by, rr)
+        ctx.closePath()
+        ctx.fill()
+
+        // Texto
+        ctx.fillStyle = color
+        ctx.textBaseline = "middle"
+        ctx.fillText(area.label, labelX + padH, labelY)
+      })
+    }
+    img.src = mediaUrl(imageUrl)
+  }, [imageUrl, areas])
+
+  return (
+    <canvas
+      ref={canvasRef}
+      className="w-full rounded-xl border border-border"
+      style={{ aspectRatio: size ? `${size.w}/${size.h}` : "auto" }}
+    />
+  )
+}
+
 // ── Modal de resultado ────────────────────────────────────────────────────────
 
-function ResultModal({ mode, analysis, annotatedImage, error, onClose }: {
+function ResultModal({ mode, analysis, imageUrl, areas, error, onClose }: {
   mode: Mode
   analysis: string | null
-  annotatedImage?: string | null
+  imageUrl?: string | null
+  areas?: Area[] | null
   error: string | null
   onClose: () => void
 }) {
   const [visible, setVisible] = useState(false)
   const [fullscreen, setFullscreen] = useState(false)
 
-  // Entra com fade+slide após montar
   useEffect(() => {
     const t = requestAnimationFrame(() => setVisible(true))
     return () => cancelAnimationFrame(t)
@@ -35,10 +137,12 @@ function ResultModal({ mode, analysis, annotatedImage, error, onClose }: {
     setTimeout(onClose, 250)
   }
 
-  if (fullscreen && annotatedImage) {
+  if (fullscreen && imageUrl && areas) {
     return (
       <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/95 p-4" onClick={() => setFullscreen(false)}>
-        <img src={annotatedImage} alt="Análise visual ampliada" className="max-w-full max-h-full object-contain rounded-xl" />
+        <div className="max-w-3xl w-full">
+          <AnnotatedCanvas imageUrl={imageUrl} areas={areas} />
+        </div>
         <button
           className="absolute top-4 right-4 flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20"
           onClick={() => setFullscreen(false)}
@@ -54,13 +158,11 @@ function ResultModal({ mode, analysis, annotatedImage, error, onClose }: {
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
       onClick={(e) => e.target === e.currentTarget && handleClose()}
     >
-      {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/50 transition-opacity duration-250"
         style={{ opacity: visible ? 1 : 0 }}
       />
 
-      {/* Card */}
       <div
         className="relative w-full max-w-md rounded-2xl bg-card border border-border shadow-xl overflow-hidden transition-all duration-250 flex flex-col max-h-[85vh]"
         style={{
@@ -68,7 +170,6 @@ function ResultModal({ mode, analysis, annotatedImage, error, onClose }: {
           transform: visible ? "translateY(0) scale(1)" : "translateY(24px) scale(0.97)",
         }}
       >
-        {/* Header com gradiente */}
         <div className="flex items-center justify-between px-5 py-4 bg-linear-to-r from-primary/10 to-transparent border-b border-border">
           <div className="flex items-center gap-2">
             {mode === "compare" ? <Sparkles size={16} className="text-primary" /> :
@@ -88,15 +189,14 @@ function ResultModal({ mode, analysis, annotatedImage, error, onClose }: {
           </button>
         </div>
 
-        {/* Corpo */}
         <div className="px-5 py-4 flex-1 overflow-y-auto space-y-4">
           {error ? (
             <p className="text-sm text-destructive">{error}</p>
           ) : (
             <>
-              {annotatedImage && (
+              {imageUrl && areas?.length && (
                 <div className="relative group cursor-zoom-in" onClick={() => setFullscreen(true)}>
-                  <img src={annotatedImage} alt="Análise visual" className="w-full rounded-xl border border-border" />
+                  <AnnotatedCanvas imageUrl={imageUrl} areas={areas} />
                   <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/0 group-hover:bg-black/30 transition-colors">
                     <span className="opacity-0 group-hover:opacity-100 text-white text-xs font-semibold bg-black/60 px-3 py-1.5 rounded-full transition-opacity">Toque para ampliar</span>
                   </div>
@@ -107,7 +207,6 @@ function ResultModal({ mode, analysis, annotatedImage, error, onClose }: {
           )}
         </div>
 
-        {/* Footer */}
         <div className="flex justify-end px-5 py-3 border-t border-border bg-muted/30">
           <Button size="sm" onClick={handleClose}>Fechar</Button>
         </div>
@@ -120,7 +219,12 @@ function ResultModal({ mode, analysis, annotatedImage, error, onClose }: {
 
 export function AiPhotoAnalysis({ selectedIds }: Props) {
   const [activeMode, setActiveMode] = useState<Mode | null>(null)
-  const [result, setResult] = useState<{ analysis: string | null; annotatedImage?: string | null; error: string | null } | null>(null)
+  const [result, setResult] = useState<{
+    analysis: string | null
+    imageUrl?: string | null
+    areas?: Area[] | null
+    error: string | null
+  } | null>(null)
   const [isLoading, setIsLoading] = useState<Mode | null>(null)
 
   const count = selectedIds.length
@@ -132,23 +236,30 @@ export function AiPhotoAnalysis({ selectedIds }: Props) {
     setIsLoading(mode)
     setResult(null)
 
-    let res: { success: boolean; analysis?: string; annotatedImage?: string; error?: string }
-
     if (mode === "compare") {
-      res = await analyzePhotoComparisonAction(selectedIds)
+      const res = await analyzePhotoComparisonAction(selectedIds)
+      setResult({
+        analysis: res.success ? (res.analysis ?? null) : null,
+        error: res.success ? null : (res.error ?? "Erro."),
+      })
     } else if (mode === "annotate") {
-      res = await suggestProceduresWithAnnotationsAction(selectedIds[0])
+      const res = await suggestProceduresWithAnnotationsAction(selectedIds[0])
+      setResult({
+        analysis: res.success ? (res.analysis ?? null) : null,
+        imageUrl: res.success ? (res.imageUrl ?? null) : null,
+        areas: res.success ? (res.areas ?? null) : null,
+        error: res.success ? null : (res.error ?? "Erro."),
+      })
     } else {
-      res = await suggestProceduresFromPhotosAction(selectedIds)
+      const res = await suggestProceduresFromPhotosAction(selectedIds)
+      setResult({
+        analysis: res.success ? (res.analysis ?? null) : null,
+        error: res.success ? null : (res.error ?? "Erro."),
+      })
     }
 
     setIsLoading(null)
     setActiveMode(mode)
-    setResult({
-      analysis: res.success ? (res.analysis ?? null) : null,
-      annotatedImage: res.success ? (res.annotatedImage ?? null) : null,
-      error: res.success ? null : (res.error ?? "Erro."),
-    })
   }
 
   return (
@@ -157,7 +268,8 @@ export function AiPhotoAnalysis({ selectedIds }: Props) {
         <ResultModal
           mode={activeMode}
           analysis={result.analysis}
-          annotatedImage={result.annotatedImage}
+          imageUrl={result.imageUrl}
+          areas={result.areas}
           error={result.error}
           onClose={() => { setResult(null); setActiveMode(null) }}
         />

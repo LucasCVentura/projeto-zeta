@@ -28,6 +28,7 @@ export async function createProcedureAction(data: {
   price: number
   hasReturn?: boolean
   returnIntervalDays?: number | null
+  commissionPct?: number
 }): Promise<ActionResult> {
   const { organizationId, role } = await requireSession()
 
@@ -41,6 +42,7 @@ export async function createProcedureAction(data: {
     price: Math.round(data.price * 100),
     hasReturn: data.hasReturn ?? false,
     returnIntervalDays: data.hasReturn ? (data.returnIntervalDays ?? null) : null,
+    commissionPct: data.commissionPct ?? 0,
   })
 
   revalidateTag(`procedures-${organizationId}`, {})
@@ -50,7 +52,7 @@ export async function createProcedureAction(data: {
 
 export async function updateProcedureAction(
   id: string,
-  data: { name?: string; price?: number; hasReturn?: boolean; returnIntervalDays?: number | null }
+  data: { name?: string; price?: number; hasReturn?: boolean; returnIntervalDays?: number | null; commissionPct?: number }
 ): Promise<ActionResult> {
   const { organizationId, role } = await requireSession()
 
@@ -65,6 +67,7 @@ export async function updateProcedureAction(
       ...(data.price !== undefined ? { price: Math.round(data.price * 100) } : {}),
       ...(data.hasReturn !== undefined ? { hasReturn: data.hasReturn } : {}),
       returnIntervalDays: data.hasReturn ? (data.returnIntervalDays ?? null) : null,
+      ...(data.commissionPct !== undefined ? { commissionPct: data.commissionPct } : {}),
       updatedAt: new Date(),
     })
     .where(

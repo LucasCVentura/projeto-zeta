@@ -1,4 +1,4 @@
-import { getDaySlots, getProceduresForBookingAction } from "@/actions/schedule"
+import { getDaySlots, getProceduresForBookingAction, getOrgProfessionalsAction } from "@/actions/schedule"
 import { AgendaView } from "@/components/agenda/agenda-view"
 import { requireSession } from "@/lib/session"
 import { db } from "@/db"
@@ -14,7 +14,7 @@ export default async function AgendaPage({ searchParams }: Props) {
   const today = todayBRT()
   const date = params.data ?? today
 
-  const { userId, organizationId } = await requireSession()
+  const { userId, organizationId, role } = await requireSession()
 
   const [config] = await db
     .select()
@@ -27,9 +27,12 @@ export default async function AgendaPage({ searchParams }: Props) {
     )
     .limit(1)
 
-  const [{ slots, hasConfig }, procedures] = await Promise.all([
+  const canSelectProfessional = role === "owner" || role === "receptionist"
+
+  const [{ slots, hasConfig }, procedures, professionals] = await Promise.all([
     getDaySlots(date),
     getProceduresForBookingAction(),
+    canSelectProfessional ? getOrgProfessionalsAction() : Promise.resolve([]),
   ])
 
   return (
@@ -55,6 +58,8 @@ export default async function AgendaPage({ searchParams }: Props) {
         hasConfig={hasConfig}
         slotDuration={config?.slotDuration ?? 60}
         procedures={procedures}
+        professionals={professionals}
+        canSelectProfessional={canSelectProfessional}
       />
     </div>
   )

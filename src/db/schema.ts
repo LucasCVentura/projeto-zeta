@@ -255,6 +255,7 @@ export const procedures = pgTable("procedures", {
 
   name: text("name").notNull(),
   price: integer("price").notNull().default(0), // centavos
+  commissionPct: integer("commission_pct").notNull().default(0), // 0–100
   hasReturn: boolean("has_return").notNull().default(false),
   returnIntervalDays: integer("return_interval_days"),
   active: boolean("active").notNull().default(true),
@@ -311,7 +312,8 @@ export const transactions = pgTable("transactions", {
   appointmentId: text("appointment_id").references(() => appointments.id, { onDelete: "set null" }),
   clientPackageId: text("client_package_id"), // sem FK para evitar circularidade; preenchido na venda de pacote
 
-  amount: integer("amount").notNull(), // centavos
+  amount: integer("amount").notNull(), // centavos (receita bruta; 0 para sessões de pacote)
+  commissionAmount: integer("commission_amount"), // centavos; null = sem comissão configurada
   description: text("description"),
   date: date("date").notNull(),
   paymentMethod: paymentMethodEnum("payment_method"),
