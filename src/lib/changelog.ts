@@ -6,6 +6,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.4.0",
+    date: "2026-06-03",
+    items: [
+      { type: "new",         text: "Importação de clientes via CSV ou Excel — suba sua lista de qualquer sistema com mapeamento automático de colunas" },
+      { type: "new",         text: "Plano Vitalício: acesso permanente sem assinatura ativa" },
+      { type: "improvement", text: "Campo de contato unificado em WhatsApp / Telefone no cadastro de clientes" },
+      { type: "fix",         text: "Lembretes e mensagens pós-atendimento agora usam o número de WhatsApp do cliente corretamente" },
+      { type: "fix",         text: "Análise visual da pele: labels das anotações exibiam caracteres japoneses em alguns dispositivos" },
+    ],
+  },
+  {
     version: "1.3.0",
     date: "2026-06-03",
     items: [
