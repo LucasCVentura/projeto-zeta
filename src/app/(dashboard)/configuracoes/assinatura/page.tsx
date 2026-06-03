@@ -7,7 +7,7 @@ import { stripe } from "@/lib/stripe"
 import { BillingPortalButton } from "@/components/subscription/billing-portal-button"
 import { CancelSubscriptionButton } from "@/components/subscription/cancel-subscription-button"
 import { BoletoDisplay } from "@/components/subscription/boleto-display"
-import { CheckCircle2, Clock, XCircle, CreditCard, ArrowLeft } from "lucide-react"
+import { CheckCircle2, Clock, XCircle, CreditCard, ArrowLeft, Infinity } from "lucide-react"
 import Link from "next/link"
 
 function fmt(date: number | null | undefined) {
@@ -98,10 +98,49 @@ export default async function AssinaturaPage() {
     } catch { /* ignora */ }
   }
 
+  const isLifetime = org.subscriptionStatus === "lifetime"
   const isActive = org.subscriptionStatus === "active"
   const isTrialing = org.subscriptionStatus === "trialing"
   const isIncompleteBoleto = org.subscriptionStatus === "incomplete"
   const isCanceled = org.subscriptionStatus === "canceled" || org.subscriptionStatus === "incomplete_expired"
+
+  if (isLifetime) {
+    return (
+      <div className="container-page max-w-xl py-6 space-y-6">
+        <div className="flex items-center gap-3">
+          <Link href="/configuracoes" className="text-muted-foreground hover:text-foreground transition-colors">
+            <ArrowLeft size={18} />
+          </Link>
+          <div>
+            <h2 className="font-heading text-xl font-semibold">Assinatura</h2>
+            <p className="text-sm text-muted-foreground">Detalhes do seu plano atual</p>
+          </div>
+        </div>
+        <div className="surface space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <Infinity size={18} className="text-primary" />
+              <span className="font-medium text-sm">Plano Vitalício</span>
+            </div>
+            <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">Vitalício</span>
+          </div>
+          <div className="space-y-3 pt-1">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Plano</span>
+              <span className="font-medium">Kira Pro Vitalício</span>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Acesso</span>
+              <span className="font-medium">Permanente</span>
+            </div>
+          </div>
+          <div className="rounded-lg bg-primary/5 border border-primary/20 px-4 py-3 text-sm text-primary">
+            Seu acesso ao Kira é permanente e não requer assinatura ativa.
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="container-page max-w-xl py-6 space-y-6">
