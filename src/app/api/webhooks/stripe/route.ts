@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { stripe } from "@/lib/stripe"
 import { db } from "@/db"
 import { organizations, users, organizationMembers } from "@/db/schema"
-import { eq } from "drizzle-orm"
+import { eq, and, sql } from "drizzle-orm"
 import type Stripe from "stripe"
 
 function fmtBRL(amount: number) {
@@ -104,7 +104,7 @@ export async function POST(req: NextRequest) {
       const status = sub.status === "active" || sub.status === "trialing" ? "active" : sub.status
       await db.update(organizations)
         .set({ subscriptionStatus: status, stripeSubscriptionId: sub.id })
-        .where(eq(organizations.id, organizationId))
+        .where(and(eq(organizations.id, organizationId), sql`subscription_status != 'lifetime'`))
 
       if (sub.status === "past_due") {
         try {
@@ -125,7 +125,7 @@ export async function POST(req: NextRequest) {
 
       await db.update(organizations)
         .set({ subscriptionStatus: "canceled" })
-        .where(eq(organizations.id, organizationId))
+        .where(and(eq(organizations.id, organizationId), sql`subscription_status != 'lifetime'`))
       break
     }
 
