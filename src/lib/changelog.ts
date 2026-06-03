@@ -6,6 +6,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.3.0",
+    date: "2026-06-03",
+    items: [
+      { type: "new",         text: "Sistema de comissões: defina a % de comissão de cada procedimento e acompanhe os ganhos por profissional" },
+      { type: "new",         text: "Profissionais agora têm acesso ao financeiro com visão exclusiva das próprias comissões" },
+      { type: "new",         text: "Owner e recepcionista podem selecionar o profissional responsável ao criar um agendamento" },
+      { type: "improvement", text: "Financeiro do dono exibe total de comissões a pagar e breakdown por profissional" },
+      { type: "fix",         text: "Análise visual da pele: labels das anotações exibiam caracteres japoneses em alguns dispositivos" },
+    ],
+  },
+  {
     version: "1.2.0",
     date: "2026-06-02",
     items: [
