@@ -38,7 +38,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
       .limit(1)
 
     if (org) {
-      const isActive = org.subscriptionStatus === "active"
+      const isLifetime = org.subscriptionStatus === "lifetime"
+      const isActive = org.subscriptionStatus === "active" || isLifetime
       const trialEnd = org.trialEndsAt ? new Date(org.trialEndsAt) : null
       const isTrialing = org.subscriptionStatus === "trialing" && trialEnd != null && trialEnd > new Date()
       const isIncomplete = org.subscriptionStatus === "incomplete"

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { extendTrialAction, cancelOrgAction, adminChatAction, markInboundEmailReadAction, saveWhatsAppTemplateSettingAction } from "@/actions/admin"
+import { extendTrialAction, cancelOrgAction, setLifetimeAction, adminChatAction, markInboundEmailReadAction, saveWhatsAppTemplateSettingAction } from "@/actions/admin"
 import { Send, Loader2, Trophy, TrendingUp, Users, DollarSign, ChevronDown, ChevronUp, Sprout, Rocket, Gem, Coins, Star, Activity, MessageSquare, Mail, MailOpen, Wallet, CalendarDays } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -193,6 +193,13 @@ export function AdminDashboard({
     setOrgs(prev => prev.map(o => o.id === orgId ? { ...o, subscriptionStatus: "canceled" } : o))
     setActionLoading(null)
     setPendingCancelOrg(null)
+  }
+
+  async function handleSetLifetime(orgId: string) {
+    setActionLoading(orgId)
+    await setLifetimeAction(orgId)
+    setOrgs(prev => prev.map(o => o.id === orgId ? { ...o, subscriptionStatus: "lifetime" } : o))
+    setActionLoading(null)
   }
 
   async function handleExpandEmail(id: string) {
@@ -521,7 +528,14 @@ export function AdminDashboard({
                             onClick={() => handleExtendTrial(org.id, 30)} className="text-xs h-7">
                             +30 dias trial
                           </Button>
-                          {org.subscriptionStatus !== "canceled" && (
+                          {org.subscriptionStatus !== "lifetime" && (
+                            <Button size="sm" variant="outline" disabled={actionLoading === org.id}
+                              onClick={() => handleSetLifetime(org.id)}
+                              className="text-xs h-7 text-amber-600 hover:text-amber-700 border-amber-300 hover:border-amber-500">
+                              ♾ Vitalício
+                            </Button>
+                          )}
+                          {org.subscriptionStatus !== "canceled" && org.subscriptionStatus !== "lifetime" && (
                             <Button size="sm" variant="outline" disabled={actionLoading === org.id}
                               onClick={() => setPendingCancelOrg({ id: org.id, name: org.name })}
                               className="text-xs h-7 text-destructive hover:text-destructive border-destructive/30 hover:border-destructive/60">

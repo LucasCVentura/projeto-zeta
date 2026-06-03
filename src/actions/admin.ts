@@ -142,6 +142,17 @@ export async function cancelOrgAction(orgId: string) {
   revalidatePath("/admin")
 }
 
+export async function setLifetimeAction(orgId: string) {
+  await requireAdmin()
+
+  await db
+    .update(organizations)
+    .set({ subscriptionStatus: "lifetime" })
+    .where(eq(organizations.id, orgId))
+
+  revalidatePath("/admin")
+}
+
 export async function getInboundEmailsAction() {
   await requireAdmin()
   const { inboundEmails } = await import("@/db/schema")
