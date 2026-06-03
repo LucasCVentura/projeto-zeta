@@ -23,6 +23,7 @@ export async function GET(req: NextRequest) {
       organizationId: appointments.organizationId,
       clientName: clients.name,
       clientPhone: clients.phone,
+      clientWhatsapp: clients.whatsapp,
       orgName: organizations.name,
       orgAddress: organizations.address,
     })
@@ -33,7 +34,7 @@ export async function GET(req: NextRequest) {
       and(
         eq(appointments.date, targetDate),
         or(eq(appointments.status, "waiting"), eq(appointments.status, "confirmed")),
-        isNotNull(clients.phone),
+        or(isNotNull(clients.whatsapp), isNotNull(clients.phone)),
         isNull(appointments.reminderSentAt)
       )
     )
@@ -42,10 +43,11 @@ export async function GET(req: NextRequest) {
 
   if (process.env.WHATSAPP_ENABLED === "true") {
     for (const row of rows) {
-      if (!row.clientPhone) continue
+      const clientPhone = row.clientWhatsapp ?? row.clientPhone
+      if (!clientPhone) continue
       try {
         await sendReminderWithConfirmation({
-          clientPhone: row.clientPhone,
+          clientPhone,
           clientName: row.clientName,
           date: targetDate,
           startTime: row.startTime,
