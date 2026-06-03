@@ -23,8 +23,7 @@ export default async function EditarClientePage({ params }: Props) {
       </div>
       <EditClientForm clientId={id} defaultValues={{
         name: client.name,
-        phone: client.phone ?? "",
-        whatsapp: client.whatsapp ?? "",
+        whatsapp: client.whatsapp ?? client.phone ?? "",
         email: client.email ?? "",
         cpf: client.cpf ?? "",
         birthDate: client.birthDate ?? "",

@@ -12,7 +12,6 @@ import { Label } from "@/components/ui/label"
 
 const schema = z.object({
   name: z.string().min(2, "Nome obrigatório"),
-  phone: z.string().optional(),
   whatsapp: z.string().optional(),
   email: z.string().email("E-mail inválido").optional().or(z.literal("")),
   cpf: z.string().optional(),
@@ -40,7 +39,7 @@ export function EditClientForm({ clientId, defaultValues }: Props) {
   async function onSubmit(data: FormData) {
     setIsLoading(true)
     setError(null)
-    const result = await updateClientAction(clientId, data)
+    const result = await updateClientAction(clientId, { ...data, phone: data.whatsapp })
     setIsLoading(false)
     if (!result.success) { setError(result.error); return }
     router.push(`/clientes/${clientId}`)
@@ -54,15 +53,9 @@ export function EditClientForm({ clientId, defaultValues }: Props) {
         {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="phone">Telefone</Label>
-          <Input id="phone" {...register("phone")} placeholder="(11) 91234-5678" />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="whatsapp">WhatsApp</Label>
-          <Input id="whatsapp" {...register("whatsapp")} placeholder="(11) 91234-5678" />
-        </div>
+      <div className="space-y-2">
+        <Label htmlFor="whatsapp">WhatsApp / Telefone</Label>
+        <Input id="whatsapp" {...register("whatsapp")} placeholder="(11) 91234-5678" />
       </div>
 
       <div className="space-y-2">
