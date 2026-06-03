@@ -95,7 +95,7 @@ export async function getClientAction(clientId: string) {
           })
           .from(appointments)
           .where(and(eq(appointments.clientId, cId), eq(appointments.organizationId, orgId)))
-          .orderBy(asc(appointments.date), asc(appointments.startTime)),
+          .orderBy(desc(appointments.date), desc(appointments.startTime)),
       ])
 
       return { client, anamnesis: anamnesis[0] ?? null, history }
