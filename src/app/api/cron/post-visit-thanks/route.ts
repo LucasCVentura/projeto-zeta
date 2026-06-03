@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { db } from "@/db"
 import { appointments, clients, organizations } from "@/db/schema"
-import { eq, and, isNotNull } from "drizzle-orm"
+import { eq, and, isNotNull, or } from "drizzle-orm"
 import { sendPostVisitThanks } from "@/actions/whatsapp"
 
 export async function GET(req: NextRequest) {
@@ -18,6 +18,7 @@ export async function GET(req: NextRequest) {
     .select({
       clientName: clients.name,
       clientPhone: clients.phone,
+      clientWhatsapp: clients.whatsapp,
       orgName: organizations.name,
       googleReviewUrl: organizations.googleReviewUrl,
     })
@@ -28,7 +29,7 @@ export async function GET(req: NextRequest) {
       and(
         eq(appointments.date, yesterdayStr),
         eq(appointments.status, "completed"),
-        isNotNull(clients.phone)
+        or(isNotNull(clients.whatsapp), isNotNull(clients.phone))
       )
     )
 
@@ -36,10 +37,11 @@ export async function GET(req: NextRequest) {
 
   if (process.env.WHATSAPP_ENABLED === "true") {
     for (const row of rows) {
-      if (!row.clientPhone || !row.googleReviewUrl) continue
+      const clientPhone = row.clientWhatsapp ?? row.clientPhone
+      if (!clientPhone || !row.googleReviewUrl) continue
       try {
         await sendPostVisitThanks({
-          clientPhone: row.clientPhone,
+          clientPhone,
           clientName: row.clientName,
           orgName: row.orgName,
           googleReviewUrl: row.googleReviewUrl,
