@@ -7,6 +7,8 @@ import {
   scheduleBlocks,
   clients,
   procedures,
+  organizationMembers,
+  users,
 } from "@/db/schema"
 import { eq, and, sql, inArray } from "drizzle-orm"
 import { requireSession } from "@/lib/session"
@@ -109,6 +111,7 @@ export async function createAppointmentAction(data: {
   procedure?: string
   clientPackageId?: string
   notes?: string
+  professionalId?: string  // owner/receptionist podem especificar outro profissional
   recurrence?: { frequency: "weekly" | "biweekly" | "monthly"; count: number }
 }): Promise<ActionResult & { skipped?: number; appointmentIds?: string[]; scheduledSessions?: { date: string; startTime: string }[] }> {
   const { userId, organizationId, role } = await requireSession()
@@ -117,13 +120,19 @@ export async function createAppointmentAction(data: {
     return { success: false, error: "Sem permissão para criar agendamentos." }
   }
 
+  // professional só pode agendar para si mesmo
+  const targetProfessionalId =
+    (role === "owner" || role === "receptionist") && data.professionalId
+      ? data.professionalId
+      : userId
+
   const [config] = await db
     .select()
     .from(scheduleConfig)
     .where(
       and(
         eq(scheduleConfig.organizationId, organizationId),
-        eq(scheduleConfig.userId, userId)
+        eq(scheduleConfig.userId, targetProfessionalId)
       )
     )
     .limit(1)
@@ -161,7 +170,7 @@ export async function createAppointmentAction(data: {
         .where(
           and(
             eq(appointments.organizationId, organizationId),
-            eq(appointments.professionalId, userId),
+            eq(appointments.professionalId, targetProfessionalId),
             eq(appointments.date, date),
             eq(appointments.startTime, data.startTime)
           )
@@ -186,7 +195,7 @@ export async function createAppointmentAction(data: {
   const inserted = await db.insert(appointments).values(
     freeDates.map((date) => ({
       organizationId,
-      professionalId: userId,
+      professionalId: targetProfessionalId,
       clientId: data.clientId,
       date,
       startTime: data.startTime,
@@ -497,6 +506,24 @@ export async function saveScheduleConfigAction(data: {
 
   revalidatePath("/agenda")
   return { success: true }
+}
+
+// ── Buscar profissionais da org (para seletor de agendamento) ────────────────
+
+export async function getOrgProfessionalsAction() {
+  const { organizationId } = await requireSession()
+  return db
+    .select({ id: users.id, name: users.name })
+    .from(organizationMembers)
+    .innerJoin(users, eq(users.id, organizationMembers.userId))
+    .where(
+      and(
+        eq(organizationMembers.organizationId, organizationId),
+        eq(organizationMembers.active, true),
+        inArray(organizationMembers.role, ["owner", "professional"])
+      )
+    )
+    .orderBy(users.name)
 }
 
 // ── Buscar clientes da org ────────────────────────────────────────────────────

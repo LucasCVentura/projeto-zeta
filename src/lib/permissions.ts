@@ -63,6 +63,7 @@ const rolePermissions: Record<OrgRole, Action[]> = {
     "records:create",
     "records:read",
     "records:update",
+    "financial:read",
     "team:read",
   ],
   receptionist: [

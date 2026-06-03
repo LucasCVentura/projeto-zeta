@@ -39,18 +39,21 @@ const FREQUENCY_OPTIONS = [
   { value: "monthly", label: "Mensal" },
 ] as const
 
+type Professional = { id: string; name: string }
+
 type Props = {
   open: boolean
   onClose: (warning?: string) => void
   date: string
   time: string
+  professionals?: Professional[]
 }
 
 function formatPrice(cents: number) {
   return (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
 }
 
-export function AppointmentModal({ open, onClose, date, time }: Props) {
+export function AppointmentModal({ open, onClose, date, time, professionals = [] }: Props) {
   const [clients, setClients] = useState<Client[]>([])
   const [procedures, setProcedures] = useState<Procedure[]>([])
 
@@ -63,6 +66,8 @@ export function AppointmentModal({ open, onClose, date, time }: Props) {
 
   const [activePackages, setActivePackages] = useState<ActivePackage[]>([])
   const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null)
+
+  const [selectedProfessionalId, setSelectedProfessionalId] = useState<string>("")
 
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -88,6 +93,7 @@ export function AppointmentModal({ open, onClose, date, time }: Props) {
       setSelectedProcedure(null)
       setActivePackages([])
       setSelectedPackageId(null)
+      setSelectedProfessionalId("")
       setClientSearch("")
       setError(null)
       setAiExplanation(null)
@@ -151,6 +157,7 @@ export function AppointmentModal({ open, onClose, date, time }: Props) {
       procedure: selectedProcedure?.name,
       clientPackageId: selectedPackageId || undefined,
       notes: data.notes,
+      professionalId: selectedProfessionalId || undefined,
       recurrence: data.recurring
         ? { frequency: data.frequency, count: data.recurrenceCount }
         : undefined,
@@ -281,6 +288,26 @@ export function AppointmentModal({ open, onClose, date, time }: Props) {
                 <p className="text-xs text-primary">
                   Sessão será descontada do pacote ao concluir o atendimento.
                 </p>
+              )}
+            </div>
+          )}
+
+          {/* Profissional responsável — visível apenas para owner/receptionist */}
+          {professionals.length > 0 && (
+            <div className="space-y-2">
+              <Label>Profissional responsável</Label>
+              <select
+                value={selectedProfessionalId}
+                onChange={(e) => setSelectedProfessionalId(e.target.value)}
+                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+              >
+                <option value="">Selecionar profissional...</option>
+                {professionals.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+              {!selectedProfessionalId && (
+                <p className="text-xs text-muted-foreground">Se não selecionado, será atribuído a você.</p>
               )}
             </div>
           )}

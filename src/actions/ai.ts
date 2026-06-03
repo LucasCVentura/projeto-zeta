@@ -387,7 +387,8 @@ export async function suggestProceduresFromPhotosAction(photoIds: string[]): Pro
 export async function suggestProceduresWithAnnotationsAction(photoId: string): Promise<{
   success: boolean
   analysis?: string
-  annotatedImage?: string  // base64 PNG
+  imageUrl?: string
+  areas?: { label: string; x: number; y: number; procedure: string }[]
   error?: string
 }> {
   const { organizationId, userId } = await requireSession()
@@ -449,43 +450,6 @@ Onde x e y são percentuais (0-100) da posição na imagem (0,0 = canto superior
 
   if (!parsed?.areas?.length) return { success: false, error: "Não foi possível identificar áreas na imagem." }
 
-  // Etapa 2 — compõe anotações na imagem com sharp
-  const sharp = (await import("sharp")).default
-  const imgBuf = Buffer.from(b64, "base64")
-  const meta = await sharp(imgBuf).metadata()
-  const W = meta.width ?? 800
-  const H = meta.height ?? 800
-
-  const COLORS = ["#9B7DFF", "#FF7DB8", "#7DCCFF", "#7DFFC4", "#FFD97D"]
-
-  const overlayItems = parsed.areas.flatMap((area, i) => {
-    const cx = Math.round((area.x / 100) * W)
-    const cy = Math.round((area.y / 100) * H)
-    const r = Math.round(Math.min(W, H) * 0.055)
-    const color = COLORS[i % COLORS.length]
-    const labelW = Math.min(area.label.length * 11 + 24, W - cx - 8)
-    const labelX = cx + r + 8
-    const labelY = cy - 12
-
-    return [
-      // Círculo
-      Buffer.from(`<svg width="${W}" height="${H}">
-        <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${color}" stroke-width="3" stroke-dasharray="6 3"/>
-        <circle cx="${cx}" cy="${cy}" r="4" fill="${color}"/>
-      </svg>`),
-      // Label
-      Buffer.from(`<svg width="${W}" height="${H}">
-        <rect x="${labelX}" y="${labelY}" width="${labelW}" height="26" rx="6" fill="#08060F" fill-opacity="0.82"/>
-        <text x="${labelX + 10}" y="${labelY + 18}" font-family="Arial, sans-serif" font-size="13" font-weight="700" fill="${color}">${area.label}</text>
-      </svg>`),
-    ]
-  })
-
-  const annotated = await sharp(imgBuf)
-    .composite(overlayItems.map((input) => ({ input })))
-    .png({ quality: 90 })
-    .toBuffer()
-
   const analysis = [
     `${parsed.greeting}\n`,
     parsed.summary,
@@ -496,7 +460,8 @@ Onde x e y são percentuais (0-100) da posição na imagem (0,0 = canto superior
   return {
     success: true,
     analysis,
-    annotatedImage: `data:image/png;base64,${annotated.toString("base64")}`,
+    imageUrl: photo.url,
+    areas: parsed.areas,
   }
 }
 
