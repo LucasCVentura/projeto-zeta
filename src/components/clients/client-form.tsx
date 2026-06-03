@@ -28,7 +28,6 @@ const SKIN_TYPES = ["Normal", "Oleosa", "Seca", "Mista", "Sensível"]
 
 const schema = z.object({
   name: z.string().min(2, "Nome deve ter ao menos 2 caracteres"),
-  phone: z.string().optional(),
   whatsapp: z.string().optional(),
   email: z.string().email("E-mail inválido").optional().or(z.literal("")),
   cpf: z.string().optional(),
@@ -80,7 +79,7 @@ export function ClientForm({ defaultValues }: { defaultValues?: Partial<FormData
   async function nextStep() {
     const fieldsPerStep: (keyof FormData)[][] = [
       ["name", "cpf", "birthDate"],
-      ["phone", "whatsapp", "email"],
+      ["whatsapp", "email"],
       [],
     ]
     const valid = await trigger(fieldsPerStep[step])
@@ -92,7 +91,7 @@ export function ClientForm({ defaultValues }: { defaultValues?: Partial<FormData
     setError(null)
     const result = await createClientAction({
       name: data.name,
-      phone: data.phone || undefined,
+      phone: data.whatsapp || undefined,
       whatsapp: data.whatsapp || undefined,
       email: data.email || undefined,
       cpf: data.cpf || undefined,
@@ -187,27 +186,15 @@ export function ClientForm({ defaultValues }: { defaultValues?: Partial<FormData
       {/* ── Step 1: Contato ── */}
       {step === 1 && (
         <div className="surface space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="phone">Telefone</Label>
-              <Input
-                id="phone"
-                placeholder="(11) 99999-9999"
-                inputMode="numeric"
-                {...register("phone")}
-                onChange={(e) => setValue("phone", maskPhone(e.target.value))}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="whatsapp">WhatsApp</Label>
-              <Input
-                id="whatsapp"
-                placeholder="(11) 99999-9999"
-                inputMode="numeric"
-                {...register("whatsapp")}
-                onChange={(e) => setValue("whatsapp", maskPhone(e.target.value))}
-              />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="whatsapp">WhatsApp / Telefone</Label>
+            <Input
+              id="whatsapp"
+              placeholder="(11) 99999-9999"
+              inputMode="numeric"
+              {...register("whatsapp")}
+              onChange={(e) => setValue("whatsapp", maskPhone(e.target.value))}
+            />
           </div>
 
           <div className="space-y-2">
