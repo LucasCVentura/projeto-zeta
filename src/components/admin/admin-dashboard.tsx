@@ -288,6 +288,9 @@ export function AdminDashboard({
               <TabsTrigger value="whatsapp">WhatsApp ({whatsappLogs.length})</TabsTrigger>
               <TabsTrigger value="conteudo" className="flex items-center gap-1.5"><CalendarDays size={13} />Conteúdo</TabsTrigger>
               <TabsTrigger value="whatsapp-config">Config WhatsApp</TabsTrigger>
+              <TabsTrigger value="chat" className="flex items-center gap-1.5">
+                <MessageSquare size={13} />Chat
+              </TabsTrigger>
               <TabsTrigger value="suporte" className="flex items-center gap-1.5">
                 <Mail size={13} />Suporte
                 {unreadCount > 0 && (
@@ -741,16 +744,14 @@ export function AdminDashboard({
             </div>
           </TabsContent>
 
-          {/* Aba: Suporte */}
-          <TabsContent value="suporte" className="space-y-6">
-            {/* Chat WhatsApp */}
-            <div className="space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Chat WhatsApp</p>
-              <AdminChat trialOutreachTemplateId={whatsappTemplateSettings.trialOutreachTemplateId} />
-            </div>
+          {/* Aba: Chat WhatsApp */}
+          <TabsContent value="chat">
+            <AdminChat trialOutreachTemplateId={whatsappTemplateSettings.trialOutreachTemplateId} />
+          </TabsContent>
 
+          {/* Aba: Suporte (emails) */}
+          <TabsContent value="suporte" className="space-y-6">
             <div className="space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">E-mails inbound</p>
             {inboundEmails.length === 0 ? (
               <div className="rounded-xl border border-border bg-card p-10 text-center space-y-3">
                 <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-muted">
