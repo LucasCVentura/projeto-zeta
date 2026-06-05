@@ -189,6 +189,9 @@ export function AdminDashboard({
   const [pendingCancelOrg, setPendingCancelOrg] = useState<{ id: string; name: string } | null>(null)
   const [activeSection, setActiveSection] = useState("overview")
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [logFilterOrg, setLogFilterOrg] = useState("all")
+  const [logFilterEvent, setLogFilterEvent] = useState("all")
+  const [logFilterError, setLogFilterError] = useState(false)
   const unreadCount = inboundEmails.filter(e => !e.read).length
 
   const NAV_ITEMS: NavItem[] = [
@@ -485,32 +488,68 @@ export function AdminDashboard({
         </div>
       )
 
-      case "whatsapp": return (
-        <div className="rounded-xl border border-border overflow-hidden">
-          {whatsappLogs.length === 0
-            ? <div className="py-16 text-center text-sm text-muted-foreground">Nenhum log de WhatsApp ainda.</div>
-            : (
-              <div className="divide-y divide-border">
-                {whatsappLogs.map(log => (
-                  <div key={log.id} className="px-5 py-4 space-y-1.5">
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="text-sm font-medium truncate">{log.organizationName ?? "—"}</p>
-                      <span className={cn("text-[10px] font-semibold px-1.5 py-0.5 rounded-full shrink-0",
-                        log.eventType === "delivered" || log.eventType === "read" ? "text-green-700 bg-green-100 dark:text-green-400 dark:bg-green-900/20" :
-                        log.eventType === "failed" ? "text-destructive bg-destructive/10" : "text-muted-foreground bg-muted"
-                      )}>{log.eventType}</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground">Template: {log.templateId ?? "—"} · Destino: {log.destination ?? "—"}</p>
-                    <p className="text-xs text-muted-foreground">MsgId: {log.messageId ?? "—"}</p>
-                    {log.error && <p className="text-xs text-destructive">Erro: {log.error}</p>}
-                    <p className="text-[11px] text-muted-foreground">{new Date(log.updatedAt).toLocaleString("pt-BR")}</p>
+      case "whatsapp": {
+        const orgNames = Array.from(new Set(whatsappLogs.map(l => l.organizationName).filter(Boolean))) as string[]
+        const eventTypes = Array.from(new Set(whatsappLogs.map(l => l.eventType)))
+
+        const filteredLogs = whatsappLogs.filter(l => {
+          if (logFilterOrg !== "all" && l.organizationName !== logFilterOrg) return false
+          if (logFilterEvent !== "all" && l.eventType !== logFilterEvent) return false
+          if (logFilterError && !l.error) return false
+          return true
+        })
+
+        const eventColor = (type: string) =>
+          type === "delivered" || type === "read" ? "text-green-700 bg-green-100 dark:text-green-400 dark:bg-green-900/20" :
+          type === "failed" ? "text-destructive bg-destructive/10" : "text-muted-foreground bg-muted"
+
+        const formatBR = (d: Date) => new Date(d).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit" })
+
+        return (
+          <div className="space-y-4">
+            {/* Filtros */}
+            <div className="flex flex-wrap gap-2 items-center">
+              <select value={logFilterOrg} onChange={e => setLogFilterOrg(e.target.value)} className="h-8 rounded-lg border border-border bg-background px-2 text-xs">
+                <option value="all">Todas as clínicas</option>
+                {orgNames.map(n => <option key={n} value={n}>{n}</option>)}
+              </select>
+              <select value={logFilterEvent} onChange={e => setLogFilterEvent(e.target.value)} className="h-8 rounded-lg border border-border bg-background px-2 text-xs">
+                <option value="all">Todos os eventos</option>
+                {eventTypes.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+              <button
+                onClick={() => setLogFilterError(v => !v)}
+                className={cn("h-8 px-3 rounded-lg border text-xs transition-colors", logFilterError ? "border-destructive bg-destructive/10 text-destructive" : "border-border text-muted-foreground hover:border-foreground")}
+              >
+                Só com erro
+              </button>
+              <span className="text-xs text-muted-foreground ml-auto">{filteredLogs.length} registros</span>
+            </div>
+
+            <div className="rounded-xl border border-border overflow-hidden">
+              {filteredLogs.length === 0
+                ? <div className="py-16 text-center text-sm text-muted-foreground">Nenhum log encontrado.</div>
+                : (
+                  <div className="divide-y divide-border">
+                    {filteredLogs.map(log => (
+                      <div key={log.id} className="px-5 py-4 space-y-1.5">
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="text-sm font-medium truncate">{log.organizationName ?? "—"}</p>
+                          <span className={cn("text-[10px] font-semibold px-1.5 py-0.5 rounded-full shrink-0", eventColor(log.eventType))}>{log.eventType}</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground">Template: {log.templateId ?? "—"} · Destino: {log.destination ?? "—"}</p>
+                        <p className="text-xs text-muted-foreground">MsgId: {log.messageId ?? "—"}</p>
+                        {log.error && <p className="text-xs text-destructive">Erro: {log.error}</p>}
+                        <p className="text-[11px] text-muted-foreground">{formatBR(log.updatedAt)}</p>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            )
-          }
-        </div>
-      )
+                )
+              }
+            </div>
+          </div>
+        )
+      }
 
       case "conteudo": return <ContentSchedule />
 
