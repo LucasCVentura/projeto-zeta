@@ -765,9 +765,32 @@ export const adminChatMessages = pgTable("admin_chat_messages", {
   content: text("content").notNull(),
   gupshupMessageId: text("gupshup_message_id"),
   templateUsed: text("template_used"),     // nome do template, se outbound via template
+  queue: text("queue"),                    // 'support' | 'commercial' | null
   readAt: timestamp("read_at"),
 
   createdAt: timestamp("created_at").notNull().defaultNow(),
 })
 
 export type AdminChatMessage = typeof adminChatMessages.$inferSelect
+
+// ── chat_sessions ─────────────────────────────────────────────────────────────
+// Rastreia o estado do bot por número de telefone
+
+export const chatSessions = pgTable("chat_sessions", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+
+  phone: text("phone").notNull().unique(),
+  // 'awaiting_selection' | 'awaiting_cpf' | 'routed'
+  state: text("state").notNull().default("awaiting_selection"),
+  // 'support' | 'commercial' | null
+  queue: text("queue"),
+  userName: text("user_name"),
+  orgName: text("org_name"),
+
+  lastActivityAt: timestamp("last_activity_at").notNull().defaultNow(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+})
+
+export type ChatSession = typeof chatSessions.$inferSelect
