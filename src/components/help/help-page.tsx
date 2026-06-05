@@ -48,7 +48,7 @@ export function HelpPage() {
           <h2 className="font-semibold text-sm">Suporte via WhatsApp</h2>
         </div>
         <p className="text-sm text-muted-foreground">
-          Prefere falar por WhatsApp? Manda uma mensagem pra gente — nosso atendimento é das 9h às 24h.
+          Prefere falar por WhatsApp? Manda uma mensagem pra gente — nosso atendimento é das 9h às 0h.
         </p>
         <a
           href="https://wa.me/5521983612233"
