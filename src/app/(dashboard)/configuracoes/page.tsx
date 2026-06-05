@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Calendar, Stethoscope, Building2, ChevronRight, Package, CreditCard, Users } from "lucide-react"
+import { Calendar, Stethoscope, Building2, ChevronRight, Package, CreditCard, Users, ClipboardList } from "lucide-react"
 import { InstallAppButton } from "@/components/settings/install-app-button"
 import { requireSession } from "@/lib/session"
 import { can } from "@/lib/permissions"
@@ -34,6 +34,13 @@ export default async function ConfiguracoesPage() {
       description: "Nome, contato e informações da sua clínica",
       href: "/configuracoes/clinica",
       icon: Building2,
+      show: can(role, "org:update"),
+    },
+    {
+      title: "Anamnese",
+      description: "Personalize as perguntas da ficha de cada cliente",
+      href: "/configuracoes/anamnese",
+      icon: ClipboardList,
       show: can(role, "org:update"),
     },
   ].filter((s) => s.show)

@@ -9,6 +9,7 @@ import {
   integer,
   time,
   numeric,
+  json,
 } from "drizzle-orm/pg-core"
 import { relations } from "drizzle-orm"
 
@@ -465,6 +466,50 @@ export const clientAnamnesis = pgTable("client_anamnesis", {
 
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 })
+
+// ── anamnesis_questions ───────────────────────────────────────────────────────
+
+export const anamnesisQuestions = pgTable("anamnesis_questions", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organizations.id, { onDelete: "cascade" }),
+
+  label: text("label").notNull(),
+  type: text("type").notNull(), // "text" | "boolean" | "select" | "multiselect"
+  options: text("options"),     // JSON array de strings, apenas para select/multiselect
+  placeholder: text("placeholder"),
+  required: boolean("required").default(false).notNull(),
+  order: integer("order").default(0).notNull(),
+  isDefault: boolean("is_default").default(false).notNull(), // veio do seed padrão
+
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+})
+
+export type AnamnesisQuestion = typeof anamnesisQuestions.$inferSelect
+
+// ── anamnesis_answers ─────────────────────────────────────────────────────────
+
+export const anamnesisAnswers = pgTable("anamnesis_answers", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+
+  clientId: text("client_id")
+    .notNull()
+    .unique()
+    .references(() => clients.id, { onDelete: "cascade" }),
+
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organizations.id, { onDelete: "cascade" }),
+
+  // { [questionId]: string | boolean | string[] }
+  answers: json("answers").notNull().default({}),
+
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+})
+
+export type AnamnesisAnswer = typeof anamnesisAnswers.$inferSelect
 
 // ── relations ────────────────────────────────────────────────────────────────
 
