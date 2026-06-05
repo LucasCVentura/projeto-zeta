@@ -39,21 +39,23 @@ export async function POST(req: NextRequest) {
       payload.payload?.postbackText ??
       null
 
-    if ((replyType === "button_reply" || replyType === "quick_reply") && contextMessageId && buttonTitle) {
-      console.log("[WhatsApp][Webhook] button reply received", {
-        replyType,
-        contextMessageId,
-        source: payload.source,
-        title: buttonTitle,
-      })
-      await handleWhatsAppButtonReply(contextMessageId, buttonTitle, payload.source)
-    } else if (buttonTitle && /(confirmar|cancelar)/i.test(buttonTitle)) {
-      // Alguns clientes enviam a resposta rápida como texto, sem context.id/gsId.
-      console.log("[WhatsApp][Webhook] text reply fallback", {
-        replyType,
-        source: payload.source,
-        title: buttonTitle,
-      })
+    const isAppointmentButton = buttonTitle ? /(confirmar|cancelar)/i.test(buttonTitle) : false
+
+    if ((replyType === "button_reply" || replyType === "quick_reply") && buttonTitle && payload.source) {
+      console.log("[WhatsApp][Webhook] button reply received", { replyType, contextMessageId, source: payload.source, title: buttonTitle })
+
+      if (isAppointmentButton && contextMessageId) {
+        await handleWhatsAppButtonReply(contextMessageId, buttonTitle, payload.source)
+      } else if (isAppointmentButton) {
+        await handleWhatsAppReplyByPhone(buttonTitle, payload.source)
+      } else {
+        // Botão do menu do chatbot (ex: Suporte, Comercial)
+        const digits = payload.source.replace(/\D/g, "")
+        const normalizedPhone = digits.startsWith("55") ? digits : `55${digits}`
+        const senderName = payload.sender?.name ?? null
+        await handleInboundMessage(normalizedPhone, buttonTitle, senderName)
+      }
+    } else if (buttonTitle && isAppointmentButton) {
       await handleWhatsAppReplyByPhone(buttonTitle, payload.source)
     } else if (replyType === "text" && payload.source) {
       const digits = payload.source.replace(/\D/g, "")
