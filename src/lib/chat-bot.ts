@@ -46,12 +46,12 @@ async function upsertSession(phone: string, patch: Partial<typeof chatSessions.$
   }
 }
 
-async function sendWelcome(phone: string) {
+async function sendWelcome(phone: string, senderName?: string | null) {
   const body = "Oi! 👋 Bem-vindo ao Kira. Como posso te ajudar hoje?"
 
   await sendWhatsAppQuickReply(phone, body, [BTN_SUPPORT, BTN_COMMERCIAL])
   await saveMessage(phone, "outbound", body)
-  await upsertSession(phone, { state: "awaiting_selection", queue: null, userName: null, orgName: null })
+  await upsertSession(phone, { state: "awaiting_selection", queue: null, userName: senderName ?? null, orgName: null })
 }
 
 async function sendOutOfHours(phone: string) {
@@ -123,14 +123,10 @@ export async function handleInboundMessage(phone: string, text: string, senderNa
 
   // Sem sessão ou sessão expirada → nova conversa
   if (!session) {
-    // Persiste o nome do contato vindo do WhatsApp na sessão
-    if (senderName) {
-      await upsertSession(phone, { state: "awaiting_selection", queue: null, userName: senderName, orgName: null })
-    }
     if (isOutOfHours()) {
       await sendOutOfHours(phone)
     } else {
-      await sendWelcome(phone)
+      await sendWelcome(phone, senderName)
     }
     return
   }
