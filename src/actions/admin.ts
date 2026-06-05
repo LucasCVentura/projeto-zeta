@@ -26,21 +26,28 @@ export async function getAdminMetricsAction() {
   const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
   const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0)
 
+  // Todas as queries em um único round-trip
   const [
-    totalOrgs,
-    activeOrgs,
-    trialingOrgs,
-    incompleteBoletoOrgs,
-    cancelledOrgs,
-    newOrgsThisMonth,
+    totalOrgsRows,
+    activeOrgsRows,
+    trialingOrgsRows,
+    incompleteBoletoOrgsRows,
+    cancelledOrgsRows,
+    newOrgsThisMonthRows,
+    newOrgsLastMonthRows,
     allOrgs,
+    clientCounts,
+    appointmentCounts,
+    photoCounts,
+    ownerMap,
   ] = await Promise.all([
-    db.select({ count: count() }).from(organizations).then(r => r[0].count),
-    db.select({ count: count() }).from(organizations).where(eq(organizations.subscriptionStatus, "active")).then(r => r[0].count),
-    db.select({ count: count() }).from(organizations).where(or(eq(organizations.subscriptionStatus, "trialing"), eq(organizations.subscriptionStatus, "incomplete"))).then(r => r[0].count),
-    db.select({ count: count() }).from(organizations).where(eq(organizations.subscriptionStatus, "incomplete")).then(r => r[0].count),
-    db.select({ count: count() }).from(organizations).where(eq(organizations.subscriptionStatus, "canceled")).then(r => r[0].count),
-    db.select({ count: count() }).from(organizations).where(gte(organizations.createdAt, startOfMonth)).then(r => r[0].count),
+    db.select({ count: count() }).from(organizations),
+    db.select({ count: count() }).from(organizations).where(eq(organizations.subscriptionStatus, "active")),
+    db.select({ count: count() }).from(organizations).where(or(eq(organizations.subscriptionStatus, "trialing"), eq(organizations.subscriptionStatus, "incomplete"))),
+    db.select({ count: count() }).from(organizations).where(eq(organizations.subscriptionStatus, "incomplete")),
+    db.select({ count: count() }).from(organizations).where(eq(organizations.subscriptionStatus, "canceled")),
+    db.select({ count: count() }).from(organizations).where(gte(organizations.createdAt, startOfMonth)),
+    db.select({ count: count() }).from(organizations).where(gte(organizations.createdAt, startOfLastMonth)),
     db.select({
       id: organizations.id,
       name: organizations.name,
@@ -49,40 +56,27 @@ export async function getAdminMetricsAction() {
       trialEndsAt: organizations.trialEndsAt,
       createdAt: organizations.createdAt,
     }).from(organizations).orderBy(sql`${organizations.createdAt} desc`),
-  ])
-
-  // MRR: orgs ativas × R$49,90
-  const mrr = activeOrgs * 4990
-  // Net MRR após taxa Stripe: 3,99% + R$0,39 por cobrança (confirmado empiricamente)
-  const stripeFeePerSub = Math.round(4990 * 0.0399) + 39
-  const netMrr = activeOrgs * (4990 - stripeFeePerSub)
-
-  // Novos no mês passado (para calcular crescimento)
-  const newOrgsLastMonth = await db
-    .select({ count: count() })
-    .from(organizations)
-    .where(gte(organizations.createdAt, startOfLastMonth))
-    .then(r => r[0].count) - newOrgsThisMonth
-
-  // Usage por org
-  const orgIds = allOrgs.map(o => o.id)
-
-  const [clientCounts, appointmentCounts, photoCounts, ownerMap] = await Promise.all([
-    db.select({ orgId: clients.organizationId, count: count() })
-      .from(clients).groupBy(clients.organizationId),
-    db.select({ orgId: appointments.organizationId, count: count() })
-      .from(appointments).groupBy(appointments.organizationId),
-    db.select({ orgId: clientPhotos.organizationId, count: count() })
-      .from(clientPhotos).groupBy(clientPhotos.organizationId),
-    db.select({
-      orgId: organizationMembers.organizationId,
-      email: users.email,
-      name: users.name,
-    })
+    db.select({ orgId: clients.organizationId, count: count() }).from(clients).groupBy(clients.organizationId),
+    db.select({ orgId: appointments.organizationId, count: count() }).from(appointments).groupBy(appointments.organizationId),
+    db.select({ orgId: clientPhotos.organizationId, count: count() }).from(clientPhotos).groupBy(clientPhotos.organizationId),
+    db.select({ orgId: organizationMembers.organizationId, email: users.email, name: users.name })
       .from(organizationMembers)
       .innerJoin(users, eq(users.id, organizationMembers.userId))
       .where(eq(organizationMembers.role, "owner")),
   ])
+
+  const totalOrgs = totalOrgsRows[0].count
+  const activeOrgs = activeOrgsRows[0].count
+  const trialingOrgs = trialingOrgsRows[0].count
+  const incompleteBoletoOrgs = incompleteBoletoOrgsRows[0].count
+  const cancelledOrgs = cancelledOrgsRows[0].count
+  const newOrgsThisMonth = newOrgsThisMonthRows[0].count
+  const newOrgsLastMonth = newOrgsLastMonthRows[0].count - newOrgsThisMonth
+
+  // MRR: orgs ativas × R$49,90
+  const mrr = activeOrgs * 4990
+  const stripeFeePerSub = Math.round(4990 * 0.0399) + 39
+  const netMrr = activeOrgs * (4990 - stripeFeePerSub)
 
   const clientMap = Object.fromEntries(clientCounts.map(r => [r.orgId, r.count]))
   const apptMap = Object.fromEntries(appointmentCounts.map(r => [r.orgId, r.count]))
