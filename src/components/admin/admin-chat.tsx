@@ -401,7 +401,8 @@ export function AdminChat({ trialOutreachTemplateId }: { trialOutreachTemplateId
   }
 
   function handleSelectConv(conv: Conversation) {
-    setActiveConv(conv)
+    setActiveConv({ ...conv, unread: 0 })
+    setConversations(prev => prev.map(c => c.phone === conv.phone ? { ...c, unread: 0 } : c))
     setShowNew(false)
   }
 
