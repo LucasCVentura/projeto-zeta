@@ -43,8 +43,9 @@ export async function sendWhatsAppQuickReply(
 
   const message = JSON.stringify({
     type: "quick_reply",
+    msgid: `qr_${Date.now()}`,
     content: { type: "text", text },
-    options: options.map((title) => ({ type: "text", title })),
+    options: options.map((title) => ({ type: "text", title, postbackText: title })),
   })
 
   const params = new URLSearchParams({
