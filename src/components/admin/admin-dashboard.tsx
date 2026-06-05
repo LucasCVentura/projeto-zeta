@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react"
 import { extendTrialAction, cancelOrgAction, setLifetimeAction, adminChatAction, markInboundEmailReadAction, saveWhatsAppTemplateSettingAction } from "@/actions/admin"
+import { AdminChat } from "@/components/admin/admin-chat"
 import { Send, Loader2, Trophy, TrendingUp, Users, DollarSign, ChevronDown, ChevronUp, Sprout, Rocket, Gem, Coins, Star, Activity, MessageSquare, Mail, MailOpen, Wallet, CalendarDays } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -97,6 +98,7 @@ type WhatsAppTemplateSetting = {
   packageSummaryTemplateId: string | null
   reminderConfirmationTemplateId: string | null
   postVisitTemplateId: string | null
+  trialOutreachTemplateId: string | null
 }
 
 const GOALS = [
@@ -158,6 +160,7 @@ export function AdminDashboard({
   const [packageTemplateId, setPackageTemplateId] = useState(whatsappTemplateSettings.packageSummaryTemplateId ?? "")
   const [reminderTemplateId, setReminderTemplateId] = useState(whatsappTemplateSettings.reminderConfirmationTemplateId ?? "")
   const [postVisitTemplateId, setPostVisitTemplateId] = useState(whatsappTemplateSettings.postVisitTemplateId ?? "")
+  const [trialOutreachTemplateId, setTrialOutreachTemplateId] = useState(whatsappTemplateSettings.trialOutreachTemplateId ?? "")
   const [pendingCancelOrg, setPendingCancelOrg] = useState<{ id: string; name: string } | null>(null)
   const chatEndRef = useRef<HTMLDivElement>(null)
 
@@ -234,6 +237,7 @@ export function AdminDashboard({
         packageSummaryTemplateId: packageTemplateId,
         reminderConfirmationTemplateId: reminderTemplateId,
         postVisitTemplateId,
+        trialOutreachTemplateId,
       })
     } catch {
       setTemplateError("Não foi possível salvar agora. Tente novamente em alguns segundos.")
@@ -458,6 +462,12 @@ export function AdminDashboard({
                   value={postVisitTemplateId}
                   onChange={(e) => setPostVisitTemplateId(e.target.value)}
                   placeholder="UUID do template pós-consulta"
+                />
+                <p className="text-sm font-medium pt-2">Template abordagem trial — <code className="text-xs bg-muted px-1 rounded">kira_trial_outreach</code></p>
+                <Input
+                  value={trialOutreachTemplateId}
+                  onChange={(e) => setTrialOutreachTemplateId(e.target.value)}
+                  placeholder="UUID do template kira_trial_outreach"
                 />
                 {templateError && (
                   <p className="text-xs text-destructive pt-1">{templateError}</p>
@@ -732,7 +742,15 @@ export function AdminDashboard({
           </TabsContent>
 
           {/* Aba: Suporte */}
-          <TabsContent value="suporte" className="space-y-3">
+          <TabsContent value="suporte" className="space-y-6">
+            {/* Chat WhatsApp */}
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Chat WhatsApp</p>
+              <AdminChat trialOutreachTemplateId={whatsappTemplateSettings.trialOutreachTemplateId} />
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">E-mails inbound</p>
             {inboundEmails.length === 0 ? (
               <div className="rounded-xl border border-border bg-card p-10 text-center space-y-3">
                 <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-muted">
@@ -783,6 +801,7 @@ export function AdminDashboard({
                 ))}
               </div>
             )}
+            </div>
           </TabsContent>
 
         </Tabs>
