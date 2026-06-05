@@ -8,7 +8,7 @@ import { revalidatePath } from "next/cache"
 
 // ── Perguntas padrão ──────────────────────────────────────────────────────────
 
-export const DEFAULT_QUESTIONS = [
+const DEFAULT_QUESTIONS = [
   { label: "Tipo de pele", type: "select", options: JSON.stringify(["Normal", "Oleosa", "Seca", "Mista", "Sensível"]), order: 0 },
   { label: "Possui alergias?", type: "boolean", placeholder: "Ex: látex, penicilina...", order: 1 },
   { label: "Possui contraindicações?", type: "boolean", placeholder: "Ex: marca-passo, gestante...", order: 2 },
