@@ -21,6 +21,9 @@ type Conversation = {
   lastDirection: string
   lastAt: Date
   unread: number
+  queue: string | null
+  userName: string | null
+  orgName: string | null
 }
 
 type TrialOrg = {
@@ -244,19 +247,27 @@ export function AdminChat({
   }
 
   function getDisplayName(conv: Conversation) {
-    return conv.senderName ?? formatPhone(conv.phone)
+    return conv.userName ?? conv.senderName ?? formatPhone(conv.phone)
   }
 
   function getDisplayNameByPhone(phone: string) {
     const conv = conversations.find(c => c.phone === phone)
+    if (conv?.userName) return conv.userName
     if (conv?.senderName) return conv.senderName
     const org = trialOrgs.find(o => o.phone?.replace(/\D/g, "").replace(/^55/, "") === phone.replace(/\D/g, "").replace(/^55/, ""))
     return org?.ownerName ?? formatPhone(phone)
   }
 
+  function getQueueBadge(queue: string | null) {
+    if (!queue) return null
+    if (queue === "support") return <span className="rounded-full bg-blue-100 text-blue-700 px-1.5 py-0.5 text-[10px] font-medium">Suporte</span>
+    if (queue === "commercial") return <span className="rounded-full bg-amber-100 text-amber-700 px-1.5 py-0.5 text-[10px] font-medium">Comercial</span>
+    return null
+  }
+
   if (activePhone) {
     return (
-      <div className="h-[600px] flex flex-col border border-border rounded-xl overflow-hidden bg-background">
+      <div className="h-150 flex flex-col border border-border rounded-xl overflow-hidden bg-background">
         <ChatView
           phone={activePhone}
           displayName={getDisplayNameByPhone(activePhone)}
@@ -268,7 +279,7 @@ export function AdminChat({
 
   if (showNew) {
     return (
-      <div className="h-[600px] flex flex-col border border-border rounded-xl overflow-hidden bg-background">
+      <div className="h-150 flex flex-col border border-border rounded-xl overflow-hidden bg-background">
         <NewConversationPanel
           trialOrgs={trialOrgs}
           trialOutreachTemplateId={trialOutreachTemplateId}
@@ -311,7 +322,10 @@ export function AdminChat({
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
-                    <p className="text-sm font-medium truncate">{getDisplayName(conv)}</p>
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <p className="text-sm font-medium truncate">{getDisplayName(conv)}</p>
+                      {getQueueBadge(conv.queue)}
+                    </div>
                     <span className="text-xs text-muted-foreground shrink-0">{formatTime(conv.lastAt)}</span>
                   </div>
                   <div className="flex items-center justify-between gap-2">

@@ -4,7 +4,7 @@ import { db } from "@/db"
 import {
   organizations, organizationMembers, users,
   appointments, clients, transactions, clientPhotos,
-  adminChatMessages,
+  adminChatMessages, chatSessions,
 } from "@/db/schema"
 import { eq, count, sum, gte, sql, or, and, desc, asc } from "drizzle-orm"
 import { auth } from "@/lib/auth"
@@ -179,10 +179,20 @@ export async function getAdminChatConversationsAction() {
 
   const unreadMap = Object.fromEntries(unreadRows.map(r => [r.phone, r.count]))
 
-  return conversations.map(c => ({
-    ...c,
-    unread: unreadMap[c.phone] ?? 0,
-  }))
+  // Sessões para pegar fila e nome identificado
+  const sessions = await db.select().from(chatSessions)
+  const sessionMap = Object.fromEntries(sessions.map(s => [s.phone, s]))
+
+  return conversations.map(c => {
+    const session = sessionMap[c.phone]
+    return {
+      ...c,
+      unread: unreadMap[c.phone] ?? 0,
+      queue: session?.queue ?? null,
+      userName: session?.userName ?? c.senderName ?? null,
+      orgName: session?.orgName ?? null,
+    }
+  })
 }
 
 export async function getAdminChatMessagesAction(phone: string) {

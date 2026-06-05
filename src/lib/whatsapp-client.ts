@@ -30,6 +30,40 @@ export async function sendWhatsApp(to: string, body: string): Promise<void> {
   if (!res.ok) throw new Error(`Gupshup error ${res.status}: ${await res.text()}`)
 }
 
+export async function sendWhatsAppQuickReply(
+  to: string,
+  text: string,
+  options: string[]
+): Promise<void> {
+  const destination = normalizePhone(to)
+  if (!destination) return
+  if (!process.env.GUPSHUP_API_KEY || !process.env.GUPSHUP_SENDER || !process.env.GUPSHUP_APP_NAME) {
+    throw new Error("Missing Gupshup env vars")
+  }
+
+  const message = JSON.stringify({
+    type: "quick_reply",
+    content: { type: "text", text },
+    options: options.map((title) => ({ type: "text", title })),
+  })
+
+  const params = new URLSearchParams({
+    channel: "whatsapp",
+    source: process.env.GUPSHUP_SENDER!,
+    destination,
+    message,
+    "src.name": process.env.GUPSHUP_APP_NAME!,
+  })
+
+  const res = await fetch(`${BASE_URL}/msg`, {
+    method: "POST",
+    headers: { apikey: process.env.GUPSHUP_API_KEY!, "Content-Type": "application/x-www-form-urlencoded" },
+    body: params.toString(),
+  })
+
+  if (!res.ok) throw new Error(`Gupshup quick_reply error ${res.status}: ${await res.text()}`)
+}
+
 export async function sendWhatsAppTemplate(
   to: string,
   templateId: string,
