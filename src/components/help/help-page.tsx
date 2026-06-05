@@ -4,7 +4,7 @@ import { useState } from "react"
 import { submitFeedbackAction } from "@/actions/feedback"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { Mail, MessageSquarePlus, CheckCircle2, Loader2 } from "lucide-react"
+import { Mail, MessageSquarePlus, CheckCircle2, Loader2, MessageCircle } from "lucide-react"
 
 export function HelpPage() {
   const [content, setContent] = useState("")
@@ -38,6 +38,26 @@ export function HelpPage() {
         >
           <Mail size={14} />
           suporte@kiraclinic.com.br
+        </a>
+      </div>
+
+      {/* WhatsApp */}
+      <div className="rounded-xl border border-border bg-card p-6 space-y-4">
+        <div className="flex items-center gap-2">
+          <MessageCircle size={16} className="text-primary" />
+          <h2 className="font-semibold text-sm">Suporte via WhatsApp</h2>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Prefere falar por WhatsApp? Manda uma mensagem pra gente — nosso atendimento é das 9h às 24h.
+        </p>
+        <a
+          href="https://wa.me/5521983612233"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline"
+        >
+          <MessageCircle size={14} />
+          (21) 98361-2233
         </a>
       </div>
 
