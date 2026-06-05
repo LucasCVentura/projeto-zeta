@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
 import { handleWhatsAppButtonReply, handleWhatsAppReplyByPhone } from "@/actions/whatsapp"
 import { logWhatsAppEvent } from "@/lib/whatsapp-logs"
+import { db } from "@/db"
+import { adminChatMessages, whatsappPendingConfirmations, organizations, organizationMembers, users } from "@/db/schema"
+import { eq, and } from "drizzle-orm"
 
 export async function POST(req: NextRequest) {
   try {
@@ -51,6 +54,52 @@ export async function POST(req: NextRequest) {
         title: buttonTitle,
       })
       await handleWhatsAppReplyByPhone(buttonTitle, payload.source)
+    } else if (replyType === "text" && payload.source) {
+      // Mensagem de texto inbound que não é confirmação → pode ser suporte
+      const digits = payload.source.replace(/\D/g, "")
+      const normalizedPhone = digits.startsWith("55") ? digits : `55${digits}`
+
+      // Verifica se não é uma confirmação pendente para não duplicar
+      const [pending] = await db
+        .select({ id: whatsappPendingConfirmations.id })
+        .from(whatsappPendingConfirmations)
+        .limit(1)
+
+      const isPendingConfirmation = !!pending && (
+        (replyType === "button_reply" || replyType === "quick_reply") ||
+        /(confirmar|cancelar)/i.test(buttonTitle ?? "")
+      )
+
+      if (!isPendingConfirmation) {
+        const messageText = payload.payload?.text ?? buttonTitle ?? ""
+        if (messageText) {
+          // Tenta identificar o nome do remetente cruzando com organizações
+          let senderName: string | null = null
+          try {
+            const [owner] = await db
+              .select({ name: users.name })
+              .from(users)
+              .innerJoin(organizationMembers, eq(organizationMembers.userId, users.id))
+              .innerJoin(organizations, eq(organizations.id, organizationMembers.organizationId))
+              .where(
+                and(
+                  eq(organizationMembers.role, "owner"),
+                  eq(users.whatsapp, normalizedPhone)
+                )
+              )
+              .limit(1)
+            senderName = owner?.name ?? null
+          } catch { /* ignora se falhar */ }
+
+          await db.insert(adminChatMessages).values({
+            phone: normalizedPhone,
+            senderName,
+            direction: "inbound",
+            content: messageText,
+            gupshupMessageId: payload.id,
+          })
+        }
+      }
     }
 
     return NextResponse.json({ ok: true })

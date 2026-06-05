@@ -134,6 +134,13 @@
       "when": 1780497110750,
       "tag": "0018_ancient_prowler",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1780679315060,
+      "tag": "0019_curly_violations",
+      "breakpoints": true
     }
   ]
 }

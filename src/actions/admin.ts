@@ -4,8 +4,9 @@ import { db } from "@/db"
 import {
   organizations, organizationMembers, users,
   appointments, clients, transactions, clientPhotos,
+  adminChatMessages,
 } from "@/db/schema"
-import { eq, count, sum, gte, sql, or } from "drizzle-orm"
+import { eq, count, sum, gte, sql, or, and, desc, asc } from "drizzle-orm"
 import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import { revalidatePath } from "next/cache"
@@ -142,6 +143,134 @@ export async function cancelOrgAction(orgId: string) {
   revalidatePath("/admin")
 }
 
+// ── Admin Chat ────────────────────────────────────────────────────────────────
+
+export async function getAdminChatConversationsAction() {
+  await requireAdmin()
+
+  // Última mensagem por número de telefone
+  const rows = await db
+    .select({
+      phone: adminChatMessages.phone,
+      senderName: adminChatMessages.senderName,
+      lastMessage: adminChatMessages.content,
+      lastDirection: adminChatMessages.direction,
+      lastAt: adminChatMessages.createdAt,
+    })
+    .from(adminChatMessages)
+    .orderBy(desc(adminChatMessages.createdAt))
+
+  // Agrupa por phone mantendo a mais recente
+  const seen = new Set<string>()
+  const conversations: typeof rows = []
+  for (const row of rows) {
+    if (!seen.has(row.phone)) {
+      seen.add(row.phone)
+      conversations.push(row)
+    }
+  }
+
+  // Conta não lidas por conversa
+  const unreadRows = await db
+    .select({ phone: adminChatMessages.phone, count: count() })
+    .from(adminChatMessages)
+    .where(eq(adminChatMessages.direction, "inbound"))
+    .groupBy(adminChatMessages.phone)
+
+  const unreadMap = Object.fromEntries(unreadRows.map(r => [r.phone, r.count]))
+
+  return conversations.map(c => ({
+    ...c,
+    unread: unreadMap[c.phone] ?? 0,
+  }))
+}
+
+export async function getAdminChatMessagesAction(phone: string) {
+  await requireAdmin()
+
+  const msgs = await db
+    .select()
+    .from(adminChatMessages)
+    .where(eq(adminChatMessages.phone, phone))
+    .orderBy(asc(adminChatMessages.createdAt))
+
+  // Marca como lidas
+  await db
+    .update(adminChatMessages)
+    .set({ readAt: new Date() })
+    .where(
+      and(
+        eq(adminChatMessages.phone, phone),
+        eq(adminChatMessages.direction, "inbound")
+      )
+    )
+
+  return msgs
+}
+
+export async function sendAdminChatMessageAction(phone: string, content: string) {
+  await requireAdmin()
+
+  const { sendWhatsApp } = await import("@/lib/whatsapp-client")
+  await sendWhatsApp(phone, content)
+
+  await db.insert(adminChatMessages).values({
+    phone,
+    direction: "outbound",
+    content,
+  })
+}
+
+export async function sendAdminChatTemplateAction(phone: string, name: string, templateId: string) {
+  await requireAdmin()
+
+  const { sendWhatsAppTemplate } = await import("@/lib/whatsapp-client")
+  const firstName = name.split(" ")[0]
+  const result = await sendWhatsAppTemplate(phone, templateId, [firstName])
+
+  const content = `Oi ${firstName}, tudo bem? 😊\n\nAqui é o Lucas, do Kira. Vi que você está testando o sistema e queria bater um papo rápido pra saber como está sendo sua experiência.\n\nTem alguma dúvida ou algo que posso te ajudar? Me conta!`
+
+  await db.insert(adminChatMessages).values({
+    phone,
+    senderName: name,
+    direction: "outbound",
+    content,
+    gupshupMessageId: result?.messageId ?? null,
+    templateUsed: "kira_trial_outreach",
+  })
+}
+
+export async function getTrialOrgsForChatAction() {
+  await requireAdmin()
+
+  const rows = await db
+    .select({
+      orgId: organizations.id,
+      orgName: organizations.name,
+      ownerName: users.name,
+      ownerPhone: users.whatsapp,
+      ownerPhoneFallback: users.phone,
+      status: organizations.subscriptionStatus,
+      trialEndsAt: organizations.trialEndsAt,
+    })
+    .from(organizations)
+    .innerJoin(organizationMembers, and(
+      eq(organizationMembers.organizationId, organizations.id),
+      eq(organizationMembers.role, "owner")
+    ))
+    .innerJoin(users, eq(users.id, organizationMembers.userId))
+    .where(or(
+      eq(organizations.subscriptionStatus, "trialing"),
+      eq(organizations.subscriptionStatus, "active"),
+    ))
+    .orderBy(desc(organizations.createdAt))
+
+  return rows.map(r => ({
+    ...r,
+    phone: r.ownerPhone ?? r.ownerPhoneFallback ?? null,
+  }))
+}
+
 export async function setLifetimeAction(orgId: string) {
   await requireAdmin()
 
@@ -209,6 +338,7 @@ export type AdminWhatsAppTemplateSetting = {
   packageSummaryTemplateId: string | null
   reminderConfirmationTemplateId: string | null
   postVisitTemplateId: string | null
+  trialOutreachTemplateId: string | null
 }
 
 export async function getWhatsAppTemplateSettingsAction(): Promise<AdminWhatsAppTemplateSetting> {
@@ -220,6 +350,7 @@ export async function getWhatsAppTemplateSettingsAction(): Promise<AdminWhatsApp
         ,s.package_summary_template_id as "packageSummaryTemplateId"
         ,s.reminder_confirmation_template_id as "reminderConfirmationTemplateId"
         ,s.post_visit_template_id as "postVisitTemplateId"
+        ,s.trial_outreach_template_id as "trialOutreachTemplateId"
       FROM whatsapp_system_template_settings s
       WHERE s.singleton_key = 'default'
       LIMIT 1
@@ -230,6 +361,7 @@ export async function getWhatsAppTemplateSettingsAction(): Promise<AdminWhatsApp
       packageSummaryTemplateId: one?.packageSummaryTemplateId ?? null,
       reminderConfirmationTemplateId: one?.reminderConfirmationTemplateId ?? null,
       postVisitTemplateId: one?.postVisitTemplateId ?? null,
+      trialOutreachTemplateId: one?.trialOutreachTemplateId ?? null,
     }
   } catch (err) {
     console.error("[Admin] Falha ao carregar config global de template WhatsApp:", err)
@@ -238,6 +370,7 @@ export async function getWhatsAppTemplateSettingsAction(): Promise<AdminWhatsApp
       packageSummaryTemplateId: null,
       reminderConfirmationTemplateId: null,
       postVisitTemplateId: null,
+      trialOutreachTemplateId: null,
     }
   }
 }
@@ -247,15 +380,17 @@ export async function saveWhatsAppTemplateSettingAction(input: {
   packageSummaryTemplateId: string
   reminderConfirmationTemplateId: string
   postVisitTemplateId: string
+  trialOutreachTemplateId: string
 }) {
   await requireAdmin()
   const bookingTemplateId = input.bookingSummaryTemplateId.trim() || null
   const packageTemplateId = input.packageSummaryTemplateId.trim() || null
   const reminderTemplateId = input.reminderConfirmationTemplateId.trim() || null
   const postVisitTemplateId = input.postVisitTemplateId.trim() || null
+  const trialOutreachTemplateId = input.trialOutreachTemplateId.trim() || null
   await db.execute(sql`
     INSERT INTO whatsapp_system_template_settings (
-      id, singleton_key, booking_summary_template_id, package_summary_template_id, reminder_confirmation_template_id, post_visit_template_id, created_at, updated_at
+      id, singleton_key, booking_summary_template_id, package_summary_template_id, reminder_confirmation_template_id, post_visit_template_id, trial_outreach_template_id, created_at, updated_at
     )
     VALUES (
       ${crypto.randomUUID()},
@@ -264,6 +399,7 @@ export async function saveWhatsAppTemplateSettingAction(input: {
       ${packageTemplateId},
       ${reminderTemplateId},
       ${postVisitTemplateId},
+      ${trialOutreachTemplateId},
       now(),
       now()
     )
@@ -272,6 +408,7 @@ export async function saveWhatsAppTemplateSettingAction(input: {
       package_summary_template_id = EXCLUDED.package_summary_template_id,
       reminder_confirmation_template_id = EXCLUDED.reminder_confirmation_template_id,
       post_visit_template_id = EXCLUDED.post_visit_template_id,
+      trial_outreach_template_id = EXCLUDED.trial_outreach_template_id,
       updated_at = now()
   `)
   revalidatePath("/admin")

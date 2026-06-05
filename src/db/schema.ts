@@ -731,6 +731,7 @@ export const whatsappSystemTemplateSettings = pgTable("whatsapp_system_template_
   packageSummaryTemplateId: text("package_summary_template_id"),
   reminderConfirmationTemplateId: text("reminder_confirmation_template_id"),
   postVisitTemplateId: text("post_visit_template_id"),
+  trialOutreachTemplateId: text("trial_outreach_template_id"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 })
@@ -749,3 +750,24 @@ export const pushSubscriptions = pgTable("push_subscriptions", {
   auth: text("auth").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 })
+
+// ── admin_chat_messages ───────────────────────────────────────────────────────
+// Chat de suporte entre admin e usuários do Kira via WhatsApp
+
+export const adminChatMessages = pgTable("admin_chat_messages", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+
+  phone: text("phone").notNull(),          // número normalizado (55XXXXXXXXXXX)
+  senderName: text("sender_name"),         // nome identificado (se cruzado com org)
+  direction: text("direction").notNull(),  // "inbound" | "outbound"
+  content: text("content").notNull(),
+  gupshupMessageId: text("gupshup_message_id"),
+  templateUsed: text("template_used"),     // nome do template, se outbound via template
+  readAt: timestamp("read_at"),
+
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+})
+
+export type AdminChatMessage = typeof adminChatMessages.$inferSelect
