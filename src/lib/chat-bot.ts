@@ -47,25 +47,15 @@ async function upsertSession(phone: string, patch: Partial<typeof chatSessions.$
 }
 
 async function sendWelcome(phone: string) {
-  const text = `Olá! 👋 Como o Kira pode te ajudar hoje?\n\n1️⃣ Suporte\n2️⃣ Comercial / Dúvidas\n\nResponda com o número ou o nome da opção.`
+  const body = "Oi! 👋 Bem-vindo ao Kira. Como posso te ajudar hoje?"
 
-  // Tenta quick_reply (botões nativos) em paralelo com o texto — garante entrega
-  // e melhora a UX se os botões funcionarem
-  const [, quickReplyResult] = await Promise.allSettled([
-    sendWhatsApp(phone, text),
-    sendWhatsAppQuickReply(phone, "Como o Kira pode te ajudar hoje?", [BTN_SUPPORT, BTN_COMMERCIAL]),
-  ])
-
-  if (quickReplyResult.status === "rejected") {
-    console.log("[Chatbot][welcome] quick_reply falhou:", quickReplyResult.reason)
-  }
-
-  await saveMessage(phone, "outbound", text)
+  await sendWhatsAppQuickReply(phone, body, [BTN_SUPPORT, BTN_COMMERCIAL])
+  await saveMessage(phone, "outbound", body)
   await upsertSession(phone, { state: "awaiting_selection", queue: null, userName: null, orgName: null })
 }
 
 async function sendOutOfHours(phone: string) {
-  const text = "Olá! 👋 Nosso atendimento funciona das 9h às 24h. Recebemos sua mensagem e responderemos assim que estivermos disponíveis! 😊"
+  const text = "Oi! 🌙 Nosso atendimento é das 9h às 24h. Já anotamos sua mensagem e te respondemos assim que estivermos disponíveis!"
   await sendWhatsApp(phone, text)
   await saveMessage(phone, "outbound", text)
   // Mantém sessão em awaiting_selection para quando o usuário responder dentro do horário
@@ -94,7 +84,7 @@ async function findUserByPhone(phone: string) {
 async function handleAwaitingCpf(phone: string, text: string) {
   const cpf = text.replace(/\D/g, "")
   if (cpf.length < 11) {
-    const reply = "Não consegui identificar o CPF. Por favor, informe apenas os números (ex: 12345678901):"
+    const reply = "Hmm, não consegui identificar o CPF. Pode mandar só os números? (ex: 12345678901)"
     await sendWhatsApp(phone, reply)
     await saveMessage(phone, "outbound", reply, "support")
     return
@@ -109,7 +99,7 @@ async function handleAwaitingCpf(phone: string, text: string) {
     .limit(1)
 
   if (!found) {
-    const reply = "Não encontramos uma conta com esse CPF. 🤔 Pode verificar e tentar novamente? Se precisar de outra ajuda, digite qualquer coisa para voltar ao menu."
+    const reply = "Não encontrei nenhuma conta com esse CPF. 🤔 Pode conferir e tentar de novo? Se quiser outra ajuda, é só mandar uma mensagem."
     await sendWhatsApp(phone, reply)
     await saveMessage(phone, "outbound", reply, "support")
     return
@@ -120,7 +110,7 @@ async function handleAwaitingCpf(phone: string, text: string) {
 
 async function routeToSupport(phone: string, userName: string, orgName: string) {
   const firstName = userName.split(" ")[0]
-  const reply = `Olá, ${firstName}! 😊 Sua solicitação foi recebida e logo um de nossos colaboradores entrará em contato. Aguarde!`
+  const reply = `Tudo certo, ${firstName}! 😊 Já encaminhei seu contato para o nosso time. Em breve alguém fala com você!`
   await sendWhatsApp(phone, reply)
   await saveMessage(phone, "outbound", reply, "support")
   await upsertSession(phone, { state: "routed", queue: "support", userName, orgName })
@@ -169,7 +159,7 @@ export async function handleInboundMessage(phone: string, text: string, senderNa
         await routeToSupport(phone, foundByPhone.userName, foundByPhone.orgName)
         return
       }
-      const reply = "Entendido! 🛠 Para identificarmos sua conta, por favor informe seu CPF cadastrado no Kira:"
+      const reply = "Claro! Para localizar sua conta, me informa o CPF cadastrado no Kira:"
       await sendWhatsApp(phone, reply)
       await saveMessage(phone, "outbound", reply, "support")
       await upsertSession(phone, { state: "awaiting_cpf", queue: "support" })
@@ -177,7 +167,7 @@ export async function handleInboundMessage(phone: string, text: string, senderNa
     }
 
     if (isCommercial) {
-      const reply = "Ótimo! 😊 Em breve um de nossos colaboradores entrará em contato. Aguarde!"
+      const reply = "Perfeito! 😊 Em instantes um de nossos atendentes vai falar com você. Aguarda um pouquinho!"
       await sendWhatsApp(phone, reply)
       await saveMessage(phone, "outbound", reply, "commercial")
       await upsertSession(phone, { state: "routed", queue: "commercial" })
