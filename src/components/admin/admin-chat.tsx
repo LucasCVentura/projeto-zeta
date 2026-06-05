@@ -64,7 +64,7 @@ function Avatar({ name, size = "md" }: { name: string; size?: "sm" | "md" }) {
   const s = size === "sm" ? "h-8 w-8 text-xs" : "h-10 w-10 text-sm"
   return (
     <div className={cn("shrink-0 flex items-center justify-center rounded-full bg-primary/15 text-primary font-bold", s)}>
-      {name[0].toUpperCase()}
+      {(name.match(/[a-zA-Z0-9]/)?.[0] ?? "#").toUpperCase()}
     </div>
   )
 }
