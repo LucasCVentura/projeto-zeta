@@ -1,10 +1,10 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
-import { extendTrialAction, cancelOrgAction, setLifetimeAction, adminChatAction, markInboundEmailReadAction, saveWhatsAppTemplateSettingAction } from "@/actions/admin"
+import { useState, useEffect } from "react"
+import { extendTrialAction, cancelOrgAction, setLifetimeAction, markInboundEmailReadAction, saveWhatsAppTemplateSettingAction } from "@/actions/admin"
 import { AdminChat } from "@/components/admin/admin-chat"
 import {
-  Send, Loader2, Trophy, TrendingUp, Users, DollarSign, ChevronDown, ChevronUp,
+  Trophy, TrendingUp, Users, DollarSign, ChevronDown, ChevronUp,
   Sprout, Rocket, Gem, Coins, Star, Activity, MessageSquare, Mail, MailOpen,
   Wallet, CalendarDays, LayoutDashboard, Building2, MessageCircle, Settings,
   Phone, BarChart3, Menu, X,
@@ -30,7 +30,6 @@ type Metrics = {
   newOrgsThisMonth: number; newOrgsLastMonth: number; mrr: number; netMrr: number; orgs: Org[]
 }
 type Service = { name: string; category: string; tier: string; monthlyCost: number | null; notes: string; url: string }
-type ChatMessage = { role: "user" | "assistant"; content: string }
 type FeedbackItem = { id: string; content: string; createdAt: Date; orgName: string | null; userName: string | null }
 type FeedbackSummary = { summary: string; feedbackCount: number; generatedAt: Date } | null
 type InboundEmail = { id: string; from: string; subject: string; body: string; read: boolean; receivedAt: Date }
@@ -180,9 +179,6 @@ export function AdminDashboard({
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [inboundEmails, setInboundEmails] = useState(initialInboundEmails)
   const [expandedEmail, setExpandedEmail] = useState<string | null>(null)
-  const [messages, setMessages] = useState<ChatMessage[]>([])
-  const [input, setInput] = useState("")
-  const [chatLoading, setChatLoading] = useState(false)
   const [templateSaving, setTemplateSaving] = useState(false)
   const [templateError, setTemplateError] = useState<string | null>(null)
   const [bookingTemplateId, setBookingTemplateId] = useState(whatsappTemplateSettings.bookingSummaryTemplateId ?? "")
@@ -193,19 +189,11 @@ export function AdminDashboard({
   const [pendingCancelOrg, setPendingCancelOrg] = useState<{ id: string; name: string } | null>(null)
   const [activeSection, setActiveSection] = useState("overview")
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const chatEndRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }, [messages])
-
   const unreadCount = inboundEmails.filter(e => !e.read).length
-  const metricsContext = `Total orgs: ${metrics.totalOrgs}, Ativas: ${metrics.activeOrgs}, Trial: ${metrics.trialingOrgs}, MRR: ${formatBRL(metrics.mrr)}`
 
   const NAV_ITEMS: NavItem[] = [
     { id: "overview",       label: "Visão Geral",     icon: LayoutDashboard },
     { id: "clinicas",       label: `Clínicas (${orgs.length})`, icon: Building2 },
-    { id: "growth",         label: "Growth IA",       icon: TrendingUp },
     { id: "feedback",       label: "Feedback",        icon: MessageSquare, badge: feedbacks.length },
     { id: "financeiro",     label: "Financeiro",      icon: Wallet },
     { id: "whatsapp",       label: `WhatsApp (${whatsappLogs.length})`, icon: Phone },
@@ -253,17 +241,6 @@ export function AdminDashboard({
     }
   }
 
-  async function handleChat(e: React.FormEvent) {
-    e.preventDefault()
-    if (!input.trim() || chatLoading) return
-    const userMsg: ChatMessage = { role: "user", content: input.trim() }
-    setMessages(prev => [...prev, userMsg])
-    setInput("")
-    setChatLoading(true)
-    const reply = await adminChatAction([...messages, userMsg], metricsContext)
-    setMessages(prev => [...prev, { role: "assistant", content: reply }])
-    setChatLoading(false)
-  }
 
   async function handleSaveTemplate() {
     setTemplateSaving(true); setTemplateError(null)
@@ -362,110 +339,71 @@ export function AdminDashboard({
       )
 
       case "clinicas": return (
-        <div className="rounded-xl border border-border overflow-hidden divide-y divide-border">
-          {orgs.length === 0 && <div className="py-16 text-center text-sm text-muted-foreground">Nenhuma clínica cadastrada.</div>}
-          {orgs.map((org) => {
-            const initials = org.name.split(" ").slice(0, 2).map(w => w[0]).join("").toUpperCase()
-            return (
-              <div key={org.id}>
-                <button
-                  onClick={() => setExpandedOrg(expandedOrg === org.id ? null : org.id)}
-                  className="w-full flex items-center gap-3 px-5 py-4 hover:bg-muted/30 transition-colors text-left"
-                >
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">{initials}</div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium truncate">{org.name}</span>
-                      <span className={cn("shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded-full", statusColor(org.subscriptionStatus))}>
-                        {statusLabel(org.subscriptionStatus)}
-                      </span>
+        <div className="space-y-4">
+          {orgs.length === 0 && (
+            <div className="py-16 text-center text-sm text-muted-foreground">Nenhuma clínica cadastrada.</div>
+          )}
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {orgs.map((org) => {
+              const initials = org.name.split(" ").slice(0, 2).map(w => w[0]).join("").toUpperCase()
+              const expanded = expandedOrg === org.id
+              return (
+                <div key={org.id} className="rounded-xl border border-border bg-card flex flex-col overflow-hidden">
+                  {/* Card header */}
+                  <div className="flex items-center gap-3 px-4 py-4">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">{initials}</div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-semibold truncate">{org.name}</span>
+                        <span className={cn("text-[10px] font-semibold px-1.5 py-0.5 rounded-full", statusColor(org.subscriptionStatus))}>
+                          {statusLabel(org.subscriptionStatus)}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground truncate mt-0.5">{org.owner?.name}</p>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-0.5 truncate">{org.owner?.email} · {org.clients} clientes</p>
                   </div>
-                  {expandedOrg === org.id ? <ChevronUp size={14} className="text-muted-foreground shrink-0" /> : <ChevronDown size={14} className="text-muted-foreground shrink-0" />}
-                </button>
-                {expandedOrg === org.id && (
-                  <div className="px-5 pb-5 pt-3 bg-muted/20 space-y-3 border-t border-border/50">
-                    <div className="grid grid-cols-3 gap-2">
-                      {[{ label: "Clientes", value: org.clients }, { label: "Atendimentos", value: org.appointments }, { label: "Fotos", value: org.photos }].map(s => (
-                        <div key={s.label} className="rounded-lg bg-background border border-border p-3 text-center">
-                          <p className="font-bold text-lg tabular-nums">{s.value}</p>
-                          <p className="text-[11px] text-muted-foreground">{s.label}</p>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="rounded-lg bg-background border border-border px-3 py-2.5 text-xs space-y-1 text-muted-foreground">
-                      <p><span className="text-foreground font-medium">{org.owner?.name}</span> · {org.owner?.email}</p>
+
+                  {/* Stats */}
+                  <div className="grid grid-cols-3 gap-px bg-border mx-4 rounded-lg overflow-hidden mb-4">
+                    {[{ label: "Clientes", value: org.clients }, { label: "Atend.", value: org.appointments }, { label: "Fotos", value: org.photos }].map(s => (
+                      <div key={s.label} className="bg-muted/40 py-2.5 text-center">
+                        <p className="font-bold text-base tabular-nums">{s.value}</p>
+                        <p className="text-[10px] text-muted-foreground">{s.label}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Info colapsável */}
+                  {expanded && (
+                    <div className="px-4 pb-3 text-xs text-muted-foreground space-y-0.5 border-t border-border/50 pt-3">
+                      <p className="truncate">{org.owner?.email}</p>
                       <p>Cadastro: <span className="text-foreground">{new Date(org.createdAt).toLocaleDateString("pt-BR")}</span>
                         {org.trialEndsAt && <> · Trial até <span className="text-foreground">{new Date(org.trialEndsAt).toLocaleDateString("pt-BR")}</span></>}
                       </p>
                     </div>
-                    <div className="flex flex-wrap gap-2">
-                      <Button size="sm" variant="outline" disabled={actionLoading === org.id} onClick={() => handleExtendTrial(org.id, 7)} className="h-7 text-xs">+7 dias trial</Button>
-                      <Button size="sm" variant="outline" disabled={actionLoading === org.id} onClick={() => handleExtendTrial(org.id, 30)} className="h-7 text-xs">+30 dias trial</Button>
-                      {org.subscriptionStatus !== "lifetime" && (
-                        <Button size="sm" variant="outline" disabled={actionLoading === org.id} onClick={() => handleSetLifetime(org.id)} className="h-7 text-xs text-amber-600 border-amber-300 hover:border-amber-500">♾ Vitalício</Button>
-                      )}
-                      {org.subscriptionStatus !== "canceled" && org.subscriptionStatus !== "lifetime" && (
-                        <Button size="sm" variant="outline" disabled={actionLoading === org.id} onClick={() => setPendingCancelOrg({ id: org.id, name: org.name })} className="h-7 text-xs text-destructive border-destructive/30 hover:border-destructive/60">Cancelar</Button>
-                      )}
-                    </div>
+                  )}
+
+                  {/* Ações */}
+                  <div className="mt-auto border-t border-border/50 px-4 py-3 flex flex-wrap gap-1.5 items-center">
+                    <button onClick={() => setExpandedOrg(expanded ? null : org.id)} className="text-xs text-muted-foreground hover:text-foreground transition-colors mr-auto">
+                      {expanded ? "Menos" : "Detalhes"}
+                    </button>
+                    <Button size="sm" variant="outline" disabled={actionLoading === org.id} onClick={() => handleExtendTrial(org.id, 7)} className="h-6 text-[11px] px-2">+7d</Button>
+                    <Button size="sm" variant="outline" disabled={actionLoading === org.id} onClick={() => handleExtendTrial(org.id, 30)} className="h-6 text-[11px] px-2">+30d</Button>
+                    {org.subscriptionStatus !== "lifetime" && (
+                      <Button size="sm" variant="outline" disabled={actionLoading === org.id} onClick={() => handleSetLifetime(org.id)} className="h-6 text-[11px] px-2 text-amber-600 border-amber-300 hover:border-amber-500">♾</Button>
+                    )}
+                    {org.subscriptionStatus !== "canceled" && org.subscriptionStatus !== "lifetime" && (
+                      <Button size="sm" variant="outline" disabled={actionLoading === org.id} onClick={() => setPendingCancelOrg({ id: org.id, name: org.name })} className="h-6 text-[11px] px-2 text-destructive border-destructive/30 hover:border-destructive/60">✕</Button>
+                    )}
                   </div>
-                )}
-              </div>
-            )
-          })}
+                </div>
+              )
+            })}
+          </div>
         </div>
       )
 
-      case "growth": return (
-        <div className="rounded-xl border border-border overflow-hidden flex flex-col" style={{ height: 600 }}>
-          <div className="px-5 py-4 border-b border-border flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10"><TrendingUp size={15} className="text-primary" /></div>
-            <div>
-              <p className="text-sm font-semibold">Consultor de Growth</p>
-              <p className="text-xs text-muted-foreground">Com acesso às métricas atuais do Kira</p>
-            </div>
-          </div>
-          <div className="flex-1 overflow-y-auto p-5 space-y-3">
-            {messages.length === 0 && (
-              <div className="h-full flex items-center justify-center text-center">
-                <div className="space-y-3">
-                  <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
-                    <TrendingUp size={22} className="text-primary" />
-                  </div>
-                  <p className="text-sm font-medium">Pergunte sobre crescimento</p>
-                  <p className="text-xs text-muted-foreground max-w-xs">Conversão de trials, estratégias de marketing, análise de churn…</p>
-                </div>
-              </div>
-            )}
-            {messages.map((msg, i) => (
-              <div key={i} className={cn("flex", msg.role === "user" ? "justify-end" : "justify-start")}>
-                <div className={cn(
-                  "max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap",
-                  msg.role === "user" ? "bg-primary text-primary-foreground rounded-br-sm" : "bg-muted text-foreground rounded-bl-sm"
-                )}>{msg.content}</div>
-              </div>
-            ))}
-            {chatLoading && (
-              <div className="flex justify-start">
-                <div className="bg-muted rounded-2xl rounded-bl-sm px-4 py-3 flex items-center gap-1.5">
-                  {[0, 150, 300].map(d => <span key={d} className="h-1.5 w-1.5 rounded-full bg-muted-foreground/50 animate-bounce" style={{ animationDelay: `${d}ms` }} />)}
-                </div>
-              </div>
-            )}
-            <div ref={chatEndRef} />
-          </div>
-          <div className="border-t border-border p-4">
-            <form onSubmit={handleChat} className="flex gap-2">
-              <Input value={input} onChange={e => setInput(e.target.value)} placeholder="Como aumentar conversão de trials..." className="h-9 text-sm" disabled={chatLoading} />
-              <Button type="submit" size="sm" disabled={chatLoading || !input.trim()} className="h-9 px-3">
-                {chatLoading ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
-              </Button>
-            </form>
-          </div>
-        </div>
-      )
 
       case "feedback": return (
         <div className="space-y-5">
@@ -605,46 +543,74 @@ export function AdminDashboard({
 
       case "chat": return <AdminChat trialOutreachTemplateId={whatsappTemplateSettings.trialOutreachTemplateId} />
 
-      case "suporte": return (
-        <div className="space-y-4">
-          {inboundEmails.length === 0
-            ? (
-              <div className="rounded-xl border border-border bg-card p-14 text-center space-y-3">
-                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-muted"><MailOpen size={20} className="text-muted-foreground" /></div>
-                <p className="text-sm font-medium">Caixa de entrada vazia</p>
-                <p className="text-xs text-muted-foreground">Emails para <span className="font-medium">suporte@kiraclinic.com.br</span> aparecem aqui.</p>
+      case "suporte": {
+        const selectedEmail = inboundEmails.find(e => e.id === expandedEmail) ?? null
+        return (
+          <div className="flex gap-0 h-full">
+            {/* Lista */}
+            <div className="w-80 shrink-0 border-r border-border flex flex-col">
+              <div className="px-4 py-3 border-b border-border shrink-0">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Entrada · {inboundEmails.length} {unreadCount > 0 && <span className="text-primary">{unreadCount} não lidos</span>}
+                </p>
               </div>
-            )
-            : (
-              <div className="rounded-xl border border-border overflow-hidden divide-y divide-border">
-                {inboundEmails.map(email => (
-                  <div key={email.id}>
-                    <button
-                      onClick={() => handleExpandEmail(email.id)}
-                      className={cn("w-full flex items-center gap-3 px-5 py-4 hover:bg-muted/30 transition-colors text-left", !email.read && "bg-primary/5")}
-                    >
-                      <div className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-full", email.read ? "bg-muted text-muted-foreground" : "bg-primary/10 text-primary")}>
-                        {email.read ? <MailOpen size={14} /> : <Mail size={14} />}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <span className={cn("text-sm block truncate", !email.read && "font-semibold")}>{email.subject}</span>
-                        <p className="text-xs text-muted-foreground mt-0.5 truncate">{email.from} · {new Date(email.receivedAt).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}</p>
-                      </div>
-                      {expandedEmail === email.id ? <ChevronUp size={14} className="text-muted-foreground shrink-0" /> : <ChevronDown size={14} className="text-muted-foreground shrink-0" />}
-                    </button>
-                    {expandedEmail === email.id && (
-                      <div className="px-5 pb-5 pt-3 bg-muted/20 space-y-2 border-t border-border/50">
-                        <p className="text-xs text-muted-foreground">De: <span className="text-foreground">{email.from}</span></p>
-                        <div className="rounded-lg bg-background border border-border p-4 text-sm whitespace-pre-wrap leading-relaxed">{email.body || "(sem conteúdo)"}</div>
-                      </div>
-                    )}
+              <div className="flex-1 overflow-y-auto divide-y divide-border">
+                {inboundEmails.length === 0 && (
+                  <div className="flex flex-col items-center gap-2 py-14 text-center px-4">
+                    <MailOpen size={20} className="text-muted-foreground/30" />
+                    <p className="text-xs text-muted-foreground">Caixa de entrada vazia</p>
                   </div>
+                )}
+                {inboundEmails.map(email => (
+                  <button
+                    key={email.id}
+                    onClick={() => handleExpandEmail(email.id)}
+                    className={cn(
+                      "w-full flex items-start gap-3 px-4 py-3.5 hover:bg-accent transition-colors text-left",
+                      expandedEmail === email.id && "bg-accent",
+                      !email.read && "bg-primary/5"
+                    )}
+                  >
+                    <div className={cn("mt-0.5 h-2 w-2 shrink-0 rounded-full", !email.read ? "bg-primary" : "bg-transparent")} />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-1 mb-0.5">
+                        <span className={cn("text-xs truncate", !email.read ? "font-semibold text-foreground" : "text-muted-foreground")}>{email.from.split("<")[0].trim() || email.from}</span>
+                        <span className="text-[10px] text-muted-foreground shrink-0">{new Date(email.receivedAt).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}</span>
+                      </div>
+                      <p className={cn("text-sm truncate", !email.read ? "font-medium" : "")}>{email.subject}</p>
+                      <p className="text-xs text-muted-foreground truncate mt-0.5">{(email.body ?? "").slice(0, 60)}</p>
+                    </div>
+                  </button>
                 ))}
               </div>
-            )
-          }
-        </div>
-      )
+            </div>
+
+            {/* Preview */}
+            <div className="flex-1 flex flex-col overflow-hidden bg-background">
+              {selectedEmail ? (
+                <>
+                  <div className="px-6 py-4 border-b border-border shrink-0 space-y-1">
+                    <h2 className="font-semibold text-base">{selectedEmail.subject}</h2>
+                    <p className="text-xs text-muted-foreground">
+                      De: <span className="text-foreground">{selectedEmail.from}</span>
+                      {" · "}
+                      {new Date(selectedEmail.receivedAt).toLocaleString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+                    </p>
+                  </div>
+                  <div className="flex-1 overflow-y-auto px-6 py-5">
+                    <p className="text-sm leading-relaxed whitespace-pre-wrap">{selectedEmail.body || "(sem conteúdo)"}</p>
+                  </div>
+                </>
+              ) : (
+                <div className="flex-1 flex flex-col items-center justify-center gap-3 text-center text-muted-foreground">
+                  <Mail size={28} className="opacity-20" />
+                  <p className="text-sm">Selecione um email para ler</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )
+      }
 
       default: return null
     }
@@ -685,7 +651,7 @@ export function AdminDashboard({
         </header>
 
         {/* Conteúdo */}
-        <main className="flex-1 overflow-y-auto p-6">
+        <main className={cn("flex-1 overflow-y-auto", (activeSection === "chat" || activeSection === "suporte") ? "p-0 overflow-hidden" : "p-6")}>
           {renderSection()}
         </main>
       </div>

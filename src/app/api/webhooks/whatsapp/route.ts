@@ -59,14 +59,12 @@ export async function POST(req: NextRequest) {
       const digits = payload.source.replace(/\D/g, "")
       const normalizedPhone = digits.startsWith("55") ? digits : `55${digits}`
       const messageText = payload.payload?.text ?? buttonTitle ?? ""
+      const senderName = payload.sender?.name ?? null
 
       if (messageText) {
-        // Se a mensagem é uma resposta de confirmação de agendamento, o fluxo
-        // já foi tratado acima (handleWhatsAppReplyByPhone). Aqui só chegam
-        // mensagens que não bateram nos handlers de confirmação.
         const isAppointmentReply = /(confirmar|cancelar)/i.test(messageText)
         if (!isAppointmentReply) {
-          await handleInboundMessage(normalizedPhone, messageText)
+          await handleInboundMessage(normalizedPhone, messageText, senderName)
         }
       }
     }
@@ -91,6 +89,10 @@ type GupshupWebhookPayload = {
     source: string
     destination?: string
     type: string
+    sender?: {
+      name?: string
+      phone?: string
+    }
     payload?: {
       title?: string
       text?: string

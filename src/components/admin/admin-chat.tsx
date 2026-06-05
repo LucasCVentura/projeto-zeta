@@ -176,14 +176,24 @@ function MessageArea({ phone, displayName, queue, orgName }: {
   const [text, setText] = useState("")
   const [sending, setSending] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
+  const isAtBottomRef = useRef(true)
 
   useEffect(() => {
     setMessages([])
     getAdminChatMessagesAction(phone).then(setMessages)
+
+    const interval = setInterval(async () => {
+      const updated = await getAdminChatMessagesAction(phone)
+      setMessages(updated)
+    }, 3000)
+
+    return () => clearInterval(interval)
   }, [phone])
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" })
+    if (isAtBottomRef.current) {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" })
+    }
   }, [messages])
 
   async function handleSend(e: React.FormEvent) {
@@ -284,7 +294,7 @@ function ConversationList({
   }
 
   return (
-    <div className="flex flex-col h-full border-r border-border">
+    <div className="flex flex-col h-full border-r border-border/60">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border">
         <p className="font-semibold text-sm">Conversas</p>
@@ -376,6 +386,13 @@ export function AdminChat({ trialOutreachTemplateId }: { trialOutreachTemplateId
       setTrialOrgs(orgs as TrialOrg[])
       setLoading(false)
     })
+
+    const interval = setInterval(async () => {
+      const convs = await getAdminChatConversationsAction()
+      setConversations(convs as Conversation[])
+    }, 5000)
+
+    return () => clearInterval(interval)
   }, [])
 
   async function refreshConversations() {
@@ -401,11 +418,11 @@ export function AdminChat({ trialOutreachTemplateId }: { trialOutreachTemplateId
   }
 
   if (loading) {
-    return <div className="h-170 flex items-center justify-center border border-border rounded-xl text-sm text-muted-foreground">Carregando...</div>
+    return <div className="h-full flex items-center justify-center text-sm text-muted-foreground">Carregando...</div>
   }
 
   return (
-    <div className="h-170 flex border border-border rounded-xl overflow-hidden bg-background">
+    <div className="h-full flex bg-background overflow-hidden">
       {/* Coluna esquerda — lista */}
       <div className={cn("flex flex-col w-80 shrink-0", activeConv && "hidden sm:flex")}>
         {showNew ? (
