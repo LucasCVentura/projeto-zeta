@@ -47,9 +47,21 @@ async function upsertSession(phone: string, patch: Partial<typeof chatSessions.$
 }
 
 async function sendWelcome(phone: string) {
-  const text = "Olá! 👋 Como o Kira pode te ajudar hoje?"
-  await sendWhatsAppQuickReply(phone, text, [BTN_SUPPORT, BTN_COMMERCIAL])
-  await saveMessage(phone, "outbound", text)
+  const quickReplyText = "Olá! 👋 Como o Kira pode te ajudar hoje?"
+  const fallbackText = `Olá! 👋 Como o Kira pode te ajudar hoje?\n\n1️⃣ Suporte\n2️⃣ Comercial / Dúvidas\n\nResponda com o número ou o nome da opção.`
+
+  // Tenta quick_reply (botões nativos); se falhar, cai em texto simples
+  let sent = false
+  try {
+    await sendWhatsAppQuickReply(phone, quickReplyText, [BTN_SUPPORT, BTN_COMMERCIAL])
+    sent = true
+  } catch { /* ignora, usa fallback */ }
+
+  if (!sent) {
+    await sendWhatsApp(phone, fallbackText)
+  }
+
+  await saveMessage(phone, "outbound", quickReplyText)
   await upsertSession(phone, { state: "awaiting_selection", queue: null, userName: null, orgName: null })
 }
 
