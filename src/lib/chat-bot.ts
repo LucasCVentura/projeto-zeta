@@ -6,7 +6,7 @@ import { sendWhatsApp, sendWhatsAppQuickReply } from "@/lib/whatsapp-client"
 const SESSION_TTL_MS = 2 * 60 * 60 * 1000  // 2 horas
 
 const BTN_SUPPORT    = "🛠 Suporte"
-const BTN_COMMERCIAL = "💬 Comercial / Dúvidas"
+const BTN_COMMERCIAL = "💬 Comercial"
 
 function isOutOfHours(): boolean {
   const now = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }))
