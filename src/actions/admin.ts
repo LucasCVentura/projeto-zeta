@@ -6,7 +6,7 @@ import {
   appointments, clients, transactions, clientPhotos,
   adminChatMessages, chatSessions,
 } from "@/db/schema"
-import { eq, count, sum, gte, sql, or, and, desc, asc } from "drizzle-orm"
+import { eq, count, sum, gte, sql, or, and, desc, asc, isNull } from "drizzle-orm"
 import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import { revalidatePath } from "next/cache"
@@ -174,7 +174,7 @@ export async function getAdminChatConversationsAction() {
   const unreadRows = await db
     .select({ phone: adminChatMessages.phone, count: count() })
     .from(adminChatMessages)
-    .where(eq(adminChatMessages.direction, "inbound"))
+    .where(and(eq(adminChatMessages.direction, "inbound"), isNull(adminChatMessages.readAt)))
     .groupBy(adminChatMessages.phone)
 
   const unreadMap = Object.fromEntries(unreadRows.map(r => [r.phone, r.count]))
