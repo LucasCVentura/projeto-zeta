@@ -72,6 +72,25 @@ async function sendOutOfHours(phone: string) {
   await upsertSession(phone, { state: "awaiting_selection", queue: null, userName: null, orgName: null })
 }
 
+async function findUserByPhone(phone: string) {
+  const digits = phone.replace(/\D/g, "")
+  const withDdi = digits.startsWith("55") ? digits : `55${digits}`
+  const withoutDdi = digits.startsWith("55") ? digits.slice(2) : digits
+
+  const rows = await db
+    .select({ userName: users.name, orgName: organizations.name, phone: users.phone, whatsapp: users.whatsapp })
+    .from(users)
+    .innerJoin(organizationMembers, eq(organizationMembers.userId, users.id))
+    .innerJoin(organizations, eq(organizations.id, organizationMembers.organizationId))
+    .where(eq(organizationMembers.role, "owner"))
+
+  return rows.find(r => {
+    const p = (r.phone ?? "").replace(/\D/g, "")
+    const w = (r.whatsapp ?? "").replace(/\D/g, "")
+    return p === withDdi || p === withoutDdi || w === withDdi || w === withoutDdi
+  }) ?? null
+}
+
 async function handleAwaitingCpf(phone: string, text: string) {
   const cpf = text.replace(/\D/g, "")
   if (cpf.length < 11) {
@@ -81,12 +100,8 @@ async function handleAwaitingCpf(phone: string, text: string) {
     return
   }
 
-  // Busca usuário pelo CPF
   const [found] = await db
-    .select({
-      userName: users.name,
-      orgName: organizations.name,
-    })
+    .select({ userName: users.name, orgName: organizations.name })
     .from(users)
     .innerJoin(organizationMembers, eq(organizationMembers.userId, users.id))
     .innerJoin(organizations, eq(organizations.id, organizationMembers.organizationId))
@@ -100,26 +115,39 @@ async function handleAwaitingCpf(phone: string, text: string) {
     return
   }
 
-  const firstName = found.userName.split(" ")[0]
+  await routeToSupport(phone, found.userName, found.orgName)
+}
+
+async function routeToSupport(phone: string, userName: string, orgName: string) {
+  const firstName = userName.split(" ")[0]
   const reply = `Olá, ${firstName}! 😊 Sua solicitação foi recebida e logo um de nossos colaboradores entrará em contato. Aguarde!`
   await sendWhatsApp(phone, reply)
   await saveMessage(phone, "outbound", reply, "support")
-  await upsertSession(phone, { state: "routed", queue: "support", userName: found.userName, orgName: found.orgName })
+  await upsertSession(phone, { state: "routed", queue: "support", userName, orgName })
 }
 
-export async function handleInboundMessage(phone: string, text: string) {
+export async function handleInboundMessage(phone: string, text: string, senderName?: string | null) {
   await saveMessage(phone, "inbound", text)
 
   const session = await getOrCreateSession(phone)
 
   // Sem sessão ou sessão expirada → nova conversa
   if (!session) {
+    // Persiste o nome do contato vindo do WhatsApp na sessão
+    if (senderName) {
+      await upsertSession(phone, { state: "awaiting_selection", queue: null, userName: senderName, orgName: null })
+    }
     if (isOutOfHours()) {
       await sendOutOfHours(phone)
     } else {
       await sendWelcome(phone)
     }
     return
+  }
+
+  // Atualiza nome do contato se ainda não tiver
+  if (senderName && !session.userName) {
+    await upsertSession(phone, { userName: senderName })
   }
 
   // Já roteado → mensagem vai direto pro admin (sem bot)
@@ -135,6 +163,12 @@ export async function handleInboundMessage(phone: string, text: string) {
     const isCommercial = normalized.includes("comercial") || normalized.includes("dúvidas") || normalized.includes("duvidas") || normalized === "2"
 
     if (isSupport) {
+      // Tenta identificar pelo próprio número de telefone
+      const foundByPhone = await findUserByPhone(phone)
+      if (foundByPhone) {
+        await routeToSupport(phone, foundByPhone.userName, foundByPhone.orgName)
+        return
+      }
       const reply = "Entendido! 🛠 Para identificarmos sua conta, por favor informe seu CPF cadastrado no Kira:"
       await sendWhatsApp(phone, reply)
       await saveMessage(phone, "outbound", reply, "support")
