@@ -47,21 +47,20 @@ async function upsertSession(phone: string, patch: Partial<typeof chatSessions.$
 }
 
 async function sendWelcome(phone: string) {
-  const quickReplyText = "Olá! 👋 Como o Kira pode te ajudar hoje?"
-  const fallbackText = `Olá! 👋 Como o Kira pode te ajudar hoje?\n\n1️⃣ Suporte\n2️⃣ Comercial / Dúvidas\n\nResponda com o número ou o nome da opção.`
+  const text = `Olá! 👋 Como o Kira pode te ajudar hoje?\n\n1️⃣ Suporte\n2️⃣ Comercial / Dúvidas\n\nResponda com o número ou o nome da opção.`
 
-  // Tenta quick_reply (botões nativos); se falhar, cai em texto simples
-  let sent = false
-  try {
-    await sendWhatsAppQuickReply(phone, quickReplyText, [BTN_SUPPORT, BTN_COMMERCIAL])
-    sent = true
-  } catch { /* ignora, usa fallback */ }
+  // Tenta quick_reply (botões nativos) em paralelo com o texto — garante entrega
+  // e melhora a UX se os botões funcionarem
+  const [, quickReplyResult] = await Promise.allSettled([
+    sendWhatsApp(phone, text),
+    sendWhatsAppQuickReply(phone, "Como o Kira pode te ajudar hoje?", [BTN_SUPPORT, BTN_COMMERCIAL]),
+  ])
 
-  if (!sent) {
-    await sendWhatsApp(phone, fallbackText)
+  if (quickReplyResult.status === "rejected") {
+    console.log("[Chatbot][welcome] quick_reply falhou:", quickReplyResult.reason)
   }
 
-  await saveMessage(phone, "outbound", quickReplyText)
+  await saveMessage(phone, "outbound", text)
   await upsertSession(phone, { state: "awaiting_selection", queue: null, userName: null, orgName: null })
 }
 
