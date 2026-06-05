@@ -6,6 +6,13 @@ import { useRouter } from "next/navigation"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 import { Search, CalendarDays, User } from "lucide-react"
+
+function formatPhone(p: string): string {
+  const d = p.replace(/\D/g, "").replace(/^55/, "")
+  if (d.length === 11) return `(${d.slice(0,2)}) ${d.slice(2,7)}-${d.slice(7)}`
+  if (d.length === 10) return `(${d.slice(0,2)}) ${d.slice(2,6)}-${d.slice(6)}`
+  return p
+}
 import { getClientsListAction } from "@/actions/clients"
 
 type Client = {
@@ -147,7 +154,7 @@ export function ClientsList({
               <div className="min-w-0 flex-1">
                 <p className="font-medium text-sm truncate">{client.name}</p>
                 <p className="text-xs text-muted-foreground truncate">
-                  {client.whatsapp ?? client.phone ?? client.email ?? "Sem contato"}
+                  {client.whatsapp ? formatPhone(client.whatsapp) : client.phone ? formatPhone(client.phone) : client.email ?? "Sem contato"}
                 </p>
               </div>
 
