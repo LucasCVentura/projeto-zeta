@@ -62,7 +62,10 @@ export async function sendWhatsAppQuickReply(
     body: params.toString(),
   })
 
-  if (!res.ok) throw new Error(`Gupshup quick_reply error ${res.status}: ${await res.text()}`)
+  const responseBody = await res.text()
+  console.log("[Gupshup][quick_reply] status:", res.status, "body:", responseBody)
+
+  if (!res.ok) throw new Error(`Gupshup quick_reply error ${res.status}: ${responseBody}`)
 }
 
 export async function sendWhatsAppTemplate(
