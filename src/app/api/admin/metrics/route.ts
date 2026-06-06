@@ -8,7 +8,9 @@ const ADMIN_EMAIL = "lucascv8525@gmail.com"
 
 export async function GET() {
   const session = await auth()
+  console.log("[/api/admin/metrics] session email:", session?.user?.email)
   if (session?.user?.email !== ADMIN_EMAIL) {
+    console.log("[/api/admin/metrics] unauthorized, redirecting")
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 

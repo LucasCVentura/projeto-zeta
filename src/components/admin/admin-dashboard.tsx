@@ -203,8 +203,9 @@ export function AdminDashboard() {
   // Busca tudo no client — página abre instantaneamente
   useEffect(() => {
     fetch("/api/admin/metrics")
-      .then(r => r.json())
-      .then(m => {
+      .then(async r => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`)
+        const m = await r.json()
         setMetrics(m)
         setOrgs(m.orgs)
         setMetricsLoading(false)
