@@ -1,7 +1,8 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { extendTrialAction, cancelOrgAction, setLifetimeAction, markInboundEmailReadAction, saveWhatsAppTemplateSettingAction } from "@/actions/admin"
+import { useState, useEffect, useCallback } from "react"
+import { extendTrialAction, cancelOrgAction, setLifetimeAction, markInboundEmailReadAction, saveWhatsAppTemplateSettingAction, getInboundEmailsAction, getWhatsAppMessageLogsAction } from "@/actions/admin"
+import { getAllFeedbackAction, getLatestFeedbackSummaryAction } from "@/actions/feedback"
 import { AdminChat } from "@/components/admin/admin-chat"
 import {
   Trophy, TrendingUp, Users, DollarSign, ChevronDown, ChevronUp,
@@ -168,17 +169,19 @@ function Sidebar({
 // ── Componente principal ──────────────────────────────────────────────────────
 
 export function AdminDashboard({
-  metrics, feedbacks = [], feedbackSummary,
-  inboundEmails: initialInboundEmails = [], whatsappLogs = [], whatsappTemplateSettings,
+  metrics, whatsappTemplateSettings,
 }: {
-  metrics: Metrics; feedbacks?: FeedbackItem[]; feedbackSummary: FeedbackSummary
-  inboundEmails?: InboundEmail[]; whatsappLogs?: WhatsAppLog[]; whatsappTemplateSettings: WhatsAppTemplateSetting
+  metrics: Metrics; whatsappTemplateSettings: WhatsAppTemplateSetting
 }) {
   const [orgs, setOrgs] = useState(metrics.orgs)
   const [expandedOrg, setExpandedOrg] = useState<string | null>(null)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
-  const [inboundEmails, setInboundEmails] = useState(initialInboundEmails)
+  const [inboundEmails, setInboundEmails] = useState<InboundEmail[]>([])
   const [expandedEmail, setExpandedEmail] = useState<string | null>(null)
+  const [feedbacks, setFeedbacks] = useState<FeedbackItem[]>([])
+  const [feedbackSummary, setFeedbackSummary] = useState<FeedbackSummary>(null)
+  const [whatsappLogs, setWhatsappLogs] = useState<WhatsAppLog[]>([])
+  const [loadedTabs, setLoadedTabs] = useState<Set<string>>(new Set())
   const [templateSaving, setTemplateSaving] = useState(false)
   const [templateError, setTemplateError] = useState<string | null>(null)
   const [bookingTemplateId, setBookingTemplateId] = useState(whatsappTemplateSettings.bookingSummaryTemplateId ?? "")
@@ -193,6 +196,29 @@ export function AdminDashboard({
   const [logFilterEvent, setLogFilterEvent] = useState("all")
   const [logFilterError, setLogFilterError] = useState(false)
   const unreadCount = inboundEmails.filter(e => !e.read).length
+
+  const loadTab = useCallback(async (section: string) => {
+    if (loadedTabs.has(section)) return
+    setLoadedTabs(prev => new Set([...prev, section]))
+
+    if (section === "feedback") {
+      const [fb, summary] = await Promise.all([getAllFeedbackAction(), getLatestFeedbackSummaryAction()])
+      setFeedbacks(fb ?? [])
+      setFeedbackSummary(summary)
+    }
+    if (section === "whatsapp") {
+      const logs = await getWhatsAppMessageLogsAction(100).catch(() => [])
+      setWhatsappLogs(logs as WhatsAppLog[])
+    }
+    if (section === "suporte") {
+      const emails = await getInboundEmailsAction().catch(() => [])
+      setInboundEmails(emails as InboundEmail[])
+    }
+  }, [loadedTabs])
+
+  useEffect(() => {
+    loadTab(activeSection)
+  }, [activeSection, loadTab])
 
   const NAV_ITEMS: NavItem[] = [
     { id: "overview",       label: "Visão Geral",     icon: LayoutDashboard },
