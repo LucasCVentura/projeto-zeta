@@ -202,14 +202,16 @@ export function AdminDashboard() {
 
   // Busca tudo no client — página abre instantaneamente
   useEffect(() => {
-    getAdminMetricsAction().then(m => {
-      setMetrics(m)
-      setOrgs(m.orgs)
-      setMetricsLoading(false)
-    }).catch((err) => {
-      console.error("[Admin] Falha ao carregar métricas:", err)
-      setMetricsLoading(false)
-    })
+    fetch("/api/admin/metrics")
+      .then(r => r.json())
+      .then(m => {
+        setMetrics(m)
+        setOrgs(m.orgs)
+        setMetricsLoading(false)
+      }).catch((err) => {
+        console.error("[Admin] Falha ao carregar métricas:", err)
+        setMetricsLoading(false)
+      })
 
     getWhatsAppTemplateSettingsAction().then(t => {
       setBookingTemplateId(t.bookingSummaryTemplateId ?? "")
