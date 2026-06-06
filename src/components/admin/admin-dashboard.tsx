@@ -206,7 +206,10 @@ export function AdminDashboard() {
       setMetrics(m)
       setOrgs(m.orgs)
       setMetricsLoading(false)
-    }).catch(() => setMetricsLoading(false))
+    }).catch((err) => {
+      console.error("[Admin] Falha ao carregar métricas:", err)
+      setMetricsLoading(false)
+    })
 
     getWhatsAppTemplateSettingsAction().then(t => {
       setBookingTemplateId(t.bookingSummaryTemplateId ?? "")

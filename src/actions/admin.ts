@@ -18,8 +18,13 @@ async function requireAdmin() {
   if (session?.user?.email !== ADMIN_EMAIL) redirect("/dashboard")
 }
 
+async function assertAdmin() {
+  const session = await auth()
+  if (session?.user?.email !== ADMIN_EMAIL) throw new Error("UNAUTHORIZED")
+}
+
 export async function getAdminMetricsAction() {
-  await requireAdmin()
+  await assertAdmin()
 
   const now = new Date()
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
@@ -116,7 +121,7 @@ export async function cancelOrgAction(orgId: string) {
 // ── Admin Chat ────────────────────────────────────────────────────────────────
 
 export async function getAdminChatConversationsAction() {
-  await requireAdmin()
+  await assertAdmin()
 
   // Última mensagem por número de telefone
   const rows = await db
@@ -166,7 +171,7 @@ export async function getAdminChatConversationsAction() {
 }
 
 export async function getAdminChatMessagesAction(phone: string) {
-  await requireAdmin()
+  await assertAdmin()
 
   const msgs = await db
     .select()
@@ -221,7 +226,7 @@ export async function sendAdminChatTemplateAction(phone: string, name: string, t
 }
 
 export async function getTrialOrgsForChatAction() {
-  await requireAdmin()
+  await assertAdmin()
 
   const rows = await db
     .select({
@@ -263,7 +268,7 @@ export async function setLifetimeAction(orgId: string) {
 }
 
 export async function getInboundEmailsAction() {
-  await requireAdmin()
+  await assertAdmin()
   const { inboundEmails } = await import("@/db/schema")
   const { desc } = await import("drizzle-orm")
   return db.select().from(inboundEmails).orderBy(desc(inboundEmails.receivedAt))
@@ -283,7 +288,7 @@ export type WhatsAppMessageLog = {
 }
 
 export async function getWhatsAppMessageLogsAction(limit = 200): Promise<WhatsAppMessageLog[]> {
-  await requireAdmin()
+  await assertAdmin()
   const rows = await db.execute(sql<WhatsAppMessageLog>`
     SELECT
       l.id,
@@ -322,7 +327,7 @@ export type AdminWhatsAppTemplateSetting = {
 }
 
 export async function getWhatsAppTemplateSettingsAction(): Promise<AdminWhatsAppTemplateSetting> {
-  await requireAdmin()
+  await assertAdmin()
   try {
     const rows = await db.execute(sql<AdminWhatsAppTemplateSetting>`
       SELECT
