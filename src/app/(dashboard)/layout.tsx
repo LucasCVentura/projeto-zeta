@@ -14,6 +14,8 @@ import { organizationMembers, organizations } from "@/db/schema"
 import { eq, and } from "drizzle-orm"
 import type { OrgRole } from "@/db/schema"
 import { getChangelogStateAction } from "@/actions/changelog"
+import { NoticesBanner } from "@/components/layout/notices-banner"
+import { getActiveNotices } from "@/lib/notices"
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const session = await auth()
@@ -80,6 +82,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           <Sidebar role={userRole} changelogHasNew={hasNew} changelogEntries={entries} />
         </div>
         <div className="flex flex-1 flex-col overflow-hidden">
+          <NoticesBanner notices={getActiveNotices()} />
           {trialDaysLeft !== null && <TrialBanner daysLeft={trialDaysLeft} />}
           <Header />
           <main className="flex-1 overflow-y-auto pb-16 lg:pb-0">
