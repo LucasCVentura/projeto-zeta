@@ -18,8 +18,9 @@ import { revalidatePath, revalidateTag, unstable_cache } from "next/cache"
 import type { AppointmentStatus } from "@/db/schema"
 import type { ActionResult } from "./auth"
 import { sendBookingSummary } from "./whatsapp"
-import { organizations } from "@/db/schema"
+import { organizations, anamnesisAnswers } from "@/db/schema"
 import { logWhatsAppSubmission } from "@/lib/whatsapp-logs"
+import { generateAnamnesisToken } from "@/lib/anamnesis-token"
 
 const TEMPLATE_BOOKING_SUMMARY_ID =
   process.env.GUPSHUP_TEMPLATE_KIRA_RESUMO_AGENDAMENTO_ID || "kira_resumo_agendamento"
@@ -248,6 +249,18 @@ export async function createAppointmentAction(data: {
           organizationId,
         })
       } else {
+        // Verifica se o cliente já tem anamnese preenchida
+        const hasAnamnesis = await db
+          .select({ id: anamnesisAnswers.id })
+          .from(anamnesisAnswers)
+          .where(eq(anamnesisAnswers.clientId, data.clientId))
+          .limit(1)
+          .then(r => r.length > 0)
+
+        const token = generateAnamnesisToken(data.clientId, organizationId)
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://kiraclinic.com.br"
+        const anamnesisLink = `${baseUrl}/anamnese/${token}`
+
         const submission = await sendBookingSummary({
           clientPhone: clientData.phone,
           clientName: clientData.name,
@@ -257,6 +270,8 @@ export async function createAppointmentAction(data: {
           orgName: org?.name ?? "Clínica",
           orgAddress: org?.address,
           templateId: bookingTemplateId,
+          anamnesisLink,
+          hasAnamnesis,
         })
         if (submission?.messageId) {
           await logWhatsAppSubmission({

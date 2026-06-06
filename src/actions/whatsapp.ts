@@ -88,9 +88,17 @@ export async function sendBookingSummary(params: {
   startTime: string
   procedure?: string | null
   templateId?: string
+  anamnesisLink?: string | null
+  hasAnamnesis?: boolean
 }): Promise<{ messageId: string } | null> {
-  const { clientPhone, clientName, orgName, orgAddress, date, startTime, procedure, templateId } = params
+  const { clientPhone, clientName, orgName, orgAddress, date, startTime, procedure, templateId, anamnesisLink, hasAnamnesis } = params
   const templates = await getGlobalTemplateIds()
+
+  const anamnesisParam = anamnesisLink
+    ? hasAnamnesis
+      ? `📋 Visualize ou edite sua ficha antes do atendimento: ${anamnesisLink}`
+      : `📋 Preencha sua ficha antes do atendimento: ${anamnesisLink}`
+    : ""
 
   return sendWhatsAppTemplate(clientPhone, templateId || templates.bookingSummaryTemplateId, [
     safeParam(clientName, "Cliente"),
@@ -99,6 +107,7 @@ export async function sendBookingSummary(params: {
     startTime.slice(0, 5),
     safeParam(procedure, "Sem procedimento"),
     safeParam(orgAddress, "Sem endereco"),
+    anamnesisParam,
   ])
 }
 
