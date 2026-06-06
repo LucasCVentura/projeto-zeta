@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { extendTrialAction, cancelOrgAction, setLifetimeAction, markInboundEmailReadAction, saveWhatsAppTemplateSettingAction, getInboundEmailsAction, getWhatsAppMessageLogsAction } from "@/actions/admin"
+import { extendTrialAction, cancelOrgAction, setLifetimeAction, markInboundEmailReadAction, saveWhatsAppTemplateSettingAction, getInboundEmailsAction, getWhatsAppMessageLogsAction, getAdminMetricsAction } from "@/actions/admin"
 import { getAllFeedbackAction, getLatestFeedbackSummaryAction } from "@/actions/feedback"
 import { AdminChat } from "@/components/admin/admin-chat"
 import {
@@ -168,12 +168,19 @@ function Sidebar({
 
 // ── Componente principal ──────────────────────────────────────────────────────
 
+const EMPTY_METRICS: Metrics = {
+  totalOrgs: 0, activeOrgs: 0, trialingOrgs: 0, incompleteBoletoOrgs: 0,
+  cancelledOrgs: 0, newOrgsThisMonth: 0, newOrgsLastMonth: 0, mrr: 0, netMrr: 0, orgs: [],
+}
+
 export function AdminDashboard({
-  metrics, whatsappTemplateSettings,
+  whatsappTemplateSettings,
 }: {
-  metrics: Metrics; whatsappTemplateSettings: WhatsAppTemplateSetting
+  whatsappTemplateSettings: WhatsAppTemplateSetting
 }) {
-  const [orgs, setOrgs] = useState(metrics.orgs)
+  const [metrics, setMetrics] = useState<Metrics>(EMPTY_METRICS)
+  const [metricsLoading, setMetricsLoading] = useState(true)
+  const [orgs, setOrgs] = useState<Org[]>([])
   const [expandedOrg, setExpandedOrg] = useState<string | null>(null)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [inboundEmails, setInboundEmails] = useState<InboundEmail[]>([])
@@ -196,6 +203,15 @@ export function AdminDashboard({
   const [logFilterEvent, setLogFilterEvent] = useState("all")
   const [logFilterError, setLogFilterError] = useState(false)
   const unreadCount = inboundEmails.filter(e => !e.read).length
+
+  // Busca métricas no client ao montar — página abre instantaneamente
+  useEffect(() => {
+    getAdminMetricsAction().then(m => {
+      setMetrics(m)
+      setOrgs(m.orgs)
+      setMetricsLoading(false)
+    }).catch(() => setMetricsLoading(false))
+  }, [])
 
   const loadTab = useCallback(async (section: string) => {
     if (loadedTabs.has(section)) return
@@ -307,7 +323,10 @@ export function AdminDashboard({
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">{m.label}</p>
-                    <p className="font-heading text-xl font-bold tabular-nums">{m.value}</p>
+                    {metricsLoading
+                      ? <div className="h-7 w-12 rounded bg-muted animate-pulse mt-0.5" />
+                      : <p className="font-heading text-xl font-bold tabular-nums">{m.value}</p>
+                    }
                   </div>
                 </div>
               )

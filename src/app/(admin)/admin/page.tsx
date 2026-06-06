@@ -1,33 +1,26 @@
-import { getAdminMetricsAction, getWhatsAppTemplateSettingsAction } from "@/actions/admin"
+import { redirect } from "next/navigation"
+import { auth } from "@/lib/auth"
 import { AdminDashboard } from "@/components/admin/admin-dashboard"
+import { getWhatsAppTemplateSettingsAction } from "@/actions/admin"
 
 export const metadata = { title: "Admin — Kira" }
 export const dynamic = "force-dynamic"
-export const maxDuration = 30
 
-function withTimeout<T>(p: Promise<T>, ms: number, fallback: T): Promise<T> {
-  return Promise.race([p, new Promise<T>(r => setTimeout(() => r(fallback), ms))])
-}
+const ADMIN_EMAIL = "lucascv8525@gmail.com"
 
-const EMPTY_METRICS = {
-  totalOrgs: 0, activeOrgs: 0, trialingOrgs: 0, incompleteBoletoOrgs: 0,
-  cancelledOrgs: 0, newOrgsThisMonth: 0, newOrgsLastMonth: 0,
-  mrr: 0, netMrr: 0, orgs: [],
-}
 const EMPTY_TEMPLATE = {
   bookingSummaryTemplateId: null, packageSummaryTemplateId: null,
   reminderConfirmationTemplateId: null, postVisitTemplateId: null, trialOutreachTemplateId: null,
 }
 
 export default async function AdminPage() {
-  const [metrics, whatsappTemplateSettings] = await Promise.all([
-    withTimeout(getAdminMetricsAction(), 20000, EMPTY_METRICS),
-    withTimeout(getWhatsAppTemplateSettingsAction().catch(() => EMPTY_TEMPLATE), 20000, EMPTY_TEMPLATE),
-  ])
+  const session = await auth()
+  if (session?.user?.email !== ADMIN_EMAIL) redirect("/dashboard")
+
+  const whatsappTemplateSettings = await getWhatsAppTemplateSettingsAction().catch(() => EMPTY_TEMPLATE)
 
   return (
     <AdminDashboard
-      metrics={metrics}
       whatsappTemplateSettings={whatsappTemplateSettings}
     />
   )
