@@ -13,32 +13,27 @@ function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T
   ])
 }
 
+const TIMEOUT = 10000
+const EMPTY_TEMPLATE = {
+  bookingSummaryTemplateId: null,
+  packageSummaryTemplateId: null,
+  reminderConfirmationTemplateId: null,
+  postVisitTemplateId: null,
+  trialOutreachTemplateId: null,
+}
+
 export default async function AdminPage() {
   const [metrics, feedbacks, feedbackSummary, inboundEmails, whatsappLogs, whatsappTemplateSettings] = await Promise.all([
-    getAdminMetricsAction(),
-    withTimeout(getAllFeedbackAction(), 8000, []),
-    withTimeout(getLatestFeedbackSummaryAction(), 8000, null),
-    withTimeout(getInboundEmailsAction(), 8000, []),
-    withTimeout(
-      getWhatsAppMessageLogsAction().catch(() => []),
-      8000,
-      []
-    ),
-    withTimeout(
-      getWhatsAppTemplateSettingsAction().catch(() => ({
-        bookingSummaryTemplateId: null,
-        packageSummaryTemplateId: null,
-        reminderConfirmationTemplateId: null,
-        postVisitTemplateId: null,
-      })),
-      8000,
-      {
-        bookingSummaryTemplateId: null,
-        packageSummaryTemplateId: null,
-        reminderConfirmationTemplateId: null,
-        postVisitTemplateId: null,
-      }
-    ),
+    withTimeout(getAdminMetricsAction(), TIMEOUT, {
+      totalOrgs: 0, activeOrgs: 0, trialingOrgs: 0, incompleteBoletoOrgs: 0,
+      cancelledOrgs: 0, newOrgsThisMonth: 0, newOrgsLastMonth: 0,
+      mrr: 0, netMrr: 0, orgs: [],
+    }),
+    withTimeout(getAllFeedbackAction(), TIMEOUT, []),
+    withTimeout(getLatestFeedbackSummaryAction(), TIMEOUT, null),
+    withTimeout(getInboundEmailsAction(), TIMEOUT, []),
+    withTimeout(getWhatsAppMessageLogsAction(100).catch(() => []), TIMEOUT, []),
+    withTimeout(getWhatsAppTemplateSettingsAction().catch(() => EMPTY_TEMPLATE), TIMEOUT, EMPTY_TEMPLATE),
   ])
 
   return (
