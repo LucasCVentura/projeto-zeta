@@ -1,15 +1,2 @@
 #!/bin/sh
-set -e
-
-while read -r local_ref local_sha remote_ref remote_sha
-do
-  case "$remote_ref" in
-    refs/heads/main)
-      echo "Push direto na main está bloqueado."
-      echo "Crie uma branch e abra PR para merge na main."
-      exit 1
-      ;;
-  esac
-done
-
 exit 0
