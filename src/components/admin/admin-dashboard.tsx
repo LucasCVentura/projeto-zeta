@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { extendTrialAction, cancelOrgAction, setLifetimeAction, markInboundEmailReadAction, saveWhatsAppTemplateSettingAction, getInboundEmailsAction, getWhatsAppMessageLogsAction, getAdminMetricsAction } from "@/actions/admin"
+import { extendTrialAction, cancelOrgAction, setLifetimeAction, markInboundEmailReadAction, saveWhatsAppTemplateSettingAction, getInboundEmailsAction, getWhatsAppMessageLogsAction, getAdminMetricsAction, getWhatsAppTemplateSettingsAction } from "@/actions/admin"
 import { getAllFeedbackAction, getLatestFeedbackSummaryAction } from "@/actions/feedback"
 import { AdminChat } from "@/components/admin/admin-chat"
 import {
@@ -173,11 +173,7 @@ const EMPTY_METRICS: Metrics = {
   cancelledOrgs: 0, newOrgsThisMonth: 0, newOrgsLastMonth: 0, mrr: 0, netMrr: 0, orgs: [],
 }
 
-export function AdminDashboard({
-  whatsappTemplateSettings,
-}: {
-  whatsappTemplateSettings: WhatsAppTemplateSetting
-}) {
+export function AdminDashboard() {
   const [metrics, setMetrics] = useState<Metrics>(EMPTY_METRICS)
   const [metricsLoading, setMetricsLoading] = useState(true)
   const [orgs, setOrgs] = useState<Org[]>([])
@@ -191,11 +187,11 @@ export function AdminDashboard({
   const [loadedTabs, setLoadedTabs] = useState<Set<string>>(new Set())
   const [templateSaving, setTemplateSaving] = useState(false)
   const [templateError, setTemplateError] = useState<string | null>(null)
-  const [bookingTemplateId, setBookingTemplateId] = useState(whatsappTemplateSettings.bookingSummaryTemplateId ?? "")
-  const [packageTemplateId, setPackageTemplateId] = useState(whatsappTemplateSettings.packageSummaryTemplateId ?? "")
-  const [reminderTemplateId, setReminderTemplateId] = useState(whatsappTemplateSettings.reminderConfirmationTemplateId ?? "")
-  const [postVisitTemplateId, setPostVisitTemplateId] = useState(whatsappTemplateSettings.postVisitTemplateId ?? "")
-  const [trialOutreachTemplateId, setTrialOutreachTemplateId] = useState(whatsappTemplateSettings.trialOutreachTemplateId ?? "")
+  const [bookingTemplateId, setBookingTemplateId] = useState("")
+  const [packageTemplateId, setPackageTemplateId] = useState("")
+  const [reminderTemplateId, setReminderTemplateId] = useState("")
+  const [postVisitTemplateId, setPostVisitTemplateId] = useState("")
+  const [trialOutreachTemplateId, setTrialOutreachTemplateId] = useState("")
   const [pendingCancelOrg, setPendingCancelOrg] = useState<{ id: string; name: string } | null>(null)
   const [activeSection, setActiveSection] = useState("overview")
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -204,13 +200,21 @@ export function AdminDashboard({
   const [logFilterError, setLogFilterError] = useState(false)
   const unreadCount = inboundEmails.filter(e => !e.read).length
 
-  // Busca métricas no client ao montar — página abre instantaneamente
+  // Busca tudo no client — página abre instantaneamente
   useEffect(() => {
     getAdminMetricsAction().then(m => {
       setMetrics(m)
       setOrgs(m.orgs)
       setMetricsLoading(false)
     }).catch(() => setMetricsLoading(false))
+
+    getWhatsAppTemplateSettingsAction().then(t => {
+      setBookingTemplateId(t.bookingSummaryTemplateId ?? "")
+      setPackageTemplateId(t.packageSummaryTemplateId ?? "")
+      setReminderTemplateId(t.reminderConfirmationTemplateId ?? "")
+      setPostVisitTemplateId(t.postVisitTemplateId ?? "")
+      setTrialOutreachTemplateId(t.trialOutreachTemplateId ?? "")
+    }).catch(() => {})
   }, [])
 
   const loadTab = useCallback(async (section: string) => {
@@ -625,7 +629,7 @@ export function AdminDashboard({
         </div>
       )
 
-      case "chat": return <AdminChat trialOutreachTemplateId={whatsappTemplateSettings.trialOutreachTemplateId} />
+      case "chat": return <AdminChat trialOutreachTemplateId={trialOutreachTemplateId || null} />
 
       case "suporte": {
         const selectedEmail = inboundEmails.find(e => e.id === expandedEmail) ?? null
