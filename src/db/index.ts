@@ -5,7 +5,7 @@ import * as schema from "./schema"
 const globalForDb = globalThis as unknown as { pgClient: postgres.Sql | undefined }
 
 const client = globalForDb.pgClient ?? postgres(process.env.DATABASE_URL!, {
-  max: 10,
+  max: 1,          // serverless: 1 conexão por invocação evita esgotar o pool do Supabase
   prepare: false,
   connect_timeout: 10,
   connection: {
