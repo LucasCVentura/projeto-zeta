@@ -164,7 +164,6 @@ export default async function DashboardPage() {
             <RevenueChart data={data.revenueChart} />
             <StatusChart data={data.statusCounts} />
           </div>
-          <ProceduresChart data={data.topProcedures} />
         </section>
       )}
 
