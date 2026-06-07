@@ -6,6 +6,27 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.6.0",
+    date: "2026-06-07",
+    items: [
+      { type: "new",         text: "Dashboard reformulado: próximos agendamentos da semana, clientes sem retorno há 30+ dias, aniversariantes da semana e procedimentos mais realizados" },
+      { type: "new",         text: "Notificações no sininho quando paciente confirma ou cancela agendamento via WhatsApp" },
+      { type: "new",         text: "Notificação no sininho quando paciente preenche a ficha de anamnese — com link direto para a ficha" },
+      { type: "new",         text: "Link para ficha de anamnese enviado automaticamente no resumo de agendamento via WhatsApp" },
+      { type: "new",         text: "Pacientes podem preencher e editar a ficha de anamnese pelo link sem precisar de login" },
+      { type: "improvement", text: "Taxa de confirmação exibida no dashboard no lugar de 'confirmados hoje'" },
+    ],
+  },
+  {
+    version: "1.5.0",
+    date: "2026-06-05",
+    items: [
+      { type: "new",         text: "Ficha de anamnese personalizável: adicione, remova e reordene as perguntas da ficha de cada cliente em Configurações → Anamnese" },
+      { type: "new",         text: "Suporte a 4 tipos de perguntas na anamnese: texto livre, sim/não, seleção única e múltipla escolha" },
+      { type: "improvement", text: "Ficha de anamnese agora salva as respostas por cliente de forma dinâmica — sem campos fixos" },
+    ],
+  },
+  {
     version: "1.4.0",
     date: "2026-06-03",
     items: [
