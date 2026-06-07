@@ -8,7 +8,8 @@ import { StatusBadge } from "./status-badge"
 import { AppointmentModal } from "./appointment-modal"
 import { BlockDrawer } from "./block-drawer"
 import { CompleteAppointmentModal } from "./complete-appointment-modal"
-import { updateAppointmentStatusAction, cancelAppointmentAction, getDaySlots } from "@/actions/schedule"
+import { updateAppointmentStatusAction, cancelAppointmentAction, getDaySlots, getMonthAppointments } from "@/actions/schedule"
+import type { MonthAppointment } from "@/actions/schedule"
 import { EditAppointmentModal } from "./edit-appointment-modal"
 import Link from "next/link"
 import type { TimeSlot } from "@/lib/schedule"
@@ -98,6 +99,36 @@ export function AgendaView({ initialDate, slots: initialSlots, hasConfig, slotDu
     notes?: string | null
   }>({ open: false, appointmentId: "" })
   const [isPending, startTransition] = useTransition()
+  const [view, setView] = useState<"day" | "month">("day")
+  const [monthData, setMonthData] = useState<Record<string, MonthAppointment[]>>({})
+  const [isLoadingMonth, setIsLoadingMonth] = useState(false)
+
+  async function loadMonth(dateStr: string) {
+    const [y, m] = dateStr.split("-").map(Number)
+    setIsLoadingMonth(true)
+    const data = await getMonthAppointments(y, m)
+    setMonthData(data)
+    setIsLoadingMonth(false)
+  }
+
+  function switchView(v: "day" | "month") {
+    setView(v)
+    if (v === "month") loadMonth(date)
+  }
+
+  function navigateMonth(dir: -1 | 1) {
+    const [y, m] = date.split("-").map(Number)
+    const d = new Date(y, m - 1 + dir, 1)
+    const newDate = toDateStr(d)
+    setDate(newDate)
+    router.push(`/agenda?data=${newDate}`)
+    loadMonth(newDate)
+  }
+
+  function handleDayClick(d: string) {
+    setView("day")
+    navigate(d)
+  }
 
   const weekDays = getWeekDays(date)
   const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" })
@@ -156,75 +187,123 @@ export function AgendaView({ initialDate, slots: initialSlots, hasConfig, slotDu
     <>
       {/* Navegação de data */}
       <div className="space-y-4">
-        {/* Semana */}
-        <div className="flex items-center justify-between gap-2">
-          <button
-            onClick={() => navigate(addDays(date, -7))}
-            className="flex h-9 w-9 items-center justify-center rounded-lg border border-border hover:bg-accent transition-colors"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M15 18l-6-6 6-6" />
-            </svg>
-          </button>
-
-          <div className="flex flex-1 gap-1 overflow-x-auto">
-            {weekDays.map((d) => {
-              const dayObj = new Date(d + "T12:00:00")
-              const dayLabel = DAY_LABELS[dayObj.getDay()]
-              const dayNum = dayObj.getDate()
-              const isSelected = d === date
-              const isToday = d === today
-              return (
-                <button
-                  key={d}
-                  onClick={() => navigate(d)}
-                  className={cn(
-                    "flex flex-1 flex-col items-center gap-0.5 rounded-xl py-2 transition-colors min-w-9",
-                    isSelected
-                      ? "bg-primary text-primary-foreground"
-                      : isToday
-                      ? "bg-primary/10 text-primary"
-                      : "hover:bg-accent text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  <span className="text-[10px] font-medium">{dayLabel}</span>
-                  <span className={cn("text-sm font-bold", isSelected ? "" : "")}>{dayNum}</span>
-                </button>
-              )
-            })}
+        {view === "day" ? (
+          /* Semana */
+          <div className="flex items-center justify-between gap-2">
+            <button
+              onClick={() => navigate(addDays(date, -7))}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border hover:bg-accent transition-colors"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M15 18l-6-6 6-6" />
+              </svg>
+            </button>
+            <div className="flex flex-1 gap-1 overflow-x-auto">
+              {weekDays.map((d) => {
+                const dayObj = new Date(d + "T12:00:00")
+                const dayLabel = DAY_LABELS[dayObj.getDay()]
+                const dayNum = dayObj.getDate()
+                const isSelected = d === date
+                const isToday = d === today
+                return (
+                  <button
+                    key={d}
+                    onClick={() => navigate(d)}
+                    className={cn(
+                      "flex flex-1 flex-col items-center gap-0.5 rounded-xl py-2 transition-colors min-w-9",
+                      isSelected
+                        ? "bg-primary text-primary-foreground"
+                        : isToday
+                        ? "bg-primary/10 text-primary"
+                        : "hover:bg-accent text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    <span className="text-[10px] font-medium">{dayLabel}</span>
+                    <span className="text-sm font-bold">{dayNum}</span>
+                  </button>
+                )
+              })}
+            </div>
+            <button
+              onClick={() => navigate(addDays(date, 7))}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border hover:bg-accent transition-colors"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M9 18l6-6-6-6" />
+              </svg>
+            </button>
           </div>
-
-          <button
-            onClick={() => navigate(addDays(date, 7))}
-            className="flex h-9 w-9 items-center justify-center rounded-lg border border-border hover:bg-accent transition-colors"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M9 18l6-6-6-6" />
-            </svg>
-          </button>
-        </div>
+        ) : (
+          /* Mês — cabeçalho de navegação */
+          <div className="flex items-center justify-between gap-2">
+            <button
+              onClick={() => navigateMonth(-1)}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border hover:bg-accent transition-colors"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M15 18l-6-6 6-6" />
+              </svg>
+            </button>
+            <p className="capitalize text-sm font-medium">
+              {new Date(date + "T12:00:00").toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}
+            </p>
+            <button
+              onClick={() => navigateMonth(1)}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border hover:bg-accent transition-colors"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M9 18l6-6-6-6" />
+              </svg>
+            </button>
+          </div>
+        )}
 
         {/* Data selecionada + ações */}
         <div className="flex items-center justify-between">
-          <p className="capitalize text-sm text-muted-foreground">{formatDate(date)}</p>
+          {view === "day" ? (
+            <p className="capitalize text-sm text-muted-foreground">{formatDate(date)}</p>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              {date === today ? "Hoje" : `Selecionado: ${new Date(date + "T12:00:00").toLocaleDateString("pt-BR", { day: "numeric", month: "short" })}`}
+            </p>
+          )}
           <div className="flex gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setBlockDrawer(true)}
-              disabled={!hasConfig}
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="mr-1.5">
-                <circle cx="12" cy="12" r="10" />
-                <path d="M4.93 4.93l14.14 14.14" />
-              </svg>
-              Bloquear
-            </Button>
-            <Button
-              size="sm"
-              onClick={() => navigate(today)}
-              variant="outline"
-            >
+            {view === "day" && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setBlockDrawer(true)}
+                disabled={!hasConfig}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="mr-1.5">
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M4.93 4.93l14.14 14.14" />
+                </svg>
+                Bloquear
+              </Button>
+            )}
+            {/* Toggle Dia / Mês */}
+            <div className="flex rounded-lg border border-border overflow-hidden">
+              <button
+                onClick={() => switchView("day")}
+                className={cn(
+                  "px-3 py-1.5 text-sm transition-colors",
+                  view === "day" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-accent"
+                )}
+              >
+                Dia
+              </button>
+              <button
+                onClick={() => switchView("month")}
+                className={cn(
+                  "px-3 py-1.5 text-sm transition-colors border-l border-border",
+                  view === "month" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-accent"
+                )}
+              >
+                Mês
+              </button>
+            </div>
+            <Button size="sm" onClick={() => { setView("day"); navigate(today) }} variant="outline">
               Hoje
             </Button>
           </div>
@@ -237,8 +316,16 @@ export function AgendaView({ initialDate, slots: initialSlots, hasConfig, slotDu
         </div>
       )}
 
-      {/* Grade de slots */}
-      {!hasConfig ? (
+      {/* Grade de slots ou visão mensal */}
+      {view === "month" ? (
+        <MonthView
+          date={date}
+          monthData={monthData}
+          isLoading={isLoadingMonth}
+          today={today}
+          onDayClick={handleDayClick}
+        />
+      ) : !hasConfig ? (
         <div className="text-center py-16 text-muted-foreground text-sm">
           Configure sua agenda para visualizar os horários.
         </div>
@@ -320,6 +407,120 @@ export function AgendaView({ initialDate, slots: initialSlots, hasConfig, slotDu
         procedures={procedures}
       />
     </>
+  )
+}
+
+// ── Month View ────────────────────────────────────────────────────────────────
+
+const MONTH_DAY_LABELS = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]
+
+const STATUS_DOT: Record<string, string> = {
+  waiting:   "bg-amber-400",
+  confirmed: "bg-blue-500",
+  completed: "bg-emerald-500",
+  missed:    "bg-red-400",
+}
+
+function MonthView({
+  date,
+  monthData,
+  isLoading,
+  today,
+  onDayClick,
+}: {
+  date: string
+  monthData: Record<string, MonthAppointment[]>
+  isLoading: boolean
+  today: string
+  onDayClick: (d: string) => void
+}) {
+  const [y, m] = date.split("-").map(Number)
+
+  // Build calendar grid starting on Monday
+  const firstDay = new Date(y, m - 1, 1)
+  const dow = firstDay.getDay() // 0=Sun
+  const daysBeforeFirst = dow === 0 ? 6 : dow - 1
+  const cursor = new Date(firstDay)
+  cursor.setDate(cursor.getDate() - daysBeforeFirst)
+
+  const weeks: string[][] = []
+  for (let w = 0; w < 6; w++) {
+    const week: string[] = []
+    for (let d = 0; d < 7; d++) {
+      week.push(cursor.toLocaleDateString("en-CA"))
+      cursor.setDate(cursor.getDate() + 1)
+    }
+    weeks.push(week)
+    // Stop after last day of month is covered
+    if (cursor.getMonth() !== m - 1 && w >= 3) break
+  }
+
+  if (isLoading) {
+    return <div className="py-16 text-center text-sm text-muted-foreground">Carregando...</div>
+  }
+
+  return (
+    <div className="space-y-1">
+      {/* Header dias da semana */}
+      <div className="grid grid-cols-7">
+        {MONTH_DAY_LABELS.map((l) => (
+          <div key={l} className="py-1.5 text-center text-[11px] font-medium text-muted-foreground">
+            {l}
+          </div>
+        ))}
+      </div>
+
+      {/* Semanas */}
+      {weeks.map((week, wi) => (
+        <div key={wi} className="grid grid-cols-7 gap-1">
+          {week.map((d) => {
+            const [, dm] = d.split("-").map(Number)
+            const isCurrentMonth = dm === m || (d.split("-")[1] && parseInt(d.split("-")[1]) === m)
+            const currentMonthCheck = d.startsWith(`${y}-${String(m).padStart(2, "0")}`)
+            const isToday = d === today
+            const isSelected = d === date
+            const appts = monthData[d] ?? []
+
+            return (
+              <button
+                key={d}
+                onClick={() => onDayClick(d)}
+                className={cn(
+                  "flex flex-col items-center rounded-xl py-2 px-0.5 min-h-[60px] transition-colors",
+                  isSelected
+                    ? "bg-primary text-primary-foreground"
+                    : isToday
+                    ? "bg-primary/10 text-primary"
+                    : currentMonthCheck
+                    ? "hover:bg-accent"
+                    : "opacity-30 hover:bg-accent"
+                )}
+              >
+                <span className="text-sm font-medium leading-none">
+                  {new Date(d + "T12:00:00").getDate()}
+                </span>
+                <div className="mt-1.5 flex flex-wrap justify-center gap-0.5">
+                  {appts.slice(0, 3).map((a, i) => (
+                    <span
+                      key={i}
+                      className={cn(
+                        "h-1.5 w-1.5 rounded-full",
+                        isSelected ? "bg-primary-foreground/70" : STATUS_DOT[a.status] ?? "bg-muted-foreground"
+                      )}
+                    />
+                  ))}
+                  {appts.length > 3 && (
+                    <span className={cn("text-[9px] leading-none", isSelected ? "text-primary-foreground/70" : "text-muted-foreground")}>
+                      +{appts.length - 3}
+                    </span>
+                  )}
+                </div>
+              </button>
+            )
+          })}
+        </div>
+      ))}
+    </div>
   )
 }
 

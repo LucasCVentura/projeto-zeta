@@ -10,7 +10,7 @@ import {
   organizationMembers,
   users,
 } from "@/db/schema"
-import { eq, and, sql, inArray } from "drizzle-orm"
+import { eq, and, sql, inArray, gte, lte } from "drizzle-orm"
 import { requireSession } from "@/lib/session"
 import { can } from "@/lib/permissions"
 import { generateSlots } from "@/lib/schedule"
@@ -539,6 +539,49 @@ export async function getOrgProfessionalsAction() {
       )
     )
     .orderBy(users.name)
+}
+
+// ── Buscar agendamentos do mês ────────────────────────────────────────────────
+
+export type MonthAppointment = { time: string; clientName: string; status: AppointmentStatus }
+
+export async function getMonthAppointments(
+  year: number,
+  month: number
+): Promise<Record<string, MonthAppointment[]>> {
+  const { userId, organizationId } = await requireSession()
+
+  const pad = (n: number) => String(n).padStart(2, "0")
+  const startDate = `${year}-${pad(month)}-01`
+  const lastDay = new Date(year, month, 0).getDate()
+  const endDate = `${year}-${pad(month)}-${pad(lastDay)}`
+
+  const appts = await db
+    .select({
+      date: appointments.date,
+      startTime: appointments.startTime,
+      clientName: clients.name,
+      status: appointments.status,
+    })
+    .from(appointments)
+    .innerJoin(clients, eq(clients.id, appointments.clientId))
+    .where(
+      and(
+        eq(appointments.organizationId, organizationId),
+        eq(appointments.professionalId, userId),
+        gte(appointments.date, startDate),
+        lte(appointments.date, endDate),
+        sql`${appointments.status} != 'cancelled'`
+      )
+    )
+    .orderBy(appointments.startTime)
+
+  const result: Record<string, MonthAppointment[]> = {}
+  for (const a of appts) {
+    if (!result[a.date]) result[a.date] = []
+    result[a.date].push({ time: a.startTime.slice(0, 5), clientName: a.clientName, status: a.status })
+  }
+  return result
 }
 
 // ── Buscar clientes da org ────────────────────────────────────────────────────
