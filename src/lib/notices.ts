@@ -8,11 +8,11 @@ export type Notice = {
 
 export const NOTICES: Notice[] = [
   {
-    id: "whatsapp-resumo-manutencao",
-    type: "warning",
-    title: "Resumo de agendamento via WhatsApp temporariamente indisponível",
-    message: "Estamos realizando melhorias no envio automático de resumos por WhatsApp. Previsão de retorno: segunda-feira, 08/06.",
-    expiresAt: "2026-06-09T00:00:00.000Z",
+    id: "whatsapp-resumo-voltou",
+    type: "success",
+    title: "Resumo de agendamento via WhatsApp de volta",
+    message: "O envio automático de resumos por WhatsApp está funcionando normalmente, incluindo o link da ficha de anamnese.",
+    expiresAt: "2026-06-10T00:00:00.000Z",
   },
 ]
 
