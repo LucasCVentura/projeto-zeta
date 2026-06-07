@@ -119,6 +119,33 @@ export default async function DashboardPage() {
             </div>
           </div>
         )}
+
+        {/* Procedimentos mais realizados */}
+        {(data.topProcedures ?? []).length > 0 && (
+          <div className="surface space-y-3">
+            <div className="flex items-center gap-2">
+              <TrendingUp size={16} className="text-primary" />
+              <p className="text-sm font-medium">Procedimentos mais realizados</p>
+            </div>
+            <div className="space-y-2">
+              {(data.topProcedures ?? []).map((p, i) => {
+                const max = data.topProcedures[0]?.count ?? 1
+                const pct = Math.round((p.count / max) * 100)
+                return (
+                  <div key={p.name} className="space-y-1">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="truncate font-medium">{p.name}</span>
+                      <span className="text-xs text-muted-foreground shrink-0 ml-2">{p.count}x</span>
+                    </div>
+                    <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+                      <div className="h-full rounded-full bg-primary/60 transition-all" style={{ width: `${pct}%` }} />
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Visão da clínica */}
