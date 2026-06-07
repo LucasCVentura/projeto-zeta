@@ -5,8 +5,9 @@ import { anamnesisQuestions, anamnesisAnswers, clients, organizations } from "@/
 import { eq, asc } from "drizzle-orm"
 import { notifyOrganizationProfessionals } from "@/actions/notifications"
 
-export async function GET(_: NextRequest, { params }: { params: { token: string } }) {
-  const decoded = verifyAnamnesisToken(params.token)
+export async function GET(_: NextRequest, { params }: { params: Promise<{ token: string }> }) {
+  const { token } = await params
+  const decoded = verifyAnamnesisToken(token)
   if (!decoded) return NextResponse.json({ error: "Token inválido" }, { status: 400 })
 
   const { clientId, orgId } = decoded
@@ -28,8 +29,9 @@ export async function GET(_: NextRequest, { params }: { params: { token: string 
   })
 }
 
-export async function POST(req: NextRequest, { params }: { params: { token: string } }) {
-  const decoded = verifyAnamnesisToken(params.token)
+export async function POST(req: NextRequest, { params }: { params: Promise<{ token: string }> }) {
+  const { token } = await params
+  const decoded = verifyAnamnesisToken(token)
   if (!decoded) return NextResponse.json({ error: "Token inválido" }, { status: 400 })
 
   const { clientId, orgId } = decoded

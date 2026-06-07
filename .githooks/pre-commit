@@ -17,7 +17,11 @@ node scripts/check-prod-db.mjs || exit 1
 echo "→ Rodando testes com cobertura..."
 npx vitest run --coverage || exit 1
 
-echo "→ Rodando suíte E2E completa..."
-npm run e2e:full || exit 1
+if nc -z 127.0.0.1 5432 2>/dev/null; then
+  echo "→ Rodando suíte E2E completa..."
+  npm run e2e:full || exit 1
+else
+  echo "⚠ Banco local indisponível — suíte E2E pulada (CI cobre)"
+fi
 
 echo "✓ Tudo ok, pode commitar!"

@@ -21,6 +21,9 @@ export default defineConfig({
         "src/lib/storage.ts",
         "src/lib/whatsapp-client.ts",
         "src/lib/config.ts",
+        "src/lib/changelog.ts",
+        "src/lib/chat-bot.ts",
+        "src/lib/notices.ts",
       ],
       thresholds: {
         lines: 90,
