@@ -4,6 +4,7 @@ import { db } from "@/db"
 import { anamnesisQuestions, anamnesisAnswers, clients, organizations } from "@/db/schema"
 import { eq, asc } from "drizzle-orm"
 import { notifyOrganizationProfessionals } from "@/actions/notifications"
+import { seedDefaultQuestionsForOrg } from "@/actions/anamnesis"
 
 export async function GET(_: NextRequest, { params }: { params: Promise<{ token: string }> }) {
   const { token } = await params
@@ -20,6 +21,8 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ token:
   ])
 
   if (!client[0] || !org[0]) return NextResponse.json({ error: "Não encontrado" }, { status: 404 })
+
+  await seedDefaultQuestionsForOrg(orgId)
 
   return NextResponse.json({
     clientName: client[0].name,
