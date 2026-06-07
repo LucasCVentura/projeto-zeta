@@ -79,14 +79,14 @@ export default async function DashboardPage() {
       {/* Linha de alertas: aniversariantes + clientes sem retorno */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {/* Aniversariantes */}
-        {data.birthdays.length > 0 && (
+        {(data.birthdays ?? []).length > 0 && (
           <div className="surface space-y-3">
             <div className="flex items-center gap-2">
               <Cake size={16} className="text-pink-500" />
               <p className="text-sm font-medium">Aniversariantes da semana</p>
             </div>
             <div className="space-y-2">
-              {data.birthdays.map(b => (
+              {(data.birthdays ?? []).map(b => (
                 <Link key={b.id} href={`/clientes/${b.id}`}
                   className="flex items-center justify-between rounded-lg border border-border px-3 py-2 hover:bg-muted/40 transition-colors no-underline">
                   <p className="text-sm font-medium">{b.name}</p>
@@ -100,14 +100,14 @@ export default async function DashboardPage() {
         )}
 
         {/* Clientes sem retorno */}
-        {data.lostClients.length > 0 && (
+        {(data.lostClients ?? []).length > 0 && (
           <div className="surface space-y-3">
             <div className="flex items-center gap-2">
               <UserX size={16} className="text-amber-500" />
               <p className="text-sm font-medium">Clientes sem retorno há 30+ dias</p>
             </div>
             <div className="space-y-2">
-              {data.lostClients.map(c => (
+              {(data.lostClients ?? []).map(c => (
                 <Link key={c.id} href={`/clientes/${c.id}`}
                   className="flex items-center justify-between rounded-lg border border-border px-3 py-2 hover:bg-muted/40 transition-colors no-underline">
                   <p className="text-sm font-medium">{c.name}</p>
@@ -180,7 +180,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Próximos agendamentos da semana */}
-      {data.weekAppointments.length > 0 && (
+      {(data.weekAppointments ?? []).length > 0 && (
         <div className="surface space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -192,7 +192,7 @@ export default async function DashboardPage() {
             </Link>
           </div>
           <div className="space-y-2">
-            {data.weekAppointments.map((appt) => (
+            {(data.weekAppointments ?? []).map((appt) => (
               <div key={appt.id} className="flex items-center justify-between rounded-lg border border-border px-4 py-3 gap-3">
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
