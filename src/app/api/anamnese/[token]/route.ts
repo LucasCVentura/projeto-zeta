@@ -3,6 +3,7 @@ import { verifyAnamnesisToken } from "@/lib/anamnesis-token"
 import { db } from "@/db"
 import { anamnesisQuestions, anamnesisAnswers, clients, organizations } from "@/db/schema"
 import { eq, asc } from "drizzle-orm"
+import { notifyOrganizationProfessionals } from "@/actions/notifications"
 
 export async function GET(_: NextRequest, { params }: { params: { token: string } }) {
   const decoded = verifyAnamnesisToken(params.token)
@@ -37,13 +38,29 @@ export async function POST(req: NextRequest, { params }: { params: { token: stri
   const existing = await db.select({ id: anamnesisAnswers.id }).from(anamnesisAnswers)
     .where(eq(anamnesisAnswers.clientId, clientId)).limit(1)
 
-  if (existing.length > 0) {
+  const isFirstTime = existing.length === 0
+
+  if (!isFirstTime) {
     await db.update(anamnesisAnswers)
       .set({ answers, updatedAt: new Date() })
       .where(eq(anamnesisAnswers.clientId, clientId))
   } else {
     await db.insert(anamnesisAnswers).values({ clientId, organizationId: orgId, answers })
   }
+
+  // Notifica profissionais no sininho
+  const [client] = await db.select({ name: clients.name }).from(clients).where(eq(clients.id, clientId)).limit(1)
+  const clientName = client?.name ?? "Cliente"
+
+  await notifyOrganizationProfessionals({
+    organizationId: orgId,
+    type: "anamnesis_filled",
+    title: `${clientName} preencheu a ficha de anamnese`,
+    body: isFirstTime
+      ? `${clientName} preencheu a ficha pela primeira vez.`
+      : `${clientName} atualizou a ficha de anamnese.`,
+    href: `/clientes/${clientId}/anamnese`,
+  })
 
   return NextResponse.json({ ok: true })
 }

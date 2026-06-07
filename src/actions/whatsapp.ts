@@ -1,9 +1,10 @@
 "use server"
 
 import { db } from "@/db"
-import { whatsappPendingConfirmations, appointments } from "@/db/schema"
+import { whatsappPendingConfirmations, appointments, clients } from "@/db/schema"
 import { eq, inArray, sql } from "drizzle-orm"
 import { sendWhatsAppTemplate, sendWhatsApp } from "@/lib/whatsapp-client"
+import { notifyOrganizationProfessionals } from "@/actions/notifications"
 
 const CONFIRMATION_TTL_DAYS = 3
 const TEMPLATE_BOOKING_SUMMARY_ID =
@@ -204,6 +205,25 @@ export async function handleWhatsAppButtonReply(messageId: string, buttonTitle: 
 
   const isConfirm = buttonTitle.toLowerCase().includes("confirmar")
 
+  // Busca dados do cliente para a notificação
+  let clientName = "Cliente"
+  let appointmentDate = ""
+  let appointmentTime = ""
+
+  if (pending.appointmentId) {
+    const [appt] = await db
+      .select({ date: appointments.date, startTime: appointments.startTime, clientId: appointments.clientId })
+      .from(appointments)
+      .where(eq(appointments.id, pending.appointmentId))
+      .limit(1)
+    if (appt) {
+      appointmentDate = new Date(appt.date).toLocaleDateString("pt-BR")
+      appointmentTime = appt.startTime?.slice(0, 5) ?? ""
+      const [client] = await db.select({ name: clients.name }).from(clients).where(eq(clients.id, appt.clientId)).limit(1)
+      if (client) clientName = client.name
+    }
+  }
+
   if (pending.clientPackageId) {
     const pkgAppts = await db
       .select({ id: appointments.id })
@@ -231,6 +251,20 @@ export async function handleWhatsAppButtonReply(messageId: string, buttonTitle: 
       await sendWhatsApp(fromPhone, "Seu agendamento foi cancelado. Entre em contato com a clínica ou profissional para reagendar. 😊")
     }
   }
+
+  // Notifica profissionais no sininho
+  const dateStr = appointmentDate && appointmentTime ? ` — ${appointmentDate} às ${appointmentTime}` : ""
+  await notifyOrganizationProfessionals({
+    organizationId: pending.organizationId,
+    type: isConfirm ? "appointment_confirmed" : "appointment_cancelled",
+    title: isConfirm
+      ? `${clientName} confirmou o agendamento`
+      : `${clientName} cancelou o agendamento`,
+    body: isConfirm
+      ? `${clientName} confirmou presença${dateStr}.`
+      : `${clientName} cancelou${dateStr}. O horário foi liberado.`,
+    href: "/agenda",
+  })
 
   await db
     .delete(whatsappPendingConfirmations)

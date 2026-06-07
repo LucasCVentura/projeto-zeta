@@ -1,4 +1,4 @@
-import { CalendarDays, Users, CalendarCheck, TrendingUp, Clock, AlertTriangle } from "lucide-react"
+import { CalendarDays, Users, CalendarCheck, TrendingUp, Clock, AlertTriangle, Cake, UserX, CalendarRange } from "lucide-react"
 import { getDashboardDataAction } from "@/actions/dashboard"
 import { getLowStockSuppliesAction } from "@/actions/supplies"
 import { getOnboardingStatusAction } from "@/actions/onboarding"
@@ -8,9 +8,14 @@ import { OnboardingChecklist } from "@/components/dashboard/onboarding-checklist
 import Link from "next/link"
 import { requireSession } from "@/lib/session"
 import { can } from "@/lib/permissions"
+import { cn } from "@/lib/utils"
 
 function formatCurrency(cents: number) {
   return (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
+}
+
+function formatDateBR(dateStr: string) {
+  return new Date(dateStr + "T00:00:00").toLocaleDateString("pt-BR", { weekday: "short", day: "numeric", month: "short" })
 }
 
 export default async function DashboardPage() {
@@ -24,20 +29,13 @@ export default async function DashboardPage() {
   const canSeeFinancial = can(session.role, "financial:read")
 
   const stats = [
+    { label: "Agendamentos hoje", value: String(data.todayCount), icon: CalendarDays },
+    { label: "Clientes", value: String(data.totalClients), icon: Users },
     {
-      label: "Agendamentos hoje",
-      value: String(data.todayCount),
-      icon: CalendarDays,
-    },
-    {
-      label: "Clientes",
-      value: String(data.totalClients),
-      icon: Users,
-    },
-    {
-      label: "Confirmados hoje",
-      value: String(data.confirmedToday),
+      label: "Taxa de confirmação",
+      value: data.confirmationRate !== null ? `${data.confirmationRate}%` : "—",
       icon: CalendarCheck,
+      sub: `${data.confirmedToday} confirmados`,
     },
     ...(canSeeFinancial ? [{
       label: "Receita do mês",
@@ -59,22 +57,71 @@ export default async function DashboardPage() {
         </Link>
       )}
 
-      {/* Onboarding — aparece até o usuário dispensar */}
+      {/* Onboarding */}
       <OnboardingChecklist dismissStorageKey={dismissStorageKey} role={session.role} {...onboarding} />
 
+      {/* KPIs */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        {stats.map(({ label, value, icon: Icon }) => (
+        {stats.map(({ label, value, icon: Icon, sub }: any) => (
           <div key={label} className="surface space-y-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
               <Icon size={18} className="text-primary" />
             </div>
-            <p className="text-2xl font-bold">{value}</p>
+            <div>
+              <p className="text-2xl font-bold">{value}</p>
+              {sub && <p className="text-xs text-muted-foreground mt-0.5">{sub}</p>}
+            </div>
             <p className="text-xs text-muted-foreground">{label}</p>
           </div>
         ))}
       </div>
 
-      {/* Visão da clínica — só para quem tem acesso financeiro */}
+      {/* Linha de alertas: aniversariantes + clientes sem retorno */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        {/* Aniversariantes */}
+        {data.birthdays.length > 0 && (
+          <div className="surface space-y-3">
+            <div className="flex items-center gap-2">
+              <Cake size={16} className="text-pink-500" />
+              <p className="text-sm font-medium">Aniversariantes da semana</p>
+            </div>
+            <div className="space-y-2">
+              {data.birthdays.map(b => (
+                <Link key={b.id} href={`/clientes/${b.id}`}
+                  className="flex items-center justify-between rounded-lg border border-border px-3 py-2 hover:bg-muted/40 transition-colors no-underline">
+                  <p className="text-sm font-medium">{b.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {new Date(b.birthDate + "T00:00:00").toLocaleDateString("pt-BR", { day: "numeric", month: "short" })}
+                  </p>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Clientes sem retorno */}
+        {data.lostClients.length > 0 && (
+          <div className="surface space-y-3">
+            <div className="flex items-center gap-2">
+              <UserX size={16} className="text-amber-500" />
+              <p className="text-sm font-medium">Clientes sem retorno há 30+ dias</p>
+            </div>
+            <div className="space-y-2">
+              {data.lostClients.map(c => (
+                <Link key={c.id} href={`/clientes/${c.id}`}
+                  className="flex items-center justify-between rounded-lg border border-border px-3 py-2 hover:bg-muted/40 transition-colors no-underline">
+                  <p className="text-sm font-medium">{c.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {c.lastDate ? `Último: ${new Date(c.lastDate + "T00:00:00").toLocaleDateString("pt-BR")}` : "Sem atendimentos"}
+                  </p>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Visão da clínica */}
       {canSeeFinancial && (
         <section className="space-y-3">
           <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
@@ -86,17 +133,15 @@ export default async function DashboardPage() {
               Ver financeiro
             </Link>
           </div>
-
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.05fr_0.95fr]">
             <RevenueChart data={data.revenueChart} />
             <StatusChart data={data.statusCounts} />
           </div>
-
           <ProceduresChart data={data.topProcedures} />
         </section>
       )}
 
-      {/* Atendimentos de hoje */}
+      {/* Agenda de hoje */}
       <div className="surface space-y-4">
         <div className="flex items-center justify-between">
           <p className="text-sm font-medium">Agenda de hoje</p>
@@ -104,15 +149,12 @@ export default async function DashboardPage() {
             Ver agenda
           </Link>
         </div>
-
         {data.upcomingToday.length === 0 ? (
           <div className="flex flex-col items-center gap-2 py-8 text-center">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
               <Clock size={16} className="text-muted-foreground" />
             </div>
-            <p className="text-sm text-muted-foreground">
-              Nenhum atendimento pendente hoje.
-            </p>
+            <p className="text-sm text-muted-foreground">Nenhum atendimento pendente hoje.</p>
           </div>
         ) : (
           <div className="space-y-2">
@@ -124,15 +166,11 @@ export default async function DashboardPage() {
                   </div>
                   <div className="min-w-0">
                     <p className="text-sm font-medium truncate">{appt.clientName}</p>
-                    {appt.procedure && (
-                      <p className="text-xs text-muted-foreground truncate">{appt.procedure}</p>
-                    )}
+                    {appt.procedure && <p className="text-xs text-muted-foreground truncate">{appt.procedure}</p>}
                   </div>
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
-                  <span className="text-sm font-medium tabular-nums">
-                    {appt.startTime.slice(0, 5)}
-                  </span>
+                  <span className="text-sm font-medium tabular-nums">{appt.startTime.slice(0, 5)}</span>
                   <StatusBadge status={appt.status} />
                 </div>
               </div>
@@ -140,6 +178,43 @@ export default async function DashboardPage() {
           </div>
         )}
       </div>
+
+      {/* Próximos agendamentos da semana */}
+      {data.weekAppointments.length > 0 && (
+        <div className="surface space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <CalendarRange size={16} className="text-primary" />
+              <p className="text-sm font-medium">Próximos da semana</p>
+            </div>
+            <Link href="/agenda" className="text-xs text-primary hover:underline underline-offset-4">
+              Ver agenda
+            </Link>
+          </div>
+          <div className="space-y-2">
+            {data.weekAppointments.map((appt) => (
+              <div key={appt.id} className="flex items-center justify-between rounded-lg border border-border px-4 py-3 gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                    {appt.clientName[0].toUpperCase()}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium truncate">{appt.clientName}</p>
+                    {appt.procedure && <p className="text-xs text-muted-foreground truncate">{appt.procedure}</p>}
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 shrink-0 text-right">
+                  <div>
+                    <p className="text-sm font-medium tabular-nums">{appt.startTime.slice(0, 5)}</p>
+                    <p className="text-xs text-muted-foreground">{formatDateBR(appt.date)}</p>
+                  </div>
+                  <StatusBadge status={appt.status as any} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

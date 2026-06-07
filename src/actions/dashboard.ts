@@ -2,7 +2,7 @@
 
 import { db } from "@/db"
 import { appointments, clients, transactions } from "@/db/schema"
-import { eq, and, gte, lte, sum, count, sql, isNotNull } from "drizzle-orm"
+import { eq, and, gte, lte, sum, count, sql, isNotNull, lt, isNull } from "drizzle-orm"
 import { requireSession } from "@/lib/session"
 import { unstable_cache } from "next/cache"
 import { todayBRT, nowBRT } from "@/lib/date"
@@ -25,11 +25,25 @@ async function _fetchDashboard(userId: string, organizationId: string) {
   const monthStart = `${year}-${String(month).padStart(2, "0")}-01`
   const monthEnd = `${year}-${String(month).padStart(2, "0")}-${new Date(year, month, 0).getDate()}`
 
+  const thirtyDaysAgo = new Date(now)
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+  const thirtyDaysAgoStr = thirtyDaysAgo.toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" })
+
+  const weekEnd = new Date(now)
+  weekEnd.setDate(weekEnd.getDate() + 6)
+  const weekEndStr = weekEnd.toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" })
+  const tomorrow = new Date(now)
+  tomorrow.setDate(tomorrow.getDate() + 1)
+  const tomorrowStr = tomorrow.toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" })
+
   const [
     todayAppointments,
     totalClients,
     monthRevenue,
     upcomingToday,
+    weekAppointments,
+    lostClients,
+    birthdays,
   ] = await Promise.all([
     // Agendamentos de hoje (não cancelados)
     db
@@ -86,6 +100,58 @@ async function _fetchDashboard(userId: string, organizationId: string) {
         )
       )
       .orderBy(appointments.startTime),
+
+    // Próximos agendamentos da semana (excluindo hoje)
+    db
+      .select({
+        id: appointments.id,
+        date: appointments.date,
+        startTime: appointments.startTime,
+        procedure: appointments.procedure,
+        status: appointments.status,
+        clientName: clients.name,
+      })
+      .from(appointments)
+      .innerJoin(clients, eq(clients.id, appointments.clientId))
+      .where(
+        and(
+          eq(appointments.organizationId, organizationId),
+          eq(appointments.professionalId, userId),
+          gte(appointments.date, tomorrowStr),
+          lte(appointments.date, weekEndStr),
+          sql`${appointments.status} IN ('waiting', 'confirmed')`
+        )
+      )
+      .orderBy(appointments.date, appointments.startTime)
+      .limit(10),
+
+    // Clientes sem retorno há 30+ dias
+    db.execute<{ id: string; name: string; lastDate: string }>(sql`
+      SELECT c.id, c.name,
+        MAX(a.date) as "lastDate"
+      FROM clients c
+      LEFT JOIN appointments a ON a.client_id = c.id
+        AND a.organization_id = ${organizationId}
+        AND a.status != 'cancelled'
+      WHERE c.organization_id = ${organizationId}
+      GROUP BY c.id, c.name
+      HAVING MAX(a.date) < ${thirtyDaysAgoStr} OR MAX(a.date) IS NULL
+      ORDER BY MAX(a.date) ASC NULLS FIRST
+      LIMIT 5
+    `).then(r => Array.isArray(r) ? r : (r as any).rows ?? []),
+
+    // Aniversariantes dos próximos 7 dias
+    db.execute<{ id: string; name: string; birthDate: string }>(sql`
+      SELECT id, name, birth_date as "birthDate"
+      FROM clients
+      WHERE organization_id = ${organizationId}
+        AND birth_date IS NOT NULL
+        AND to_char(birth_date::date, 'MM-DD') BETWEEN
+          to_char(NOW() AT TIME ZONE 'America/Sao_Paulo', 'MM-DD') AND
+          to_char((NOW() AT TIME ZONE 'America/Sao_Paulo' + interval '7 days'), 'MM-DD')
+      ORDER BY to_char(birth_date::date, 'MM-DD')
+      LIMIT 5
+    `).then(r => Array.isArray(r) ? r : (r as any).rows ?? []),
   ])
 
   const confirmedToday = upcomingToday.filter((a) => a.status === "confirmed").length
@@ -162,12 +228,20 @@ async function _fetchDashboard(userId: string, organizationId: string) {
     .groupBy(appointments.status)
     .then((r) => r.map((row) => ({ status: row.status, count: Number(row.count) })))
 
+  const confirmationRate = Number(todayAppointments) > 0
+    ? Math.round((confirmedToday / Number(todayAppointments)) * 100)
+    : null
+
   return {
     todayCount: Number(todayAppointments),
     totalClients: Number(totalClients),
     confirmedToday,
+    confirmationRate,
     monthRevenue,
     upcomingToday,
+    weekAppointments: weekAppointments as Array<{ id: string; date: string; startTime: string; procedure: string | null; status: string; clientName: string }>,
+    lostClients: lostClients as Array<{ id: string; name: string; lastDate: string | null }>,
+    birthdays: birthdays as Array<{ id: string; name: string; birthDate: string }>,
     today,
     revenueChart,
     topProcedures,
