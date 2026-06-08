@@ -27,7 +27,10 @@ async function getOrCreateSession(phone: string) {
 
   if (!existing) return null
 
-  // Expira após 2h de inatividade → trata como nova sessão
+  // Sessões roteadas (admin conversando diretamente) nunca expiram pelo bot
+  if (existing.state === "routed") return existing
+
+  // Demais estados expiram após 2h de inatividade → trata como nova sessão
   const elapsed = Date.now() - new Date(existing.lastActivityAt).getTime()
   if (elapsed > SESSION_TTL_MS) {
     await db.delete(chatSessions).where(eq(chatSessions.phone, phone))
