@@ -204,6 +204,15 @@ export async function sendAdminChatMessageAction(phone: string, content: string)
     direction: "outbound",
     content,
   })
+
+  // Marca sessão como roteada para que respostas cheguem direto ao admin sem passar pelo bot
+  await db
+    .insert(chatSessions)
+    .values({ phone, state: "routed", queue: "commercial", lastActivityAt: new Date() })
+    .onConflictDoUpdate({
+      target: chatSessions.phone,
+      set: { state: "routed", queue: "commercial", lastActivityAt: new Date() },
+    })
 }
 
 export async function sendAdminChatTemplateAction(phone: string, name: string, templateId: string) {
@@ -223,6 +232,15 @@ export async function sendAdminChatTemplateAction(phone: string, name: string, t
     gupshupMessageId: result?.messageId ?? null,
     templateUsed: "kira_trial_outreach",
   })
+
+  // Marca sessão como roteada para que respostas cheguem direto ao admin sem passar pelo bot
+  await db
+    .insert(chatSessions)
+    .values({ phone, state: "routed", queue: "commercial", lastActivityAt: new Date() })
+    .onConflictDoUpdate({
+      target: chatSessions.phone,
+      set: { state: "routed", queue: "commercial", lastActivityAt: new Date() },
+    })
 }
 
 export async function getTrialOrgsForChatAction() {
