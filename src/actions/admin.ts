@@ -208,10 +208,10 @@ export async function sendAdminChatMessageAction(phone: string, content: string)
   // Marca sessão como roteada para que respostas cheguem direto ao admin sem passar pelo bot
   await db
     .insert(chatSessions)
-    .values({ phone, state: "routed", queue: "commercial", lastActivityAt: new Date() })
+    .values({ phone, state: "routed", queue: null, lastActivityAt: new Date() })
     .onConflictDoUpdate({
       target: chatSessions.phone,
-      set: { state: "routed", queue: "commercial", lastActivityAt: new Date() },
+      set: { state: "routed", queue: null, lastActivityAt: new Date() },
     })
 }
 
@@ -236,10 +236,10 @@ export async function sendAdminChatTemplateAction(phone: string, name: string, t
   // Marca sessão como roteada para que respostas cheguem direto ao admin sem passar pelo bot
   await db
     .insert(chatSessions)
-    .values({ phone, state: "routed", queue: "commercial", lastActivityAt: new Date() })
+    .values({ phone, state: "routed", queue: null, lastActivityAt: new Date() })
     .onConflictDoUpdate({
       target: chatSessions.phone,
-      set: { state: "routed", queue: "commercial", lastActivityAt: new Date() },
+      set: { state: "routed", queue: null, lastActivityAt: new Date() },
     })
 }
 
