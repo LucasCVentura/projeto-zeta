@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { extendTrialAction, cancelOrgAction, setLifetimeAction, markInboundEmailReadAction, saveWhatsAppTemplateSettingAction, getInboundEmailsAction, getWhatsAppMessageLogsAction, getAdminMetricsAction, getWhatsAppTemplateSettingsAction } from "@/actions/admin"
+import type { WhatsAppLogsParams } from "@/actions/admin"
 import { getAllFeedbackAction, getLatestFeedbackSummaryAction } from "@/actions/feedback"
 import { AdminChat } from "@/components/admin/admin-chat"
 import {
@@ -184,6 +185,10 @@ export function AdminDashboard() {
   const [feedbacks, setFeedbacks] = useState<FeedbackItem[]>([])
   const [feedbackSummary, setFeedbackSummary] = useState<FeedbackSummary>(null)
   const [whatsappLogs, setWhatsappLogs] = useState<WhatsAppLog[]>([])
+  const [whatsappTotal, setWhatsappTotal] = useState(0)
+  const [whatsappPage, setWhatsappPage] = useState(1)
+  const [whatsappPeriod, setWhatsappPeriod] = useState<WhatsAppLogsParams["period"]>("7d")
+  const [whatsappLoading, setWhatsappLoading] = useState(false)
   const [loadedTabs, setLoadedTabs] = useState<Set<string>>(new Set())
   const [templateSaving, setTemplateSaving] = useState(false)
   const [templateError, setTemplateError] = useState<string | null>(null)
@@ -195,8 +200,8 @@ export function AdminDashboard() {
   const [pendingCancelOrg, setPendingCancelOrg] = useState<{ id: string; name: string } | null>(null)
   const [activeSection, setActiveSection] = useState("overview")
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [logFilterOrg, setLogFilterOrg] = useState("all")
-  const [logFilterEvent, setLogFilterEvent] = useState("all")
+  const [logFilterOrg, setLogFilterOrg] = useState("")
+  const [logFilterEvent, setLogFilterEvent] = useState("")
   const [logFilterError, setLogFilterError] = useState(false)
   const unreadCount = inboundEmails.filter(e => !e.read).length
 
@@ -223,6 +228,16 @@ export function AdminDashboard() {
     }).catch(() => {})
   }, [])
 
+  const fetchLogs = useCallback(async (params: WhatsAppLogsParams) => {
+    setWhatsappLoading(true)
+    try {
+      const result = await getWhatsAppMessageLogsAction(params)
+      setWhatsappLogs(result.logs as WhatsAppLog[])
+      setWhatsappTotal(result.total)
+    } catch { /* ignore */ }
+    finally { setWhatsappLoading(false) }
+  }, [])
+
   const loadTab = useCallback(async (section: string) => {
     if (loadedTabs.has(section)) return
     setLoadedTabs(prev => new Set([...prev, section]))
@@ -233,14 +248,13 @@ export function AdminDashboard() {
       setFeedbackSummary(summary)
     }
     if (section === "whatsapp") {
-      const logs = await getWhatsAppMessageLogsAction(100).catch(() => [])
-      setWhatsappLogs(logs as WhatsAppLog[])
+      await fetchLogs({ page: 1, period: "7d" })
     }
     if (section === "suporte") {
       const emails = await getInboundEmailsAction().catch(() => [])
       setInboundEmails(emails as InboundEmail[])
     }
-  }, [loadedTabs])
+  }, [loadedTabs, fetchLogs])
 
   useEffect(() => {
     loadTab(activeSection)
@@ -544,64 +558,158 @@ export function AdminDashboard() {
       )
 
       case "whatsapp": {
-        const orgNames = Array.from(new Set(whatsappLogs.map(l => l.organizationName).filter(Boolean))) as string[]
-        const eventTypes = Array.from(new Set(whatsappLogs.map(l => l.eventType)))
+        const PAGE_SIZE = 25
+        const totalPages = Math.max(1, Math.ceil(whatsappTotal / PAGE_SIZE))
 
-        const filteredLogs = whatsappLogs.filter(l => {
-          if (logFilterOrg !== "all" && l.organizationName !== logFilterOrg) return false
-          if (logFilterEvent !== "all" && l.eventType !== logFilterEvent) return false
-          if (logFilterError && !l.error) return false
-          return true
-        })
+        function applyFilters(overrides: Partial<WhatsAppLogsParams> = {}) {
+          const params: WhatsAppLogsParams = {
+            page: whatsappPage,
+            pageSize: PAGE_SIZE,
+            period: whatsappPeriod,
+            orgName: logFilterOrg || undefined,
+            eventType: logFilterEvent || undefined,
+            errorOnly: logFilterError || undefined,
+            ...overrides,
+          }
+          if (overrides.page === undefined) { params.page = 1; setWhatsappPage(1) }
+          fetchLogs(params)
+        }
 
         const eventColor = (type: string) =>
           type === "delivered" || type === "read" ? "text-green-700 bg-green-100 dark:text-green-400 dark:bg-green-900/20" :
-          type === "failed" ? "text-destructive bg-destructive/10" : "text-muted-foreground bg-muted"
+          type === "failed" ? "text-destructive bg-destructive/10" :
+          type === "submitted" ? "text-blue-700 bg-blue-100 dark:text-blue-400 dark:bg-blue-900/20" :
+          "text-muted-foreground bg-muted"
 
-        const formatBR = (d: Date) => new Date(d).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit" })
+        const eventLabel: Record<string, string> = {
+          submitted: "Enviado", enqueued: "Na fila", sent: "Entregue ao WA",
+          delivered: "Entregue", read: "Lido", failed: "Falhou",
+        }
+
+        const formatBR = (d: Date) => new Date(d).toLocaleString("pt-BR", {
+          timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit",
+          year: "numeric", hour: "2-digit", minute: "2-digit",
+        })
+
+        const PERIODS: { value: WhatsAppLogsParams["period"]; label: string }[] = [
+          { value: "today", label: "Hoje" },
+          { value: "7d",    label: "7 dias" },
+          { value: "30d",   label: "30 dias" },
+          { value: "all",   label: "Tudo" },
+        ]
+
+        const EVENT_FILTERS = [
+          { value: "",          label: "Todos os eventos" },
+          { value: "submitted", label: "Enviados" },
+          { value: "delivered", label: "Entregues" },
+          { value: "read",      label: "Lidos" },
+          { value: "failed",    label: "Com falha" },
+        ]
 
         return (
           <div className="space-y-4">
             {/* Filtros */}
-            <div className="flex flex-wrap gap-2 items-center">
-              <select value={logFilterOrg} onChange={e => setLogFilterOrg(e.target.value)} className="h-8 rounded-lg border border-border bg-background px-2 text-xs">
-                <option value="all">Todas as clínicas</option>
-                {orgNames.map(n => <option key={n} value={n}>{n}</option>)}
-              </select>
-              <select value={logFilterEvent} onChange={e => setLogFilterEvent(e.target.value)} className="h-8 rounded-lg border border-border bg-background px-2 text-xs">
-                <option value="all">Todos os eventos</option>
-                {eventTypes.map(t => <option key={t} value={t}>{t}</option>)}
-              </select>
-              <button
-                onClick={() => setLogFilterError(v => !v)}
-                className={cn("h-8 px-3 rounded-lg border text-xs transition-colors", logFilterError ? "border-destructive bg-destructive/10 text-destructive" : "border-border text-muted-foreground hover:border-foreground")}
-              >
-                Só com erro
-              </button>
-              <span className="text-xs text-muted-foreground ml-auto">{filteredLogs.length} registros</span>
+            <div className="space-y-2">
+              {/* Período */}
+              <div className="flex rounded-lg border border-border overflow-hidden w-fit">
+                {PERIODS.map(p => (
+                  <button
+                    key={p.value}
+                    onClick={() => { setWhatsappPeriod(p.value); setWhatsappPage(1); applyFilters({ period: p.value, page: 1 }) }}
+                    className={cn(
+                      "px-3 py-1.5 text-xs transition-colors border-r border-border last:border-r-0",
+                      whatsappPeriod === p.value ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-accent"
+                    )}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Linha de filtros */}
+              <div className="flex flex-wrap gap-2 items-center">
+                <Input
+                  placeholder="Filtrar por clínica..."
+                  value={logFilterOrg}
+                  onChange={e => setLogFilterOrg(e.target.value)}
+                  onKeyDown={e => e.key === "Enter" && applyFilters({ orgName: logFilterOrg || undefined })}
+                  className="h-8 text-xs w-44"
+                />
+                <select
+                  value={logFilterEvent}
+                  onChange={e => { setLogFilterEvent(e.target.value); applyFilters({ eventType: e.target.value || undefined }) }}
+                  className="h-8 rounded-lg border border-border bg-background px-2 text-xs"
+                >
+                  {EVENT_FILTERS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
+                </select>
+                <button
+                  onClick={() => { const next = !logFilterError; setLogFilterError(next); applyFilters({ errorOnly: next }) }}
+                  className={cn("h-8 px-3 rounded-lg border text-xs transition-colors", logFilterError ? "border-destructive bg-destructive/10 text-destructive" : "border-border text-muted-foreground hover:border-foreground")}
+                >
+                  Só com erro
+                </button>
+                <button
+                  onClick={() => applyFilters({ orgName: logFilterOrg || undefined })}
+                  className="h-8 px-3 rounded-lg border border-border text-xs text-muted-foreground hover:bg-accent transition-colors"
+                >
+                  Buscar
+                </button>
+                <span className="text-xs text-muted-foreground ml-auto tabular-nums">
+                  {whatsappTotal} registro{whatsappTotal !== 1 ? "s" : ""}
+                </span>
+              </div>
             </div>
 
+            {/* Lista */}
             <div className="rounded-xl border border-border overflow-hidden">
-              {filteredLogs.length === 0
-                ? <div className="py-16 text-center text-sm text-muted-foreground">Nenhum log encontrado.</div>
-                : (
-                  <div className="divide-y divide-border">
-                    {filteredLogs.map(log => (
-                      <div key={log.id} className="px-5 py-4 space-y-1.5">
-                        <div className="flex items-center justify-between gap-3">
-                          <p className="text-sm font-medium truncate">{log.organizationName ?? "—"}</p>
-                          <span className={cn("text-[10px] font-semibold px-1.5 py-0.5 rounded-full shrink-0", eventColor(log.eventType))}>{log.eventType}</span>
-                        </div>
-                        <p className="text-xs text-muted-foreground">Template: {log.templateId ?? "—"} · Destino: {log.destination ?? "—"}</p>
-                        <p className="text-xs text-muted-foreground">MsgId: {log.messageId ?? "—"}</p>
-                        {log.error && <p className="text-xs text-destructive">Erro: {log.error}</p>}
-                        <p className="text-[11px] text-muted-foreground">{formatBR(log.updatedAt)}</p>
+              {whatsappLoading ? (
+                <div className="py-16 text-center text-sm text-muted-foreground">Carregando...</div>
+              ) : whatsappLogs.length === 0 ? (
+                <div className="py-16 text-center text-sm text-muted-foreground">Nenhum log encontrado.</div>
+              ) : (
+                <div className="divide-y divide-border">
+                  {whatsappLogs.map(log => (
+                    <div key={log.id} className="px-5 py-3.5 space-y-1">
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="text-sm font-medium truncate">{log.organizationName ?? <span className="text-muted-foreground">Sem org</span>}</p>
+                        <span className={cn("text-[10px] font-semibold px-1.5 py-0.5 rounded-full shrink-0", eventColor(log.eventType))}>
+                          {eventLabel[log.eventType] ?? log.eventType}
+                        </span>
                       </div>
-                    ))}
-                  </div>
-                )
-              }
+                      <p className="text-xs text-muted-foreground">
+                        Destino: <span className="text-foreground/70">{log.destination ?? "—"}</span>
+                        {log.templateId && <> · Template: <span className="font-mono text-[10px]">{log.templateId.length > 20 ? log.templateId.slice(0, 20) + "…" : log.templateId}</span></>}
+                      </p>
+                      {log.error && <p className="text-xs text-destructive">⚠ {log.error}</p>}
+                      <p className="text-[11px] text-muted-foreground">{formatBR(log.updatedAt)}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
+
+            {/* Paginação */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between">
+                <button
+                  disabled={whatsappPage <= 1 || whatsappLoading}
+                  onClick={() => { const p = whatsappPage - 1; setWhatsappPage(p); applyFilters({ page: p }) }}
+                  className="h-8 px-3 rounded-lg border border-border text-xs text-muted-foreground hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  ← Anterior
+                </button>
+                <span className="text-xs text-muted-foreground tabular-nums">
+                  Página {whatsappPage} de {totalPages}
+                </span>
+                <button
+                  disabled={whatsappPage >= totalPages || whatsappLoading}
+                  onClick={() => { const p = whatsappPage + 1; setWhatsappPage(p); applyFilters({ page: p }) }}
+                  className="h-8 px-3 rounded-lg border border-border text-xs text-muted-foreground hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  Próxima →
+                </button>
+              </div>
+            )}
           </div>
         )
       }

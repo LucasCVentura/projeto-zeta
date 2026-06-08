@@ -305,28 +305,72 @@ export type WhatsAppMessageLog = {
   updatedAt: Date
 }
 
-export async function getWhatsAppMessageLogsAction(limit = 200): Promise<WhatsAppMessageLog[]> {
+export type WhatsAppLogsParams = {
+  page?: number
+  pageSize?: number
+  orgName?: string
+  eventType?: string
+  errorOnly?: boolean
+  period?: "today" | "7d" | "30d" | "all"
+}
+
+export async function getWhatsAppMessageLogsAction(
+  params: WhatsAppLogsParams = {}
+): Promise<{ logs: WhatsAppMessageLog[]; total: number }> {
   await assertAdmin()
-  const rows = await db.execute(sql<WhatsAppMessageLog>`
-    SELECT
-      l.id,
-      l.message_id as "messageId",
-      l.organization_id as "organizationId",
-      o.name as "organizationName",
-      l.destination,
-      l.template_id as "templateId",
-      l.event_type as "eventType",
-      l.error,
-      l.created_at as "createdAt",
-      l.updated_at as "updatedAt"
-    FROM whatsapp_message_logs l
-    LEFT JOIN organizations o ON o.id = l.organization_id
-    ORDER BY l.updated_at DESC
-    LIMIT ${limit}
-  `)
-  if (Array.isArray(rows)) return rows as WhatsAppMessageLog[]
-  const withRows = rows as { rows?: WhatsAppMessageLog[] }
-  return withRows.rows ?? []
+  const { page = 1, pageSize = 25, orgName, eventType, errorOnly, period = "7d" } = params
+  const offset = (page - 1) * pageSize
+
+  const periodFilter =
+    period === "today" ? sql`AND l.updated_at >= now() - interval '1 day'` :
+    period === "7d"    ? sql`AND l.updated_at >= now() - interval '7 days'` :
+    period === "30d"   ? sql`AND l.updated_at >= now() - interval '30 days'` :
+    sql``
+
+  const orgFilter    = orgName    ? sql`AND o.name = ${orgName}`      : sql``
+  const eventFilter  = eventType  ? sql`AND l.event_type = ${eventType}` : sql``
+  const errorFilter  = errorOnly  ? sql`AND l.error IS NOT NULL`      : sql``
+
+  const [dataRows, countRows] = await Promise.all([
+    db.execute(sql`
+      SELECT
+        l.id,
+        l.message_id     as "messageId",
+        l.organization_id as "organizationId",
+        o.name           as "organizationName",
+        l.destination,
+        l.template_id    as "templateId",
+        l.event_type     as "eventType",
+        l.error,
+        l.created_at     as "createdAt",
+        l.updated_at     as "updatedAt"
+      FROM whatsapp_message_logs l
+      LEFT JOIN organizations o ON o.id = l.organization_id
+      WHERE 1=1
+      ${periodFilter}
+      ${orgFilter}
+      ${eventFilter}
+      ${errorFilter}
+      ORDER BY l.updated_at DESC
+      LIMIT ${pageSize} OFFSET ${offset}
+    `),
+    db.execute(sql`
+      SELECT count(*)::int as total
+      FROM whatsapp_message_logs l
+      LEFT JOIN organizations o ON o.id = l.organization_id
+      WHERE 1=1
+      ${periodFilter}
+      ${orgFilter}
+      ${eventFilter}
+      ${errorFilter}
+    `),
+  ])
+
+  const logs = (Array.isArray(dataRows) ? dataRows : (dataRows as { rows?: unknown[] }).rows ?? []) as WhatsAppMessageLog[]
+  const countArr = (Array.isArray(countRows) ? countRows : (countRows as { rows?: unknown[] }).rows ?? []) as { total: number }[]
+  const total = countArr[0]?.total ?? 0
+
+  return { logs, total }
 }
 
 export async function markInboundEmailReadAction(id: string) {
