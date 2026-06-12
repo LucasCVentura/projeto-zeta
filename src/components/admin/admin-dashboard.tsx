@@ -42,7 +42,8 @@ type WhatsAppLog = {
 }
 type WhatsAppTemplateSetting = {
   bookingSummaryTemplateId: string | null; packageSummaryTemplateId: string | null
-  reminderConfirmationTemplateId: string | null; postVisitTemplateId: string | null; trialOutreachTemplateId: string | null
+  reminderConfirmationTemplateId: string | null; postVisitTemplateId: string | null
+  trialOutreachTemplateId: string | null; trialExpiredOutreachTemplateId: string | null
 }
 
 // ── Constantes ────────────────────────────────────────────────────────────────
@@ -197,6 +198,7 @@ export function AdminDashboard() {
   const [reminderTemplateId, setReminderTemplateId] = useState("")
   const [postVisitTemplateId, setPostVisitTemplateId] = useState("")
   const [trialOutreachTemplateId, setTrialOutreachTemplateId] = useState("")
+  const [trialExpiredOutreachTemplateId, setTrialExpiredOutreachTemplateId] = useState("")
   const [pendingCancelOrg, setPendingCancelOrg] = useState<{ id: string; name: string } | null>(null)
   const [activeSection, setActiveSection] = useState("overview")
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -225,6 +227,7 @@ export function AdminDashboard() {
       setReminderTemplateId(t.reminderConfirmationTemplateId ?? "")
       setPostVisitTemplateId(t.postVisitTemplateId ?? "")
       setTrialOutreachTemplateId(t.trialOutreachTemplateId ?? "")
+      setTrialExpiredOutreachTemplateId(t.trialExpiredOutreachTemplateId ?? "")
     }).catch(() => {})
   }, [])
 
@@ -316,7 +319,8 @@ export function AdminDashboard() {
     try {
       await saveWhatsAppTemplateSettingAction({
         bookingSummaryTemplateId: bookingTemplateId, packageSummaryTemplateId: packageTemplateId,
-        reminderConfirmationTemplateId: reminderTemplateId, postVisitTemplateId, trialOutreachTemplateId,
+        reminderConfirmationTemplateId: reminderTemplateId, postVisitTemplateId,
+        trialOutreachTemplateId, trialExpiredOutreachTemplateId,
       })
     } catch { setTemplateError("Não foi possível salvar. Tente novamente.") }
     finally { setTemplateSaving(false) }
@@ -779,6 +783,10 @@ export function AdminDashboard() {
               <p className="text-sm font-medium">Abordagem trial <code className="text-xs bg-muted px-1.5 py-0.5 rounded ml-1">kira_trial_outreach</code></p>
               <Input value={trialOutreachTemplateId} onChange={e => setTrialOutreachTemplateId(e.target.value)} placeholder="UUID do template trial outreach" className="font-mono text-xs" />
             </div>
+            <div className="space-y-1.5">
+              <p className="text-sm font-medium">Reativação trial expirado <code className="text-xs bg-muted px-1.5 py-0.5 rounded ml-1">kira_trial_expired_outreach</code></p>
+              <Input value={trialExpiredOutreachTemplateId} onChange={e => setTrialExpiredOutreachTemplateId(e.target.value)} placeholder="UUID do template trial expirado" className="font-mono text-xs" />
+            </div>
             {templateError && <p className="text-xs text-destructive">{templateError}</p>}
             <Button onClick={handleSaveTemplate} disabled={templateSaving} className="w-full">
               {templateSaving ? "Salvando..." : "Salvar configurações"}
@@ -787,7 +795,7 @@ export function AdminDashboard() {
         </div>
       )
 
-      case "chat": return <AdminChat trialOutreachTemplateId={trialOutreachTemplateId || null} />
+      case "chat": return <AdminChat trialOutreachTemplateId={trialOutreachTemplateId || null} trialExpiredOutreachTemplateId={trialExpiredOutreachTemplateId || null} />
 
       case "suporte": {
         const selectedEmail = inboundEmails.find(e => e.id === expandedEmail) ?? null

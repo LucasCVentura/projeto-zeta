@@ -6,7 +6,7 @@ import {
   appointments, clients, transactions, clientPhotos,
   adminChatMessages, chatSessions,
 } from "@/db/schema"
-import { eq, count, sum, gte, sql, or, and, desc, asc, isNull } from "drizzle-orm"
+import { eq, count, sum, gte, lt, sql, or, and, desc, asc, isNull } from "drizzle-orm"
 import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import { revalidatePath } from "next/cache"
@@ -120,7 +120,7 @@ export async function cancelOrgAction(orgId: string) {
 
 // ── Admin Chat ────────────────────────────────────────────────────────────────
 
-export async function getAdminChatConversationsAction() {
+export async function getAdminChatConversationsAction(showArchived = false) {
   await assertAdmin()
 
   // Última mensagem por número de telefone
@@ -154,20 +154,35 @@ export async function getAdminChatConversationsAction() {
 
   const unreadMap = Object.fromEntries(unreadRows.map(r => [r.phone, r.count]))
 
-  // Sessões para pegar fila e nome identificado
+  // Sessões para pegar fila, nome e estado de arquivamento
   const sessions = await db.select().from(chatSessions)
   const sessionMap = Object.fromEntries(sessions.map(s => [s.phone, s]))
 
-  return conversations.map(c => {
-    const session = sessionMap[c.phone]
-    return {
-      ...c,
-      unread: unreadMap[c.phone] ?? 0,
-      queue: session?.queue ?? null,
-      userName: session?.userName ?? c.senderName ?? null,
-      orgName: session?.orgName ?? null,
-    }
-  })
+  return conversations
+    .map(c => {
+      const session = sessionMap[c.phone]
+      return {
+        ...c,
+        unread: unreadMap[c.phone] ?? 0,
+        queue: session?.queue ?? null,
+        userName: session?.userName ?? c.senderName ?? null,
+        orgName: session?.orgName ?? null,
+        archived: session?.archived ?? false,
+      }
+    })
+    .filter(c => showArchived ? c.archived : !c.archived)
+}
+
+export async function archiveConversationAction(phone: string, archived: boolean) {
+  await requireAdmin()
+
+  await db
+    .insert(chatSessions)
+    .values({ phone, state: "routed", queue: null, archived, lastActivityAt: new Date() })
+    .onConflictDoUpdate({
+      target: chatSessions.phone,
+      set: { archived, lastActivityAt: new Date() },
+    })
 }
 
 export async function getAdminChatMessagesAction(phone: string) {
@@ -215,14 +230,19 @@ export async function sendAdminChatMessageAction(phone: string, content: string)
     })
 }
 
-export async function sendAdminChatTemplateAction(phone: string, name: string, templateId: string) {
+export async function sendAdminChatTemplateAction(
+  phone: string,
+  name: string,
+  templateId: string,
+  options?: { content?: string; templateUsed?: string }
+) {
   await requireAdmin()
 
   const { sendWhatsAppTemplate } = await import("@/lib/whatsapp-client")
   const firstName = name.split(" ")[0]
   const result = await sendWhatsAppTemplate(phone, templateId, [firstName])
 
-  const content = `Oi ${firstName}, tudo bem? 😊\n\nAqui é o Lucas, do Kira. Vi que você está testando o sistema e queria bater um papo rápido pra saber como está sendo sua experiência.\n\nTem alguma dúvida ou algo que posso te ajudar? Me conta!`
+  const content = options?.content ?? `Oi ${firstName}, tudo bem? 😊\n\nAqui é o Lucas, do Kira. Vi que você está testando o sistema e queria bater um papo rápido pra saber como está sendo sua experiência.\n\nTem alguma dúvida ou algo que posso te ajudar? Me conta!`
 
   await db.insert(adminChatMessages).values({
     phone,
@@ -230,7 +250,7 @@ export async function sendAdminChatTemplateAction(phone: string, name: string, t
     direction: "outbound",
     content,
     gupshupMessageId: result?.messageId ?? null,
-    templateUsed: "kira_trial_outreach",
+    templateUsed: options?.templateUsed ?? "kira_trial_outreach",
   })
 
   // Marca sessão como roteada para que respostas cheguem direto ao admin sem passar pelo bot
@@ -267,6 +287,38 @@ export async function getTrialOrgsForChatAction() {
       eq(organizations.subscriptionStatus, "active"),
     ))
     .orderBy(desc(organizations.createdAt))
+
+  return rows.map(r => ({
+    ...r,
+    phone: r.ownerPhone ?? r.ownerPhoneFallback ?? null,
+  }))
+}
+
+export async function getExpiredTrialOrgsForChatAction() {
+  await assertAdmin()
+
+  const now = new Date()
+  const rows = await db
+    .select({
+      orgId: organizations.id,
+      orgName: organizations.name,
+      ownerName: users.name,
+      ownerPhone: users.whatsapp,
+      ownerPhoneFallback: users.phone,
+      status: organizations.subscriptionStatus,
+      trialEndsAt: organizations.trialEndsAt,
+    })
+    .from(organizations)
+    .innerJoin(organizationMembers, and(
+      eq(organizationMembers.organizationId, organizations.id),
+      eq(organizationMembers.role, "owner")
+    ))
+    .innerJoin(users, eq(users.id, organizationMembers.userId))
+    .where(and(
+      eq(organizations.subscriptionStatus, "trialing"),
+      lt(organizations.trialEndsAt, now),
+    ))
+    .orderBy(desc(organizations.trialEndsAt))
 
   return rows.map(r => ({
     ...r,
@@ -386,6 +438,7 @@ export type AdminWhatsAppTemplateSetting = {
   reminderConfirmationTemplateId: string | null
   postVisitTemplateId: string | null
   trialOutreachTemplateId: string | null
+  trialExpiredOutreachTemplateId: string | null
 }
 
 export async function getWhatsAppTemplateSettingsAction(): Promise<AdminWhatsAppTemplateSetting> {
@@ -398,6 +451,7 @@ export async function getWhatsAppTemplateSettingsAction(): Promise<AdminWhatsApp
         ,s.reminder_confirmation_template_id as "reminderConfirmationTemplateId"
         ,s.post_visit_template_id as "postVisitTemplateId"
         ,s.trial_outreach_template_id as "trialOutreachTemplateId"
+        ,s.trial_expired_outreach_template_id as "trialExpiredOutreachTemplateId"
       FROM whatsapp_system_template_settings s
       WHERE s.singleton_key = 'default'
       LIMIT 1
@@ -409,6 +463,7 @@ export async function getWhatsAppTemplateSettingsAction(): Promise<AdminWhatsApp
       reminderConfirmationTemplateId: one?.reminderConfirmationTemplateId ?? null,
       postVisitTemplateId: one?.postVisitTemplateId ?? null,
       trialOutreachTemplateId: one?.trialOutreachTemplateId ?? null,
+      trialExpiredOutreachTemplateId: one?.trialExpiredOutreachTemplateId ?? null,
     }
   } catch (err) {
     console.error("[Admin] Falha ao carregar config global de template WhatsApp:", err)
@@ -418,6 +473,7 @@ export async function getWhatsAppTemplateSettingsAction(): Promise<AdminWhatsApp
       reminderConfirmationTemplateId: null,
       postVisitTemplateId: null,
       trialOutreachTemplateId: null,
+      trialExpiredOutreachTemplateId: null,
     }
   }
 }
@@ -428,6 +484,7 @@ export async function saveWhatsAppTemplateSettingAction(input: {
   reminderConfirmationTemplateId: string
   postVisitTemplateId: string
   trialOutreachTemplateId: string
+  trialExpiredOutreachTemplateId: string
 }) {
   await requireAdmin()
   const bookingTemplateId = input.bookingSummaryTemplateId.trim() || null
@@ -435,9 +492,10 @@ export async function saveWhatsAppTemplateSettingAction(input: {
   const reminderTemplateId = input.reminderConfirmationTemplateId.trim() || null
   const postVisitTemplateId = input.postVisitTemplateId.trim() || null
   const trialOutreachTemplateId = input.trialOutreachTemplateId.trim() || null
+  const trialExpiredOutreachTemplateId = input.trialExpiredOutreachTemplateId.trim() || null
   await db.execute(sql`
     INSERT INTO whatsapp_system_template_settings (
-      id, singleton_key, booking_summary_template_id, package_summary_template_id, reminder_confirmation_template_id, post_visit_template_id, trial_outreach_template_id, created_at, updated_at
+      id, singleton_key, booking_summary_template_id, package_summary_template_id, reminder_confirmation_template_id, post_visit_template_id, trial_outreach_template_id, trial_expired_outreach_template_id, created_at, updated_at
     )
     VALUES (
       ${crypto.randomUUID()},
@@ -447,6 +505,7 @@ export async function saveWhatsAppTemplateSettingAction(input: {
       ${reminderTemplateId},
       ${postVisitTemplateId},
       ${trialOutreachTemplateId},
+      ${trialExpiredOutreachTemplateId},
       now(),
       now()
     )
@@ -456,6 +515,7 @@ export async function saveWhatsAppTemplateSettingAction(input: {
       reminder_confirmation_template_id = EXCLUDED.reminder_confirmation_template_id,
       post_visit_template_id = EXCLUDED.post_visit_template_id,
       trial_outreach_template_id = EXCLUDED.trial_outreach_template_id,
+      trial_expired_outreach_template_id = EXCLUDED.trial_expired_outreach_template_id,
       updated_at = now()
   `)
   revalidatePath("/admin")

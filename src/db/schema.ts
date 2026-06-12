@@ -834,6 +834,8 @@ export const chatSessions = pgTable("chat_sessions", {
   userName: text("user_name"),
   orgName: text("org_name"),
 
+  archived: boolean("archived").notNull().default(false),
+
   lastActivityAt: timestamp("last_activity_at").notNull().defaultNow(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 })
