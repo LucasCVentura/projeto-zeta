@@ -419,20 +419,59 @@ export function AdminDashboard() {
             {orgs.map((org) => {
               const initials = org.name.split(" ").slice(0, 2).map(w => w[0]).join("").toUpperCase()
               const expanded = expandedOrg === org.id
+              const now = new Date()
+              const trialEnd = org.trialEndsAt ? new Date(org.trialEndsAt) : null
+              const trialExpired = org.subscriptionStatus === "trialing" && trialEnd !== null && trialEnd < now
+              const trialDaysLeft = trialEnd && !trialExpired
+                ? Math.ceil((trialEnd.getTime() - now.getTime()) / 86400000)
+                : null
+              const trialDaysAgo = trialExpired && trialEnd
+                ? Math.floor((now.getTime() - trialEnd.getTime()) / 86400000)
+                : null
+
               return (
-                <div key={org.id} className="rounded-xl border border-border bg-card flex flex-col overflow-hidden">
+                <div key={org.id} className={cn(
+                  "rounded-xl border bg-card flex flex-col overflow-hidden",
+                  trialExpired ? "border-destructive/40" : "border-border"
+                )}>
+                  {/* Faixa de trial expirado */}
+                  {trialExpired && (
+                    <div className="bg-destructive/10 px-4 py-1.5 flex items-center gap-2">
+                      <span className="text-[11px] font-semibold text-destructive">
+                        Trial encerrado há {trialDaysAgo === 0 ? "menos de 1 dia" : `${trialDaysAgo} dia${trialDaysAgo !== 1 ? "s" : ""}`}
+                      </span>
+                    </div>
+                  )}
+
                   {/* Card header */}
                   <div className="flex items-center gap-3 px-4 py-4">
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">{initials}</div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-sm font-semibold truncate">{org.name}</span>
-                        <span className={cn("text-[10px] font-semibold px-1.5 py-0.5 rounded-full", statusColor(org.subscriptionStatus))}>
-                          {statusLabel(org.subscriptionStatus)}
+                        <span className={cn(
+                          "text-[10px] font-semibold px-1.5 py-0.5 rounded-full",
+                          trialExpired ? "text-destructive bg-destructive/10" : statusColor(org.subscriptionStatus)
+                        )}>
+                          {trialExpired ? "Trial expirado" : statusLabel(org.subscriptionStatus)}
                         </span>
                       </div>
                       <p className="text-xs text-muted-foreground truncate mt-0.5">{org.owner?.name}</p>
                     </div>
+                    {/* Dias restantes do trial */}
+                    {trialDaysLeft !== null && (
+                      <div className={cn(
+                        "shrink-0 text-center rounded-lg px-2 py-1",
+                        trialDaysLeft <= 3 ? "bg-amber-50 dark:bg-amber-900/20" : "bg-muted"
+                      )}>
+                        <p className={cn("text-base font-bold tabular-nums leading-none", trialDaysLeft <= 3 ? "text-amber-600 dark:text-amber-400" : "text-foreground")}>
+                          {trialDaysLeft}
+                        </p>
+                        <p className={cn("text-[9px] font-medium", trialDaysLeft <= 3 ? "text-amber-500" : "text-muted-foreground")}>
+                          {trialDaysLeft === 1 ? "dia" : "dias"}
+                        </p>
+                      </div>
+                    )}
                   </div>
 
                   {/* Stats */}
@@ -450,7 +489,12 @@ export function AdminDashboard() {
                     <div className="px-4 pb-3 text-xs text-muted-foreground space-y-0.5 border-t border-border/50 pt-3">
                       <p className="truncate">{org.owner?.email}</p>
                       <p>Cadastro: <span className="text-foreground">{new Date(org.createdAt).toLocaleDateString("pt-BR")}</span>
-                        {org.trialEndsAt && <> · Trial até <span className="text-foreground">{new Date(org.trialEndsAt).toLocaleDateString("pt-BR")}</span></>}
+                        {trialEnd && (
+                          <> · {trialExpired
+                            ? <span className="text-destructive font-medium">Trial encerrou em {trialEnd.toLocaleDateString("pt-BR")}</span>
+                            : <>Trial até <span className="text-foreground">{trialEnd.toLocaleDateString("pt-BR")}</span></>
+                          }</>
+                        )}
                       </p>
                     </div>
                   )}
