@@ -1,6 +1,7 @@
 "use server"
 
 import Groq from "groq-sdk"
+import OpenAI from "openai"
 import { db } from "@/db"
 import { appointments, clientPhotos, users } from "@/db/schema"
 import { eq, and, desc } from "drizzle-orm"
@@ -228,10 +229,10 @@ export async function analyzePhotoComparisonAction(photoIds: string[]): Promise<
 
   const firstName = await getUserFirstName(userId)
   const salutation = `${greeting()}, ${firstName}!`
-  const groq = new Groq({ apiKey })
+  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 
-  const chat = await groq.chat.completions.create({
-    model: "meta-llama/llama-4-scout-17b-16e-instruct",
+  const chat = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
     messages: [
       {
         role: "user",
@@ -306,10 +307,10 @@ export async function analyzeClientEvolutionAction(clientId: string): Promise<{
     return `Foto ${i + 1}: ${d}${p.procedure ? ` (${p.procedure})` : ""}`
   }).join(" | ")
 
-  const groq = new Groq({ apiKey })
+  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 
-  const chat = await groq.chat.completions.create({
-    model: "meta-llama/llama-4-scout-17b-16e-instruct",
+  const chat = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
     messages: [
       {
         role: "user",
@@ -369,10 +370,10 @@ export async function suggestProceduresFromPhotosAction(photoIds: string[]): Pro
   if (validImages.length === 0) return { success: false, error: "Não foi possível carregar as imagens." }
 
   const firstName = await getUserFirstName(userId)
-  const groq = new Groq({ apiKey })
+  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 
-  const chat = await groq.chat.completions.create({
-    model: "meta-llama/llama-4-scout-17b-16e-instruct",
+  const chat = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
     messages: [
       {
         role: "user",
@@ -404,9 +405,6 @@ export async function suggestProceduresWithAnnotationsAction(photoId: string): P
 }> {
   const { organizationId, userId } = await requireSession()
 
-  const apiKey = process.env.GROQ_API_KEY
-  if (!apiKey) return { success: false, error: "GROQ_API_KEY não configurada." }
-
   const photos = await db.select().from(clientPhotos).where(and(eq(clientPhotos.organizationId, organizationId)))
   const photo = photos.find((p) => p.id === photoId)
   if (!photo) return { success: false, error: "Foto não encontrada." }
@@ -416,7 +414,7 @@ export async function suggestProceduresWithAnnotationsAction(photoId: string): P
 
   const firstName = await getUserFirstName(userId)
   const salutation = `${greeting()}, ${firstName}!`
-  const groq = new Groq({ apiKey })
+  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 
   // Zonas faciais fixas — modelo só escolhe a zona, nós mapeamos para coordenadas.
   // Isso elimina o problema de o modelo errar coordenadas x/y livres.
@@ -442,8 +440,8 @@ export async function suggestProceduresWithAnnotationsAction(photoId: string): P
 
   const zoneList = Object.keys(ZONES).join(", ")
 
-  const chat = await groq.chat.completions.create({
-    model: "meta-llama/llama-4-scout-17b-16e-instruct",
+  const chat = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
     messages: [
       {
         role: "user",
