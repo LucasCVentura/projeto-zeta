@@ -214,11 +214,17 @@ export async function analyzePhotoComparisonAction(photoIds: string[]): Promise<
   if (validImages.length < 2) return { success: false, error: "Não foi possível carregar as imagens." }
 
   const labels = selected.map((p, i) => {
-    const d = new Date(p.takenAt + "T12:00:00").toLocaleDateString("pt-BR", { day: "numeric", month: "short", year: "numeric" })
-    return `Foto ${i + 1}: ${d}${p.procedure ? ` — ${p.procedure}` : ""}`
+    const d = new Date(p.takenAt + "T12:00:00").toLocaleDateString("pt-BR", { day: "numeric", month: "long", year: "numeric" })
+    return `Foto ${i + 1}: tirada em ${d}${p.procedure ? ` — procedimento: ${p.procedure}` : ""}`
   }).join("\n")
 
+  const daysBetween = selected.length >= 2
+    ? Math.round((new Date(selected[selected.length - 1].takenAt + "T12:00:00").getTime() - new Date(selected[0].takenAt + "T12:00:00").getTime()) / 86400000)
+    : 0
+  const intervalText = daysBetween > 0 ? `\nIntervalo entre as fotos: ${daysBetween} dia${daysBetween !== 1 ? "s" : ""}.` : ""
+
   const firstName = await getUserFirstName(userId)
+  const salutation = `${greeting()}, ${firstName}!`
   const groq = new Groq({ apiKey })
 
   const chat = await groq.chat.completions.create({
@@ -229,19 +235,21 @@ export async function analyzePhotoComparisonAction(photoIds: string[]): Promise<
         content: [
           {
             type: "text",
-            text: `Você é um assistente especializado em estética e dermatologia. Analise as fotos abaixo e descreva a evolução observada.\n\n${labels}\n\nResponda em português, de forma natural e direta, como se estivesse conversando com a profissional. Comece com "${greeting()}, ${firstName}!" e depois descreva em tópicos (use • no início de cada linha) as mudanças observadas: textura da pele, tom, manchas, hidratação, firmeza ou qualquer evolução visível. Sem formatação markdown como ** ou ##. Máximo 5 tópicos.`,
+            text: `Você é um assistente especializado em estética e dermatologia. Compare as fotos abaixo e descreva objetivamente as diferenças observadas na pele da cliente.\n\n${labels}${intervalText}\n\nIMPORTANTE:\n- Se as datas forem diferentes, as fotos foram tiradas em momentos distintos — avalie a evolução real.\n- Seja honesta: se houver melhora visível, descreva. Se a diferença for pequena ou negativa, diga isso também.\n- Nunca diga que as fotos parecem do mesmo dia se as datas forem diferentes.\n- Descreva em tópicos (use • no início de cada linha): textura, tom, manchas, hidratação, firmeza e qualquer mudança visível.\n- Sem formatação markdown como ** ou ##. Máximo 5 tópicos. Sem saudação — vá direto aos tópicos.`,
           },
           ...validImages,
         ],
       },
     ],
-    temperature: 0.4,
-    max_tokens: 350,
+    temperature: 0.3,
+    max_tokens: 400,
   })
 
-  const analysis = chat.choices[0]?.message?.content?.trim()
-  if (!analysis) return { success: false, error: "Não foi possível gerar análise." }
+  const body = chat.choices[0]?.message?.content?.trim()
+  if (!body) return { success: false, error: "Não foi possível gerar análise." }
 
+  // Garante a saudação com o nome real, sem depender do modelo
+  const analysis = `${salutation}\n\nAnalisando as fotos, posso observar que:\n\n${body}`
   return { success: true, analysis }
 }
 

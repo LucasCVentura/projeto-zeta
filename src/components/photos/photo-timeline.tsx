@@ -6,7 +6,7 @@ import { PhotoUpload } from "./photo-upload"
 import { PhotoComparison, CompareButton } from "./photo-comparison"
 import { AiPhotoAnalysis } from "./ai-photo-analysis"
 import { PhotoCarousel } from "./photo-carousel"
-import { Trash2, Loader2, Play, X } from "lucide-react"
+import { Trash2, Loader2, Play, X, ZoomIn } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { mediaUrl } from "@/lib/media-url"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
@@ -231,18 +231,26 @@ export function PhotoTimeline({ clientId, initialPhotos }: Props) {
                           </div>
                         )}
 
-                        {/* Botão excluir — sempre visível, some quando em modo seleção */}
+                        {/* Botões de ação — somem em modo seleção */}
                         {!selectMode && (
-                          <button
-                            onClick={(e) => { e.stopPropagation(); setPendingDeletePhoto(photo) }}
-                            disabled={deleting === photo.id}
-                            className="absolute top-1.5 right-1.5 flex h-7 w-7 items-center justify-center rounded-lg bg-black/50 text-white hover:bg-destructive transition-colors disabled:opacity-40"
-                          >
-                            {deleting === photo.id
-                              ? <Loader2 size={12} className="animate-spin" />
-                              : <Trash2 size={12} />
-                            }
-                          </button>
+                          <div className="absolute top-1.5 right-1.5 flex flex-col gap-1">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setPendingDeletePhoto(photo) }}
+                              disabled={deleting === photo.id}
+                              className="flex h-7 w-7 items-center justify-center rounded-lg bg-black/50 text-white hover:bg-destructive transition-colors disabled:opacity-40"
+                            >
+                              {deleting === photo.id
+                                ? <Loader2 size={12} className="animate-spin" />
+                                : <Trash2 size={12} />
+                              }
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setCarouselIndex(chronological.findIndex(p => p.id === photo.id)) }}
+                              className="flex h-7 w-7 items-center justify-center rounded-lg bg-black/50 text-white hover:bg-white/30 transition-colors"
+                            >
+                              <ZoomIn size={12} />
+                            </button>
+                          </div>
                         )}
 
                         {/* Data no hover */}

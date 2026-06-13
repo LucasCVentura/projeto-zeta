@@ -11,6 +11,7 @@ import { ClientDocumentsSection } from "@/components/clients/client-documents-se
 import { ClientConsentSection } from "@/components/clients/client-consent-section"
 import { ArrowLeft, Phone, Mail, CalendarDays, Pencil, Images } from "lucide-react"
 import { ImageConsentEditor } from "@/components/clients/image-consent-editor"
+import { DeleteClientButton } from "@/components/clients/delete-client-button"
 
 type Props = { params: Promise<{ id: string }> }
 
@@ -107,6 +108,7 @@ export default async function ClientePerfilPage({ params }: Props) {
           >
             <Pencil size={13} />
           </Link>
+          <DeleteClientButton clientId={id} clientName={client.name} />
         </div>
       </div>
 

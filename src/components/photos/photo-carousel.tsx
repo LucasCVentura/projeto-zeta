@@ -77,9 +77,9 @@ export function PhotoCarousel({ photos, startIndex = 0, onClose }: Props) {
         </div>
         <button
           onClick={onClose}
-          className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors"
+          className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20 text-white hover:bg-white/30 transition-colors"
         >
-          <X size={18} />
+          <X size={20} />
         </button>
       </div>
 
@@ -139,6 +139,14 @@ export function PhotoCarousel({ photos, startIndex = 0, onClose }: Props) {
             ))}
           </div>
         )}
+
+        {/* Botão fechar — sempre visível no footer para facilitar no mobile */}
+        <button
+          onClick={onClose}
+          className="w-full flex items-center justify-center gap-2 py-2 text-white/50 hover:text-white/80 transition-colors text-sm"
+        >
+          <X size={14} /> Fechar
+        </button>
       </div>
     </div>
   )

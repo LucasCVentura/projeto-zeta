@@ -286,3 +286,30 @@ export async function updateImageConsentAction(clientId: string, consent: boolea
   revalidateTag(`client-${clientId}`, {})
   revalidatePath(`/clientes/${clientId}`)
 }
+
+// ── Excluir cliente ───────────────────────────────────────────────────────────
+
+export async function deleteClientAction(clientId: string): Promise<ActionResult> {
+  const { organizationId } = await requireSession()
+
+  const [existing] = await db
+    .select({ id: clients.id })
+    .from(clients)
+    .where(and(eq(clients.id, clientId), eq(clients.organizationId, organizationId)))
+    .limit(1)
+
+  if (!existing) return { success: false, error: "Cliente não encontrado." }
+
+  // appointments.clientId é restrict — precisa apagar antes
+  await db.delete(appointments).where(
+    and(eq(appointments.clientId, clientId), eq(appointments.organizationId, organizationId))
+  )
+
+  // cascade cuida de: anamnese, fotos, pacotes, consentimentos, etc.
+  await db.delete(clients).where(
+    and(eq(clients.id, clientId), eq(clients.organizationId, organizationId))
+  )
+
+  revalidatePath("/clientes")
+  return { success: true }
+}
