@@ -46,13 +46,21 @@ export function PhotoUpload({ clientId, onUploaded }: Props) {
 
   function handleFiles(files: FileList) {
     setError(null)
+    const ALLOWED = ["image/jpeg", "image/png", "image/webp", "image/gif"]
     const newItems: QueueItem[] = []
+    let hasUnsupported = false
     for (const f of Array.from(files)) {
       if (!f.type.startsWith("image/")) continue
       if (f.size > 10 * 1024 * 1024) continue
+      if (!ALLOWED.includes(f.type)) { hasUnsupported = true; continue }
       const preview = URL.createObjectURL(f)
       newItems.push({ file: f, preview, done: false })
     }
+    if (hasUnsupported && newItems.length === 0) {
+      setError("Formato não suportado. Use JPEG, PNG ou WebP.")
+      return
+    }
+    if (hasUnsupported) setError("Alguns arquivos foram ignorados por ter formato não suportado (use JPEG, PNG ou WebP).")
     if (newItems.length === 0) { setError("Nenhuma imagem válida selecionada (máx 10MB cada)."); return }
     setQueue((prev) => [...prev, ...newItems])
   }
