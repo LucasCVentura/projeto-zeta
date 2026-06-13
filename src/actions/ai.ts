@@ -228,7 +228,7 @@ export async function analyzePhotoComparisonAction(photoIds: string[]): Promise<
   const groq = new Groq({ apiKey })
 
   const chat = await groq.chat.completions.create({
-    model: "meta-llama/llama-4-maverick-17b-128e-instruct",
+    model: "meta-llama/llama-4-scout-17b-16e-instruct",
     messages: [
       {
         role: "user",
@@ -306,7 +306,7 @@ export async function analyzeClientEvolutionAction(clientId: string): Promise<{
   const groq = new Groq({ apiKey })
 
   const chat = await groq.chat.completions.create({
-    model: "meta-llama/llama-4-maverick-17b-128e-instruct",
+    model: "meta-llama/llama-4-scout-17b-16e-instruct",
     messages: [
       {
         role: "user",
@@ -369,7 +369,7 @@ export async function suggestProceduresFromPhotosAction(photoIds: string[]): Pro
   const groq = new Groq({ apiKey })
 
   const chat = await groq.chat.completions.create({
-    model: "meta-llama/llama-4-maverick-17b-128e-instruct",
+    model: "meta-llama/llama-4-scout-17b-16e-instruct",
     messages: [
       {
         role: "user",
@@ -416,7 +416,7 @@ export async function suggestProceduresWithAnnotationsAction(photoId: string): P
 
   // Etapa 1 — pede coordenadas + texto numa única chamada
   const chat = await groq.chat.completions.create({
-    model: "meta-llama/llama-4-maverick-17b-128e-instruct",
+    model: "meta-llama/llama-4-scout-17b-16e-instruct",
     messages: [
       {
         role: "user",
