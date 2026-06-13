@@ -415,9 +415,33 @@ export async function suggestProceduresWithAnnotationsAction(photoId: string): P
   if (!photoResult) return { success: false, error: "Não foi possível carregar a imagem." }
 
   const firstName = await getUserFirstName(userId)
+  const salutation = `${greeting()}, ${firstName}!`
   const groq = new Groq({ apiKey })
 
-  // Etapa 1 — pede coordenadas + texto numa única chamada
+  // Zonas faciais fixas — modelo só escolhe a zona, nós mapeamos para coordenadas.
+  // Isso elimina o problema de o modelo errar coordenadas x/y livres.
+  const ZONES: Record<string, { x: number; y: number }> = {
+    testa:              { x: 50, y: 18 },
+    sobrancelha_esq:    { x: 35, y: 30 },
+    sobrancelha_dir:    { x: 65, y: 30 },
+    olho_esq:           { x: 33, y: 38 },
+    olho_dir:           { x: 67, y: 38 },
+    olheira_esq:        { x: 33, y: 45 },
+    olheira_dir:        { x: 67, y: 45 },
+    nariz:              { x: 50, y: 52 },
+    bochecha_esq:       { x: 27, y: 55 },
+    bochecha_dir:       { x: 73, y: 55 },
+    labio_superior:     { x: 50, y: 63 },
+    labio_inferior:     { x: 50, y: 68 },
+    queixo:             { x: 50, y: 76 },
+    pescoco:            { x: 50, y: 88 },
+    cabelo:             { x: 50, y: 7  },
+    orelha_esq:         { x: 10, y: 45 },
+    orelha_dir:         { x: 90, y: 45 },
+  }
+
+  const zoneList = Object.keys(ZONES).join(", ")
+
   const chat = await groq.chat.completions.create({
     model: "meta-llama/llama-4-scout-17b-16e-instruct",
     messages: [
@@ -426,17 +450,18 @@ export async function suggestProceduresWithAnnotationsAction(photoId: string): P
         content: [
           {
             type: "text",
-            text: `Você é um especialista em estética e biomedicina. Analise esta foto de pele e responda SOMENTE com um JSON válido, sem texto fora do JSON, no seguinte formato:
+            text: `Você é um especialista em estética e biomedicina. Analise esta foto de pele e responda SOMENTE com um JSON válido, sem texto fora do JSON:
 
 {
-  "greeting": "${greeting()}, ${firstName}!",
-  "summary": "frase curta e natural descrevendo o estado geral da pele",
+  "summary": "frase curta descrevendo o estado geral da pele",
   "areas": [
-    { "label": "nome da condição", "x": 45, "y": 30, "procedure": "procedimento indicado" }
+    { "zone": "nome_da_zona", "label": "nome da condição visível", "procedure": "procedimento indicado" }
   ]
 }
 
-Onde x e y são percentuais (0-100) da posição na imagem (0,0 = canto superior esquerdo). Identifique de 3 a 5 áreas de atenção visíveis. Sem markdown, sem texto fora do JSON.`,
+Zonas disponíveis (use EXATAMENTE um desses nomes no campo "zone"): ${zoneList}
+
+Identifique de 3 a 5 áreas de atenção visíveis na foto. Sem markdown, sem texto fora do JSON.`,
           },
           {
             type: "image_url",
@@ -451,7 +476,7 @@ Onde x e y são percentuais (0-100) da posição na imagem (0,0 = canto superior
 
   const raw = chat.choices[0]?.message?.content?.trim() ?? ""
 
-  let parsed: { greeting: string; summary: string; areas: { label: string; x: number; y: number; procedure: string }[] }
+  let parsed: { summary: string; areas: { zone: string; label: string; procedure: string }[] }
   try {
     const jsonMatch = raw.match(/\{[\s\S]*\}/)
     parsed = JSON.parse(jsonMatch?.[0] ?? raw)
@@ -461,18 +486,25 @@ Onde x e y são percentuais (0-100) da posição na imagem (0,0 = canto superior
 
   if (!parsed?.areas?.length) return { success: false, error: "Não foi possível identificar áreas na imagem." }
 
+  // Mapeia zona → coordenadas fixas; ignora zonas desconhecidas
+  const areas = parsed.areas
+    .filter((a) => ZONES[a.zone])
+    .map((a) => ({ label: a.label, procedure: a.procedure, ...ZONES[a.zone] }))
+
+  if (!areas.length) return { success: false, error: "Não foi possível mapear as áreas identificadas." }
+
   const analysis = [
-    `${parsed.greeting}\n`,
+    `${salutation}\n`,
     parsed.summary,
     "",
-    ...parsed.areas.map((a) => `• ${a.label}: ${a.procedure}`),
+    ...areas.map((a) => `• ${a.label}: ${a.procedure}`),
   ].join("\n")
 
   return {
     success: true,
     analysis,
     imageUrl: photo.url,
-    areas: parsed.areas,
+    areas,
   }
 }
 
