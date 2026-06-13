@@ -254,10 +254,15 @@ export async function cancelOrgAction(orgId: string) {
 
 // ── Admin Chat ────────────────────────────────────────────────────────────────
 
+// Normaliza para "55XXXXXXXXXXX" — resolve divergência entre formato do webhook e digitação manual
+function normalizePhone(phone: string) {
+  const digits = phone.replace(/\D/g, "")
+  return digits.startsWith("55") ? digits : `55${digits}`
+}
+
 export async function getAdminChatConversationsAction(showArchived = false) {
   await assertAdmin()
 
-  // Última mensagem por número de telefone
   const rows = await db
     .select({
       phone: adminChatMessages.phone,
@@ -269,35 +274,50 @@ export async function getAdminChatConversationsAction(showArchived = false) {
     .from(adminChatMessages)
     .orderBy(desc(adminChatMessages.createdAt))
 
-  // Agrupa por phone mantendo a mais recente
+  // Agrupa por número normalizado mantendo a mensagem mais recente
   const seen = new Set<string>()
-  const conversations: typeof rows = []
+  const conversations: (typeof rows[0] & { normalizedPhone: string })[] = []
   for (const row of rows) {
-    if (!seen.has(row.phone)) {
-      seen.add(row.phone)
-      conversations.push(row)
+    const key = normalizePhone(row.phone)
+    if (!seen.has(key)) {
+      seen.add(key)
+      conversations.push({ ...row, normalizedPhone: key })
     }
   }
 
-  // Conta não lidas por conversa
   const unreadRows = await db
     .select({ phone: adminChatMessages.phone, count: count() })
     .from(adminChatMessages)
     .where(and(eq(adminChatMessages.direction, "inbound"), isNull(adminChatMessages.readAt)))
     .groupBy(adminChatMessages.phone)
 
-  const unreadMap = Object.fromEntries(unreadRows.map(r => [r.phone, r.count]))
+  // Unread agrupado por número normalizado
+  const unreadMap: Record<string, number> = {}
+  for (const r of unreadRows) {
+    const key = normalizePhone(r.phone)
+    unreadMap[key] = (unreadMap[key] ?? 0) + r.count
+  }
 
-  // Sessões para pegar fila, nome e estado de arquivamento
   const sessions = await db.select().from(chatSessions)
-  const sessionMap = Object.fromEntries(sessions.map(s => [s.phone, s]))
+  // Sessão lookup por número normalizado — garante match independente do formato salvo
+  const sessionMap: Record<string, typeof sessions[0]> = {}
+  for (const s of sessions) {
+    const key = normalizePhone(s.phone)
+    if (!sessionMap[key]) sessionMap[key] = s
+    // Prefere a sessão com mais dados preenchidos
+    else if (!sessionMap[key].userName && s.userName) sessionMap[key] = s
+  }
 
   return conversations
     .map(c => {
-      const session = sessionMap[c.phone]
+      const session = sessionMap[c.normalizedPhone]
       return {
-        ...c,
-        unread: unreadMap[c.phone] ?? 0,
+        phone: c.normalizedPhone,
+        senderName: c.senderName,
+        lastMessage: c.lastMessage,
+        lastDirection: c.lastDirection,
+        lastAt: c.lastAt,
+        unread: unreadMap[c.normalizedPhone] ?? 0,
         queue: session?.queue ?? null,
         userName: session?.userName ?? c.senderName ?? null,
         orgName: session?.orgName ?? null,
