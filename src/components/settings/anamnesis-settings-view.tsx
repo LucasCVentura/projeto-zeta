@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useRef } from "react"
+import Link from "next/link"
 import type { AnamnesisQuestion } from "@/db/schema"
 import {
   createAnamnesisQuestionAction,
@@ -14,7 +15,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog"
 import { cn } from "@/lib/utils"
-import { Plus, Trash2, GripVertical } from "lucide-react"
+import { Plus, Trash2, GripVertical, ArrowLeft } from "lucide-react"
 
 const TYPE_LABELS: Record<string, string> = {
   text:        "Texto livre",
@@ -81,6 +82,10 @@ export function AnamnesisSettingsView({ questions: initial }: { questions: Anamn
 
   return (
     <div className="container-page max-w-2xl py-8 space-y-6">
+      <Link href="/configuracoes" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
+        <ArrowLeft size={14} /> Configurações
+      </Link>
+
       <div className="flex items-start justify-between gap-4">
         <div>
           <h2 className="font-heading text-xl font-semibold">Ficha de anamnese</h2>

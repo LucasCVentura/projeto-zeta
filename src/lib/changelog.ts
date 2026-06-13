@@ -6,6 +6,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.7.0",
+    date: "2026-06-12",
+    items: [
+      { type: "new",         text: "Termos de consentimento: crie múltiplos termos em Configurações → Termos e envie junto com a ficha de anamnese para o cliente aceitar ou recusar" },
+      { type: "new",         text: "Respostas dos termos ficam registradas na ficha do cliente com data e hora — editáveis pelo profissional a qualquer momento" },
+      { type: "improvement", text: "Termos podem ser ativados ou desativados individualmente sem perder o histórico de respostas" },
+    ],
+  },
+  {
     version: "1.6.0",
     date: "2026-06-07",
     items: [

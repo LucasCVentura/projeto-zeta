@@ -82,6 +82,7 @@ export const organizations = pgTable("organizations", {
   instagram: text("instagram"),
   address: text("address"),
   googleReviewUrl: text("google_review_url"),
+  imageConsentText: text("image_consent_text"),
   logo: text("logo"),
 
   stripeCustomerId: text("stripe_customer_id"),
@@ -464,6 +465,10 @@ export const clientAnamnesis = pgTable("client_anamnesis", {
   // Observações livres
   extraNotes: text("extra_notes"),
 
+  // Autorização de uso de imagem: null = não respondeu, true = autorizou, false = não autorizou
+  imageConsent: boolean("image_consent"),
+  imageConsentAt: timestamp("image_consent_at"),
+
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 })
 
@@ -488,6 +493,30 @@ export const anamnesisQuestions = pgTable("anamnesis_questions", {
 })
 
 export type AnamnesisQuestion = typeof anamnesisQuestions.$inferSelect
+
+// ── consent_terms ─────────────────────────────────────────────────────────────
+
+export const consentTerms = pgTable("consent_terms", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  orgId: text("org_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  body: text("body").notNull(),
+  active: boolean("active").notNull().default(true),
+  displayOrder: integer("display_order").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+})
+
+export const consentTermRecords = pgTable("consent_term_records", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  clientId: text("client_id").notNull().references(() => clients.id, { onDelete: "cascade" }),
+  orgId: text("org_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+  termId: text("term_id").notNull().references(() => consentTerms.id, { onDelete: "cascade" }),
+  accepted: boolean("accepted").notNull(),
+  respondedAt: timestamp("responded_at").notNull().defaultNow(),
+})
+
+export type ConsentTerm = typeof consentTerms.$inferSelect
+export type ConsentTermRecord = typeof consentTermRecords.$inferSelect
 
 // ── anamnesis_answers ─────────────────────────────────────────────────────────
 

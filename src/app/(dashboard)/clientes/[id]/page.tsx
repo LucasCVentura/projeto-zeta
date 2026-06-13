@@ -4,10 +4,13 @@ import { getClientAction } from "@/actions/clients"
 import { getClientPackagesAction, getPackagesAction } from "@/actions/packages"
 import { getOrganizationAction } from "@/actions/organization"
 import { getClientDocumentsAction } from "@/actions/documents"
+import { getClientConsentRecordsAction } from "@/actions/consent-terms"
 import { ClientPackagesSection } from "@/components/packages/client-packages-section"
 import { ClientHistory } from "@/components/clients/client-history"
 import { ClientDocumentsSection } from "@/components/clients/client-documents-section"
+import { ClientConsentSection } from "@/components/clients/client-consent-section"
 import { ArrowLeft, Phone, Mail, CalendarDays, Pencil, Images } from "lucide-react"
+import { ImageConsentEditor } from "@/components/clients/image-consent-editor"
 
 type Props = { params: Promise<{ id: string }> }
 
@@ -33,7 +36,7 @@ export default async function ClientePerfilPage({ params }: Props) {
   const data = await getClientAction(id)
   if (!data) notFound()
 
-  const [clientPackages, allPackages, org, documents] = await Promise.all([
+  const [clientPackages, allPackages, org, documents, consentTermsWithRecords] = await Promise.all([
     getClientPackagesAction(id).catch((error) => {
       console.error("[clientes/:id] getClientPackagesAction failed", { clientId: id, error })
       return []
@@ -48,6 +51,10 @@ export default async function ClientePerfilPage({ params }: Props) {
     }),
     getClientDocumentsAction(id).catch((error) => {
       console.error("[clientes/:id] getClientDocumentsAction failed", { clientId: id, error })
+      return []
+    }),
+    getClientConsentRecordsAction(id).catch((error) => {
+      console.error("[clientes/:id] getClientConsentRecordsAction failed", { clientId: id, error })
       return []
     }),
   ])
@@ -102,6 +109,18 @@ export default async function ClientePerfilPage({ params }: Props) {
           </Link>
         </div>
       </div>
+
+      {/* Termos de consentimento */}
+      <ClientConsentSection clientId={id} terms={consentTermsWithRecords} />
+
+      {/* Autorização de imagem (legado) — só exibe se não houver termos configurados */}
+      {consentTermsWithRecords.length === 0 && (
+        <ImageConsentEditor
+          clientId={id}
+          consent={data.anamnesis?.imageConsent ?? null}
+          consentAt={data.anamnesis?.imageConsentAt ?? null}
+        />
+      )}
 
       {/* Observações internas */}
       {client.notes && (

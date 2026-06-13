@@ -10,6 +10,13 @@ import { CheckCircle2 } from "lucide-react"
 
 type PageState = "loading" | "ready" | "saving" | "saved" | "invalid"
 
+type TermData = {
+  id: string
+  title: string
+  body: string
+  accepted: boolean | null
+}
+
 export default function PublicAnamnesisPage() {
   const { token } = useParams<{ token: string }>()
   const [state, setState] = useState<PageState>("loading")
@@ -17,6 +24,8 @@ export default function PublicAnamnesisPage() {
   const [answers, setAnswers] = useState<Record<string, unknown>>({})
   const [orgName, setOrgName] = useState("")
   const [clientName, setClientName] = useState("")
+  const [terms, setTerms] = useState<TermData[]>([])
+  const [consentResponses, setConsentResponses] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
     fetch(`/api/anamnese/${token}`)
@@ -27,6 +36,13 @@ export default function PublicAnamnesisPage() {
         setAnswers(data.answers ?? {})
         setOrgName(data.orgName)
         setClientName(data.clientName)
+        const loadedTerms: TermData[] = data.terms ?? []
+        setTerms(loadedTerms)
+        const initial: Record<string, boolean> = {}
+        for (const t of loadedTerms) {
+          if (typeof t.accepted === "boolean") initial[t.id] = t.accepted
+        }
+        setConsentResponses(initial)
         setState("ready")
       })
       .catch(() => setState("invalid"))
@@ -36,12 +52,23 @@ export default function PublicAnamnesisPage() {
     setAnswers(prev => ({ ...prev, [questionId]: value }))
   }
 
+  function toggleConsent(termId: string, value: boolean) {
+    setConsentResponses(prev => {
+      if (prev[termId] === value) {
+        const next = { ...prev }
+        delete next[termId]
+        return next
+      }
+      return { ...prev, [termId]: value }
+    })
+  }
+
   async function handleSave() {
     setState("saving")
     const res = await fetch(`/api/anamnese/${token}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ answers }),
+      body: JSON.stringify({ answers, consentResponses }),
     })
     setState(res.ok ? "saved" : "ready")
   }
@@ -94,6 +121,50 @@ export default function PublicAnamnesisPage() {
             />
           ))}
         </div>
+
+        {terms.length > 0 && (
+          <div className="space-y-3">
+            <p className="text-sm font-medium">Termos de consentimento</p>
+            <p className="text-xs text-muted-foreground">Opcional — você pode enviar a ficha sem responder.</p>
+            {terms.map(term => {
+              const value = consentResponses[term.id]
+              return (
+                <div key={term.id} className="rounded-xl border border-border bg-card p-4 space-y-3">
+                  <div>
+                    <p className="text-sm font-medium">{term.title}</p>
+                    <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{term.body}</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => toggleConsent(term.id, true)}
+                      className={cn(
+                        "flex-1 rounded-lg border py-2 text-sm transition-colors",
+                        value === true
+                          ? "border-primary bg-primary/10 text-primary font-medium"
+                          : "border-border text-muted-foreground"
+                      )}
+                    >
+                      Aceito
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => toggleConsent(term.id, false)}
+                      className={cn(
+                        "flex-1 rounded-lg border py-2 text-sm transition-colors",
+                        value === false
+                          ? "border-red-400 bg-red-50 text-red-600 font-medium"
+                          : "border-border text-muted-foreground"
+                      )}
+                    >
+                      Não aceito
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
 
         <Button
           onClick={handleSave}

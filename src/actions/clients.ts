@@ -256,3 +256,33 @@ export async function upsertAnamnesisAction(
   revalidatePath(`/clientes/${clientId}`)
   return { success: true }
 }
+
+// ── Atualizar consentimento de imagem ─────────────────────────────────────────
+
+export async function updateImageConsentAction(clientId: string, consent: boolean | null) {
+  const { organizationId } = await requireSession()
+
+  const [existing] = await db
+    .select({ id: clientAnamnesis.id })
+    .from(clientAnamnesis)
+    .where(eq(clientAnamnesis.clientId, clientId))
+    .limit(1)
+
+  const now = consent !== null ? new Date() : null
+
+  if (existing) {
+    await db
+      .update(clientAnamnesis)
+      .set({ imageConsent: consent, imageConsentAt: now, updatedAt: new Date() })
+      .where(eq(clientAnamnesis.clientId, clientId))
+  } else {
+    await db.insert(clientAnamnesis).values({
+      clientId,
+      imageConsent: consent,
+      imageConsentAt: now,
+    })
+  }
+
+  revalidateTag(`client-${clientId}`, {})
+  revalidatePath(`/clientes/${clientId}`)
+}

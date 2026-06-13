@@ -1,7 +1,7 @@
 "use server"
 
 import { db } from "@/db"
-import { anamnesisQuestions, anamnesisAnswers } from "@/db/schema"
+import { anamnesisQuestions, anamnesisAnswers, organizations } from "@/db/schema"
 import { eq, asc } from "drizzle-orm"
 import { requireSession } from "@/lib/session"
 import { revalidatePath } from "next/cache"
@@ -194,4 +194,25 @@ export async function saveAnamnesisAnswersAction(
   }
 
   revalidatePath(`/clientes/${clientId}`)
+}
+
+// ── Texto do termo de autorização de imagem ───────────────────────────────────
+
+export async function getImageConsentTextAction(): Promise<string> {
+  const { organizationId } = await requireSession()
+  const [org] = await db
+    .select({ imageConsentText: organizations.imageConsentText })
+    .from(organizations)
+    .where(eq(organizations.id, organizationId))
+    .limit(1)
+  return org?.imageConsentText ?? ""
+}
+
+export async function saveImageConsentTextAction(text: string) {
+  const { organizationId } = await requireSession()
+  await db
+    .update(organizations)
+    .set({ imageConsentText: text.trim() || null })
+    .where(eq(organizations.id, organizationId))
+  revalidatePath("/configuracoes/anamnese")
 }
