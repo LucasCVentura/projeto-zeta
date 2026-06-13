@@ -304,7 +304,7 @@ export async function getAdminChatConversationsAction(showArchived = false) {
         archived: session?.archived ?? false,
       }
     })
-    .filter(c => showArchived ? c.archived : !c.archived)
+    .filter(c => showArchived || !c.archived)
 }
 
 export async function archiveConversationAction(phone: string, archived: boolean) {
