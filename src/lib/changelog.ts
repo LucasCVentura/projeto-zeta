@@ -6,6 +6,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.8.0",
+    date: "2026-06-13",
+    items: [
+      { type: "new",         text: "Botão de lupa nas fotos da evolução fotográfica — toque para ampliar sem precisar selecionar" },
+      { type: "new",         text: "Excluir cliente: novo botão na ficha do cliente com confirmação antes de remover todos os dados" },
+      { type: "improvement", text: "Carrossel de evolução agora tem botão Fechar visível no rodapé, facilitando o fechamento no celular" },
+      { type: "improvement", text: "Análise comparativa de fotos com IA melhorada: considera o intervalo real entre as fotos e é mais honesta sobre diferenças pequenas" },
+    ],
+  },
+  {
     version: "1.7.0",
     date: "2026-06-12",
     items: [
