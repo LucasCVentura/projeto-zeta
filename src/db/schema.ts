@@ -6,10 +6,12 @@ import {
   date,
   boolean,
   unique,
+  uniqueIndex,
   integer,
   time,
   numeric,
   json,
+  jsonb,
 } from "drizzle-orm/pg-core"
 import { relations } from "drizzle-orm"
 
@@ -870,3 +872,18 @@ export const chatSessions = pgTable("chat_sessions", {
 })
 
 export type ChatSession = typeof chatSessions.$inferSelect
+
+// ── ai_photo_analyses ─────────────────────────────────────────────────────────
+
+export const aiPhotoAnalyses = pgTable("ai_photo_analyses", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  organizationId: text("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+  photoKey: text("photo_key").notNull(),
+  analysisType: text("analysis_type").notNull(),
+  analysis: text("analysis").notNull(),
+  imageUrl: text("image_url"),
+  areas: jsonb("areas"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex("ai_photo_analyses_key_idx").on(t.organizationId, t.photoKey, t.analysisType),
+])

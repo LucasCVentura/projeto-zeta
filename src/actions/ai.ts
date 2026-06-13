@@ -3,8 +3,8 @@
 import Groq from "groq-sdk"
 import OpenAI from "openai"
 import { db } from "@/db"
-import { appointments, clientPhotos, users } from "@/db/schema"
-import { eq, and, desc } from "drizzle-orm"
+import { appointments, clientPhotos, users, aiPhotoAnalyses } from "@/db/schema"
+import { eq, and, desc, sql } from "drizzle-orm"
 import { requireSession } from "@/lib/session"
 import { todayBRT } from "@/lib/date"
 
@@ -49,6 +49,39 @@ async function photoToBase64(url: string): Promise<{ b64: string; mimeType: stri
   } catch {
     return null
   }
+}
+
+// Cache helpers
+function photoKey(ids: string[]) {
+  return [...ids].sort().join(",")
+}
+
+async function getCachedAnalysis(organizationId: string, key: string, type: string) {
+  const [row] = await db
+    .select()
+    .from(aiPhotoAnalyses)
+    .where(and(
+      eq(aiPhotoAnalyses.organizationId, organizationId),
+      eq(aiPhotoAnalyses.photoKey, key),
+      eq(aiPhotoAnalyses.analysisType, type),
+    ))
+    .limit(1)
+  return row ?? null
+}
+
+async function saveAnalysis(organizationId: string, key: string, type: string, data: {
+  analysis: string
+  imageUrl?: string | null
+  areas?: unknown
+}) {
+  await db.insert(aiPhotoAnalyses).values({
+    organizationId,
+    photoKey: key,
+    analysisType: type,
+    analysis: data.analysis,
+    imageUrl: data.imageUrl ?? null,
+    areas: data.areas ?? null,
+  }).onConflictDoNothing()
 }
 
 const DAY_NAMES = ["domingo", "segunda-feira", "terça-feira", "quarta-feira", "quinta-feira", "sexta-feira", "sábado"]
@@ -192,6 +225,10 @@ export async function analyzePhotoComparisonAction(photoIds: string[]): Promise<
   if (!apiKey) return { success: false, error: "GROQ_API_KEY não configurada." }
   if (photoIds.length < 2) return { success: false, error: "Selecione ao menos 2 fotos." }
 
+  const cacheKey = photoKey(photoIds)
+  const cached = await getCachedAnalysis(organizationId, cacheKey, "compare")
+  if (cached) return { success: true, analysis: cached.analysis }
+
   const photos = await db
     .select()
     .from(clientPhotos)
@@ -252,8 +289,8 @@ export async function analyzePhotoComparisonAction(photoIds: string[]): Promise<
   const body = chat.choices[0]?.message?.content?.trim()
   if (!body) return { success: false, error: "Não foi possível gerar análise." }
 
-  // Garante a saudação com o nome real, sem depender do modelo
   const analysis = `${salutation}\n\nAnalisando as fotos, posso observar que:\n\n${body}`
+  await saveAnalysis(organizationId, cacheKey, "compare", { analysis })
   return { success: true, analysis }
 }
 
@@ -344,6 +381,10 @@ export async function suggestProceduresFromPhotosAction(photoIds: string[]): Pro
   if (!apiKey) return { success: false, error: "GROQ_API_KEY não configurada." }
   if (photoIds.length < 1) return { success: false, error: "Selecione ao menos 1 foto." }
 
+  const cacheKey = photoKey(photoIds)
+  const cached = await getCachedAnalysis(organizationId, cacheKey, "suggest")
+  if (cached) return { success: true, analysis: cached.analysis }
+
   const photos = await db
     .select()
     .from(clientPhotos)
@@ -393,6 +434,7 @@ export async function suggestProceduresFromPhotosAction(photoIds: string[]): Pro
   const analysis = chat.choices[0]?.message?.content?.trim()
   if (!analysis) return { success: false, error: "Não foi possível gerar indicações." }
 
+  await saveAnalysis(organizationId, cacheKey, "suggest", { analysis })
   return { success: true, analysis }
 }
 
@@ -404,6 +446,17 @@ export async function suggestProceduresWithAnnotationsAction(photoId: string): P
   error?: string
 }> {
   const { organizationId, userId } = await requireSession()
+
+  const cacheKey = photoKey([photoId])
+  const cached = await getCachedAnalysis(organizationId, cacheKey, "annotate")
+  if (cached) {
+    return {
+      success: true,
+      analysis: cached.analysis,
+      imageUrl: cached.imageUrl ?? undefined,
+      areas: (cached.areas as { label: string; x: number; y: number; procedure: string }[] | null) ?? undefined,
+    }
+  }
 
   const photos = await db.select().from(clientPhotos).where(and(eq(clientPhotos.organizationId, organizationId)))
   const photo = photos.find((p) => p.id === photoId)
@@ -433,7 +486,6 @@ export async function suggestProceduresWithAnnotationsAction(photoId: string): P
     labio_inferior:     { x: 50, y: 68 },
     queixo:             { x: 50, y: 76 },
     pescoco:            { x: 50, y: 88 },
-    cabelo:             { x: 50, y: 7  },
     orelha_esq:         { x: 10, y: 45 },
     orelha_dir:         { x: 90, y: 45 },
   }
@@ -497,6 +549,8 @@ Identifique de 3 a 5 áreas de atenção visíveis na foto. Sem markdown, sem te
     "",
     ...areas.map((a) => `• ${a.label}: ${a.procedure}`),
   ].join("\n")
+
+  await saveAnalysis(organizationId, cacheKey, "annotate", { analysis, imageUrl: photo.url, areas })
 
   return {
     success: true,
