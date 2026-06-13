@@ -27,71 +27,90 @@ export async function getAdminMetricsAction() {
   await assertAdmin()
 
   const now = new Date()
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
-  const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
+  const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString()
 
-  const [
-    totalOrgsRows, activeOrgsRows, trialingOrgsRows, incompleteBoletoOrgsRows,
-    cancelledOrgsRows, newOrgsThisMonthRows, newOrgsLastMonthRows,
-    allOrgs, clientCounts, appointmentCounts, photoCounts, ownerMap,
-    revenueCounts, teamCounts, lastActivityRows,
-  ] = await Promise.all([
-    db.select({ count: count() }).from(organizations),
-    db.select({ count: count() }).from(organizations).where(eq(organizations.subscriptionStatus, "active")),
-    db.select({ count: count() }).from(organizations).where(or(eq(organizations.subscriptionStatus, "trialing"), eq(organizations.subscriptionStatus, "incomplete"))),
-    db.select({ count: count() }).from(organizations).where(eq(organizations.subscriptionStatus, "incomplete")),
-    db.select({ count: count() }).from(organizations).where(eq(organizations.subscriptionStatus, "canceled")),
-    db.select({ count: count() }).from(organizations).where(gte(organizations.createdAt, startOfMonth)),
-    db.select({ count: count() }).from(organizations).where(gte(organizations.createdAt, startOfLastMonth)),
-    db.select({
-      id: organizations.id, name: organizations.name, slug: organizations.slug,
-      subscriptionStatus: organizations.subscriptionStatus,
-      trialEndsAt: organizations.trialEndsAt, createdAt: organizations.createdAt,
-    }).from(organizations).orderBy(sql`${organizations.createdAt} desc`),
-    db.select({ orgId: clients.organizationId, count: count() }).from(clients).groupBy(clients.organizationId),
-    db.select({ orgId: appointments.organizationId, count: count() }).from(appointments).groupBy(appointments.organizationId),
-    db.select({ orgId: clientPhotos.organizationId, count: count() }).from(clientPhotos).groupBy(clientPhotos.organizationId),
-    db.select({ orgId: organizationMembers.organizationId, email: users.email, name: users.name })
-      .from(organizationMembers)
-      .innerJoin(users, eq(users.id, organizationMembers.userId))
-      .where(eq(organizationMembers.role, "owner")),
-    db.select({ orgId: transactions.organizationId, total: sum(transactions.amount) }).from(transactions).groupBy(transactions.organizationId),
-    db.select({ orgId: organizationMembers.organizationId, count: count() }).from(organizationMembers).where(eq(organizationMembers.active, true)).groupBy(organizationMembers.organizationId),
-    db.select({ orgId: appointments.organizationId, last: max(appointments.date) }).from(appointments).groupBy(appointments.organizationId),
+  // 2 queries no total — evita saturar o pool de conexões do Supabase pgBouncer
+  const [countsResult, orgsResult] = await Promise.all([
+    db.execute(sql`
+      SELECT
+        (SELECT COUNT(*)::int FROM organizations)                                                              AS total_orgs,
+        (SELECT COUNT(*)::int FROM organizations WHERE subscription_status = 'active')                        AS active_orgs,
+        (SELECT COUNT(*)::int FROM organizations WHERE subscription_status IN ('trialing','incomplete'))      AS trialing_orgs,
+        (SELECT COUNT(*)::int FROM organizations WHERE subscription_status = 'incomplete')                    AS incomplete_orgs,
+        (SELECT COUNT(*)::int FROM organizations WHERE subscription_status = 'canceled')                      AS cancelled_orgs,
+        (SELECT COUNT(*)::int FROM organizations WHERE created_at >= ${startOfMonth}::timestamptz)            AS new_this_month,
+        (SELECT COUNT(*)::int FROM organizations WHERE created_at >= ${startOfLastMonth}::timestamptz)        AS new_last_month_total
+    `),
+    db.execute(sql`
+      WITH
+        client_counts   AS (SELECT organization_id, COUNT(*)::int AS cnt FROM clients GROUP BY organization_id),
+        appt_counts     AS (SELECT organization_id, COUNT(*)::int AS cnt FROM appointments GROUP BY organization_id),
+        photo_counts    AS (SELECT organization_id, COUNT(*)::int AS cnt FROM client_photos GROUP BY organization_id),
+        revenue_totals  AS (SELECT organization_id, COALESCE(SUM(amount), 0)::bigint AS total FROM transactions GROUP BY organization_id),
+        team_counts     AS (SELECT organization_id, COUNT(*)::int AS cnt FROM organization_members WHERE active = true GROUP BY organization_id),
+        last_activity   AS (SELECT organization_id, MAX(date) AS last FROM appointments GROUP BY organization_id),
+        owners          AS (
+          SELECT om.organization_id, u.email AS owner_email, u.name AS owner_name
+          FROM organization_members om
+          JOIN users u ON u.id = om.user_id
+          WHERE om.role = 'owner'
+        )
+      SELECT
+        o.id, o.name, o.slug, o.subscription_status, o.trial_ends_at, o.created_at,
+        COALESCE(c.cnt, 0)::int        AS clients,
+        COALESCE(a.cnt, 0)::int        AS appointments,
+        COALESCE(p.cnt, 0)::int        AS photos,
+        COALESCE(r.total, 0)::bigint   AS revenue,
+        COALESCE(t.cnt, 0)::int        AS team,
+        la.last                        AS last_activity_at,
+        own.owner_email,
+        own.owner_name
+      FROM organizations o
+      LEFT JOIN client_counts  c   ON c.organization_id  = o.id
+      LEFT JOIN appt_counts    a   ON a.organization_id  = o.id
+      LEFT JOIN photo_counts   p   ON p.organization_id  = o.id
+      LEFT JOIN revenue_totals r   ON r.organization_id  = o.id
+      LEFT JOIN team_counts    t   ON t.organization_id  = o.id
+      LEFT JOIN last_activity  la  ON la.organization_id = o.id
+      LEFT JOIN owners         own ON own.organization_id = o.id
+      ORDER BY o.created_at DESC
+    `),
   ])
 
-  const totalOrgs = totalOrgsRows[0].count
-  const activeOrgs = activeOrgsRows[0].count
-  const mrr = activeOrgs * 4990
+  const counts = (Array.isArray(countsResult) ? countsResult[0] : (countsResult as any).rows?.[0]) as any
+  const orgsRaw = (Array.isArray(orgsResult) ? orgsResult : (orgsResult as any).rows ?? []) as any[]
+
+  const totalOrgs   = Number(counts.total_orgs)
+  const activeOrgs  = Number(counts.active_orgs)
+  const newOrgsThisMonth = Number(counts.new_this_month)
+  const mrr    = activeOrgs * 4990
   const netMrr = activeOrgs * (4990 - Math.round(4990 * 0.0399) - 39)
-  const newOrgsThisMonth = newOrgsThisMonthRows[0].count
-  const clientMap = Object.fromEntries(clientCounts.map(r => [r.orgId, r.count]))
-  const apptMap = Object.fromEntries(appointmentCounts.map(r => [r.orgId, r.count]))
-  const photoMap = Object.fromEntries(photoCounts.map(r => [r.orgId, r.count]))
-  const ownerByOrg = Object.fromEntries(ownerMap.map(r => [r.orgId, { email: r.email, name: r.name }]))
-  const revenueMap = Object.fromEntries(revenueCounts.map(r => [r.orgId, Number(r.total ?? 0)]))
-  const teamMap = Object.fromEntries(teamCounts.map(r => [r.orgId, r.count]))
-  const lastActivityMap = Object.fromEntries(lastActivityRows.map(r => [r.orgId, r.last]))
 
   return {
     totalOrgs,
     activeOrgs,
-    trialingOrgs: trialingOrgsRows[0].count,
-    incompleteBoletoOrgs: incompleteBoletoOrgsRows[0].count,
-    cancelledOrgs: cancelledOrgsRows[0].count,
+    trialingOrgs:         Number(counts.trialing_orgs),
+    incompleteBoletoOrgs: Number(counts.incomplete_orgs),
+    cancelledOrgs:        Number(counts.cancelled_orgs),
     newOrgsThisMonth,
-    newOrgsLastMonth: newOrgsLastMonthRows[0].count - newOrgsThisMonth,
+    newOrgsLastMonth: Number(counts.new_last_month_total) - newOrgsThisMonth,
     mrr,
     netMrr,
-    orgs: allOrgs.map(o => ({
-      ...o,
-      clients: clientMap[o.id] ?? 0,
-      appointments: apptMap[o.id] ?? 0,
-      photos: photoMap[o.id] ?? 0,
-      owner: ownerByOrg[o.id] ?? null,
-      revenue: revenueMap[o.id] ?? 0,
-      team: teamMap[o.id] ?? 0,
-      lastActivityAt: lastActivityMap[o.id] ?? null,
+    orgs: orgsRaw.map((o: any) => ({
+      id:                 o.id,
+      name:               o.name,
+      slug:               o.slug,
+      subscriptionStatus: o.subscription_status,
+      trialEndsAt:        o.trial_ends_at,
+      createdAt:          o.created_at,
+      clients:            Number(o.clients),
+      appointments:       Number(o.appointments),
+      photos:             Number(o.photos),
+      revenue:            Number(o.revenue),
+      team:               Number(o.team),
+      lastActivityAt:     o.last_activity_at ?? null,
+      owner:              o.owner_email ? { email: o.owner_email, name: o.owner_name } : null,
     })),
   }
 }
