@@ -18,33 +18,36 @@ async function getUserFirstName(userId: string): Promise<string> {
   const [u] = await db.select({ name: users.name }).from(users).where(eq(users.id, userId)).limit(1)
   return u?.name?.split(" ")[0] ?? "Doutora"
 }
-async function photoToBase64(url: string): Promise<string | null> {
+// Groq suporta: image/jpeg, image/png, image/gif, image/webp
+const SUPPORTED_TYPES = new Set(["image/jpeg", "image/png", "image/gif", "image/webp"])
+
+async function photoToBase64(url: string): Promise<{ b64: string; mimeType: string } | null> {
   try {
-    // Supabase internal URL — fetch via public URL
+    let fetchUrl = url
     if (url.startsWith("supabase://")) {
       const { mediaUrl } = await import("@/lib/media-url")
-      const publicUrl = mediaUrl(url)
-      const res = await fetch(publicUrl)
-      if (!res.ok) return null
-      return Buffer.from(await res.arrayBuffer()).toString("base64")
+      fetchUrl = mediaUrl(url)
     }
-    if (url.startsWith("http")) {
-      const res = await fetch(url)
+
+    if (fetchUrl.startsWith("http")) {
+      const res = await fetch(fetchUrl)
       if (!res.ok) return null
-      return Buffer.from(await res.arrayBuffer()).toString("base64")
+      const mimeType = (res.headers.get("content-type") ?? "image/jpeg").split(";")[0].trim()
+      if (!SUPPORTED_TYPES.has(mimeType)) return null
+      const b64 = Buffer.from(await res.arrayBuffer()).toString("base64")
+      return { b64, mimeType }
     }
+
     // fallback local (desenvolvimento)
     const { readFile } = await import("fs/promises")
     const { join } = await import("path")
     const buffer = await readFile(join(process.cwd(), "public", url.split("?")[0]))
-    return buffer.toString("base64")
+    const ext = url.split(".").pop()?.toLowerCase()
+    const mimeType = ext === "png" ? "image/png" : ext === "webp" ? "image/webp" : "image/jpeg"
+    return { b64: buffer.toString("base64"), mimeType }
   } catch {
     return null
   }
-}
-
-function imageMediaType(url: string): string {
-  return url.toLowerCase().includes(".png") ? "image/png" : "image/jpeg"
 }
 
 const DAY_NAMES = ["domingo", "segunda-feira", "terça-feira", "quarta-feira", "quinta-feira", "sexta-feira", "sábado"]
@@ -201,11 +204,11 @@ export async function analyzePhotoComparisonAction(photoIds: string[]): Promise<
 
   const imageContents = await Promise.all(
     selected.map(async (photo) => {
-      const b64 = await photoToBase64(photo.url)
-      if (!b64) return null
+      const result = await photoToBase64(photo.url)
+      if (!result) return null
       return {
         type: "image_url" as const,
-        image_url: { url: `data:${imageMediaType(photo.url)};base64,${b64}` },
+        image_url: { url: `data:${result.mimeType};base64,${result.b64}` },
       }
     })
   )
@@ -286,11 +289,11 @@ export async function analyzeClientEvolutionAction(clientId: string): Promise<{
 
   const imageContents = await Promise.all(
     sampled.map(async (photo) => {
-      const b64 = await photoToBase64(photo.url)
-      if (!b64) return null
+      const result = await photoToBase64(photo.url)
+      if (!result) return null
       return {
         type: "image_url" as const,
-        image_url: { url: `data:${imageMediaType(photo.url)};base64,${b64}` },
+        image_url: { url: `data:${result.mimeType};base64,${result.b64}` },
       }
     })
   )
@@ -353,11 +356,11 @@ export async function suggestProceduresFromPhotosAction(photoIds: string[]): Pro
 
   const imageContents = await Promise.all(
     selected.map(async (photo) => {
-      const b64 = await photoToBase64(photo.url)
-      if (!b64) return null
+      const result = await photoToBase64(photo.url)
+      if (!result) return null
       return {
         type: "image_url" as const,
-        image_url: { url: `data:${imageMediaType(photo.url)};base64,${b64}` },
+        image_url: { url: `data:${result.mimeType};base64,${result.b64}` },
       }
     })
   )
@@ -408,8 +411,8 @@ export async function suggestProceduresWithAnnotationsAction(photoId: string): P
   const photo = photos.find((p) => p.id === photoId)
   if (!photo) return { success: false, error: "Foto não encontrada." }
 
-  const b64 = await photoToBase64(photo.url)
-  if (!b64) return { success: false, error: "Não foi possível carregar a imagem." }
+  const photoResult = await photoToBase64(photo.url)
+  if (!photoResult) return { success: false, error: "Não foi possível carregar a imagem." }
 
   const firstName = await getUserFirstName(userId)
   const groq = new Groq({ apiKey })
@@ -437,7 +440,7 @@ Onde x e y são percentuais (0-100) da posição na imagem (0,0 = canto superior
           },
           {
             type: "image_url",
-            image_url: { url: `data:${imageMediaType(photo.url)};base64,${b64}` },
+            image_url: { url: `data:${photoResult.mimeType};base64,${photoResult.b64}` },
           },
         ],
       },
