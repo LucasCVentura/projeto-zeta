@@ -342,34 +342,50 @@ export async function archiveConversationAction(phone: string, archived: boolean
 export async function getAdminChatMessagesAction(phone: string) {
   await assertAdmin()
 
-  const msgs = await db
-    .select()
-    .from(adminChatMessages)
-    .where(eq(adminChatMessages.phone, phone))
-    .orderBy(asc(adminChatMessages.createdAt))
+  // Normaliza o telefone recebido e compara pelos últimos 11 dígitos (sem código de país)
+  // O banco tem formatos mistos: "(21) 99958-3894" e "5521999583894"
+  const digitsOnly = phone.replace(/\D/g, "")
 
-  // Marca como lidas
-  await db
-    .update(adminChatMessages)
-    .set({ readAt: new Date() })
-    .where(
-      and(
-        eq(adminChatMessages.phone, phone),
-        eq(adminChatMessages.direction, "inbound")
-      )
-    )
+  const msgs = await db.execute(sql`
+    SELECT * FROM admin_chat_messages
+    WHERE RIGHT(REGEXP_REPLACE(phone, '[^0-9]', '', 'g'), 11) = RIGHT(${digitsOnly}, 11)
+    ORDER BY created_at ASC
+  `)
 
-  return msgs
+  const rawRows = (Array.isArray(msgs) ? msgs : (msgs as any).rows ?? []) as any[]
+
+  await db.execute(sql`
+    UPDATE admin_chat_messages
+    SET read_at = NOW()
+    WHERE RIGHT(REGEXP_REPLACE(phone, '[^0-9]', '', 'g'), 11) = RIGHT(${digitsOnly}, 11)
+      AND direction = 'inbound'
+      AND read_at IS NULL
+  `)
+
+  // Mapeia snake_case do banco para camelCase esperado pelo componente
+  return rawRows.map((r: any) => ({
+    id: r.id,
+    phone: r.phone,
+    senderName: r.sender_name ?? null,
+    direction: r.direction,
+    content: r.content,
+    gupshupMessageId: r.gupshup_message_id ?? null,
+    templateUsed: r.template_used ?? null,
+    queue: r.queue ?? null,
+    readAt: r.read_at ? new Date(r.read_at) : null,
+    createdAt: new Date(r.created_at),
+  }))
 }
 
 export async function sendAdminChatMessageAction(phone: string, content: string) {
   await requireAdmin()
 
+  const normalizedPhone = normalizePhone(phone)
   const { sendWhatsApp } = await import("@/lib/whatsapp-client")
-  await sendWhatsApp(phone, content)
+  await sendWhatsApp(normalizedPhone, content)
 
   await db.insert(adminChatMessages).values({
-    phone,
+    phone: normalizedPhone,
     direction: "outbound",
     content,
   })
@@ -377,7 +393,7 @@ export async function sendAdminChatMessageAction(phone: string, content: string)
   // Marca sessão como roteada para que respostas cheguem direto ao admin sem passar pelo bot
   await db
     .insert(chatSessions)
-    .values({ phone, state: "routed", queue: null, lastActivityAt: new Date() })
+    .values({ phone: normalizedPhone, state: "routed", queue: null, lastActivityAt: new Date() })
     .onConflictDoUpdate({
       target: chatSessions.phone,
       set: { state: "routed", queue: null, lastActivityAt: new Date() },
@@ -392,14 +408,15 @@ export async function sendAdminChatTemplateAction(
 ) {
   await requireAdmin()
 
+  const normalizedPhone = normalizePhone(phone)
   const { sendWhatsAppTemplate } = await import("@/lib/whatsapp-client")
   const firstName = name.split(" ")[0]
-  const result = await sendWhatsAppTemplate(phone, templateId, [firstName])
+  const result = await sendWhatsAppTemplate(normalizedPhone, templateId, [firstName])
 
   const content = options?.content ?? `Oi ${firstName}, tudo bem? 😊\n\nAqui é o Lucas, do Kira. Vi que você está testando o sistema e queria bater um papo rápido pra saber como está sendo sua experiência.\n\nTem alguma dúvida ou algo que posso te ajudar? Me conta!`
 
   await db.insert(adminChatMessages).values({
-    phone,
+    phone: normalizedPhone,
     senderName: name,
     direction: "outbound",
     content,
@@ -410,7 +427,7 @@ export async function sendAdminChatTemplateAction(
   // Marca sessão como roteada para que respostas cheguem direto ao admin sem passar pelo bot
   await db
     .insert(chatSessions)
-    .values({ phone, state: "routed", queue: null, lastActivityAt: new Date() })
+    .values({ phone: normalizedPhone, state: "routed", queue: null, lastActivityAt: new Date() })
     .onConflictDoUpdate({
       target: chatSessions.phone,
       set: { state: "routed", queue: null, lastActivityAt: new Date() },
