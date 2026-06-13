@@ -45,7 +45,8 @@ describe("whatsapp-logs", () => {
       destination: "5511888888888",
       payload: { reason: "inactive" },
     })
-    expect(executeMock).toHaveBeenCalledTimes(1)
+    // 2 chamadas: insert do evento + backfill de organization_id por destination
+    expect(executeMock).toHaveBeenCalledTimes(2)
   })
 
   it("loga evento sem erro e sem payload", async () => {

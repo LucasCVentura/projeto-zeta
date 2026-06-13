@@ -27,7 +27,7 @@ export async function GET() {
       (SELECT COUNT(*) FROM organizations WHERE created_at >= ${startOfLastMonth}::timestamptz) as new_last_month_total
   `) as any
 
-  const [orgsRaw, clientCounts, apptCounts, photoCounts, ownerMap] = await Promise.all([
+  const [orgsRaw, clientCounts, apptCounts, photoCounts, ownerMap, revenueCounts, teamCounts, lastActivityRows] = await Promise.all([
     db.execute(sql`
       SELECT id, name, slug, subscription_status, trial_ends_at, created_at
       FROM organizations ORDER BY created_at DESC
@@ -41,6 +41,9 @@ export async function GET() {
       JOIN users u ON u.id = om.user_id
       WHERE om.role = 'owner'
     `),
+    db.execute(sql`SELECT organization_id, COALESCE(SUM(amount),0) as total FROM transactions GROUP BY organization_id`),
+    db.execute(sql`SELECT organization_id, COUNT(*) as count FROM organization_members WHERE active = true GROUP BY organization_id`),
+    db.execute(sql`SELECT organization_id, MAX(date) as last FROM appointments GROUP BY organization_id`),
   ]) as any[]
 
   const totalOrgs = Number(counts.total_orgs)
@@ -54,6 +57,9 @@ export async function GET() {
   const apptMap = Object.fromEntries((apptCounts as any[]).map((r: any) => [r.organization_id, Number(r.count)]))
   const photoMap = Object.fromEntries((photoCounts as any[]).map((r: any) => [r.organization_id, Number(r.count)]))
   const ownerByOrg = Object.fromEntries((ownerMap as any[]).map((r: any) => [r.organization_id, { email: r.email, name: r.name }]))
+  const revenueMap = Object.fromEntries((revenueCounts as any[]).map((r: any) => [r.organization_id, Number(r.total)]))
+  const teamMap = Object.fromEntries((teamCounts as any[]).map((r: any) => [r.organization_id, Number(r.count)]))
+  const lastActivityMap = Object.fromEntries((lastActivityRows as any[]).map((r: any) => [r.organization_id, r.last]))
 
   return NextResponse.json({
     totalOrgs,
@@ -76,6 +82,9 @@ export async function GET() {
       appointments: apptMap[o.id] ?? 0,
       photos: photoMap[o.id] ?? 0,
       owner: ownerByOrg[o.id] ?? null,
+      revenue: revenueMap[o.id] ?? 0,
+      team: teamMap[o.id] ?? 0,
+      lastActivityAt: lastActivityMap[o.id] ?? null,
     })),
   })
 }

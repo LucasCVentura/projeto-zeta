@@ -6,6 +6,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.8.0",
+    date: "2026-06-12",
+    items: [
+      { type: "new",         text: "Painel admin: aba Clínicas com dashboard geral agregado — totais de clientes, atendimentos, fotos e receita de todas as clínicas, distribuição por status, ranking das mais ativas e alerta de clínicas em risco" },
+      { type: "new",         text: "Visão detalhada por clínica: uso, atendimentos por status, financeiro (receita, ticket médio, comissões, formas de pagamento), equipe e atividade recente" },
+    ],
+  },
+  {
     version: "1.7.0",
     date: "2026-06-12",
     items: [

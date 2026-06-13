@@ -1,15 +1,16 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { extendTrialAction, cancelOrgAction, setLifetimeAction, markInboundEmailReadAction, saveWhatsAppTemplateSettingAction, getInboundEmailsAction, getWhatsAppMessageLogsAction, getAdminMetricsAction, getWhatsAppTemplateSettingsAction } from "@/actions/admin"
-import type { WhatsAppLogsParams } from "@/actions/admin"
+import { extendTrialAction, cancelOrgAction, setLifetimeAction, markInboundEmailReadAction, saveWhatsAppTemplateSettingAction, getInboundEmailsAction, getWhatsAppMessageLogsAction, getAdminMetricsAction, getWhatsAppTemplateSettingsAction, getClinicDetailAction } from "@/actions/admin"
+import type { WhatsAppLogsParams, ClinicDetail } from "@/actions/admin"
 import { getAllFeedbackAction, getLatestFeedbackSummaryAction } from "@/actions/feedback"
 import { AdminChat } from "@/components/admin/admin-chat"
 import {
   Trophy, TrendingUp, Users, DollarSign, ChevronDown, ChevronUp,
   Sprout, Rocket, Gem, Coins, Star, Activity, MessageSquare, Mail, MailOpen,
   Wallet, CalendarDays, LayoutDashboard, Building2, MessageCircle, Settings,
-  Phone, BarChart3, Menu, X,
+  Phone, BarChart3, Menu, X, ArrowLeft, Image as ImageIcon, Stethoscope,
+  Package, Send, Clock, AlertTriangle, ClipboardList, UserCircle, AtSign, MapPin,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -25,6 +26,7 @@ type Org = {
   subscriptionStatus: string; trialEndsAt: Date | null; createdAt: Date
   clients: number; appointments: number; photos: number
   owner: { email: string; name: string } | null
+  revenue: number; team: number; lastActivityAt: string | null
 }
 type Metrics = {
   totalOrgs: number; activeOrgs: number; trialingOrgs: number
@@ -168,6 +170,219 @@ function Sidebar({
   )
 }
 
+// ── Painel de detalhe da clínica ───────────────────────────────────────────────
+
+const PAYMENT_LABELS: Record<string, string> = {
+  pix: "Pix", cartao_credito: "Crédito", cartao_debito: "Débito",
+  dinheiro: "Dinheiro", parcelado: "Parcelado",
+}
+const APPT_STATUS_LABELS: Record<string, string> = {
+  waiting: "Aguardando", confirmed: "Confirmados", completed: "Concluídos",
+  missed: "Faltas", cancelled: "Cancelados",
+}
+
+function StatusBadgeLabel({ status }: { status: string }) {
+  return <span className={cn("text-[10px] font-semibold px-1.5 py-0.5 rounded-full", statusColor(status))}>{statusLabel(status)}</span>
+}
+
+function ClinicDetailPanel({
+  detail, loading, actionLoading, onBack, onExtendTrial, onSetLifetime, onCancel,
+}: {
+  detail: ClinicDetail | null
+  loading: boolean
+  actionLoading: string | null
+  onBack: () => void
+  onExtendTrial: (id: string, days: number) => void
+  onSetLifetime: (id: string) => void
+  onCancel: (id: string, name: string) => void
+}) {
+  if (loading || !detail) {
+    return (
+      <div className="space-y-4">
+        <button onClick={onBack} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
+          <ArrowLeft size={14} /> Voltar
+        </button>
+        <div className="py-24 text-center text-sm text-muted-foreground">Carregando detalhes...</div>
+      </div>
+    )
+  }
+
+  const { org, owner, team, clients, appointments, photos, anamnesisFilled, procedures, packages, financial, whatsapp } = detail
+  const initials = org.name.split(" ").slice(0, 2).map(w => w[0]).join("").toUpperCase()
+  const now = new Date()
+  const trialEnd = org.trialEndsAt ? new Date(org.trialEndsAt) : null
+  const busy = actionLoading === org.id
+
+  const kpis = [
+    { label: "Clientes", value: clients.total, icon: Users },
+    { label: "Atendimentos", value: appointments.total, icon: CalendarDays },
+    { label: "Fotos", value: photos, icon: ImageIcon },
+    { label: "Receita", value: formatBRL(financial.totalRevenue), icon: DollarSign },
+    { label: "Equipe", value: team.total, icon: UserCircle },
+    { label: "Procedimentos", value: procedures, icon: Stethoscope },
+    { label: "Pacotes", value: packages, icon: Package },
+    { label: "Anamneses", value: anamnesisFilled, icon: ClipboardList },
+  ]
+
+  const maxStatus = Math.max(1, ...Object.values(appointments.byStatus))
+
+  return (
+    <div className="space-y-5">
+      <button onClick={onBack} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
+        <ArrowLeft size={14} /> Voltar para clínicas
+      </button>
+
+      {/* Header */}
+      <div className="rounded-xl border border-border bg-card p-5">
+        <div className="flex items-start gap-4">
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary/10 text-lg font-bold text-primary">{initials}</div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="font-heading text-xl font-semibold">{org.name}</h2>
+              <StatusBadgeLabel status={org.subscriptionStatus} />
+            </div>
+            <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 text-sm">
+              {owner && <p className="flex items-center gap-1.5 text-muted-foreground"><UserCircle size={13} /> {owner.name} · <span className="truncate">{owner.email}</span></p>}
+              {org.phone && <p className="flex items-center gap-1.5 text-muted-foreground"><Phone size={13} /> {org.phone}</p>}
+              {org.instagram && <p className="flex items-center gap-1.5 text-muted-foreground"><AtSign size={13} /> {org.instagram}</p>}
+              {org.address && <p className="flex items-center gap-1.5 text-muted-foreground truncate"><MapPin size={13} /> {org.address}</p>}
+              <p className="flex items-center gap-1.5 text-muted-foreground"><CalendarDays size={13} /> Cadastro: {new Date(org.createdAt).toLocaleDateString("pt-BR")}</p>
+              {trialEnd && <p className="flex items-center gap-1.5 text-muted-foreground"><Clock size={13} /> Trial até {trialEnd.toLocaleDateString("pt-BR")}</p>}
+            </div>
+          </div>
+        </div>
+        {/* Ações admin */}
+        <div className="mt-4 pt-4 border-t border-border/50 flex flex-wrap gap-1.5">
+          <Button size="sm" variant="outline" disabled={busy} onClick={() => onExtendTrial(org.id, 7)} className="h-7 text-xs px-2.5">+7 dias</Button>
+          <Button size="sm" variant="outline" disabled={busy} onClick={() => onExtendTrial(org.id, 30)} className="h-7 text-xs px-2.5">+30 dias</Button>
+          {org.subscriptionStatus !== "lifetime" && (
+            <Button size="sm" variant="outline" disabled={busy} onClick={() => onSetLifetime(org.id)} className="h-7 text-xs px-2.5 text-amber-600 border-amber-300 hover:border-amber-500">Vitalício ♾</Button>
+          )}
+          {org.subscriptionStatus !== "canceled" && org.subscriptionStatus !== "lifetime" && (
+            <Button size="sm" variant="outline" disabled={busy} onClick={() => onCancel(org.id, org.name)} className="h-7 text-xs px-2.5 text-destructive border-destructive/30 hover:border-destructive/60">Cancelar ✕</Button>
+          )}
+        </div>
+      </div>
+
+      {/* KPIs */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {kpis.map(k => {
+          const Icon = k.icon
+          return (
+            <div key={k.label} className="rounded-xl border border-border bg-card p-4">
+              <div className="flex items-center gap-2 text-muted-foreground mb-1">
+                <Icon size={14} /><span className="text-[11px]">{k.label}</span>
+              </div>
+              <p className="font-heading text-lg font-bold tabular-nums">{k.value}</p>
+            </div>
+          )
+        })}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Atendimentos por status */}
+        <div className="rounded-xl border border-border bg-card p-5">
+          <p className="text-sm font-semibold mb-3">Atendimentos por status</p>
+          <div className="space-y-2">
+            {Object.keys(APPT_STATUS_LABELS).map(st => {
+              const v = appointments.byStatus[st] ?? 0
+              return (
+                <div key={st} className="flex items-center gap-3">
+                  <span className="text-xs text-muted-foreground w-24 shrink-0">{APPT_STATUS_LABELS[st]}</span>
+                  <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
+                    <div className="h-full rounded-full bg-primary" style={{ width: `${(v / maxStatus) * 100}%` }} />
+                  </div>
+                  <span className="text-xs font-medium tabular-nums w-8 text-right">{v}</span>
+                </div>
+              )
+            })}
+          </div>
+          <div className="mt-4 pt-3 border-t border-border/50 grid grid-cols-3 gap-2 text-center">
+            <div><p className="text-base font-bold tabular-nums text-green-600">{appointments.completionRate}%</p><p className="text-[10px] text-muted-foreground">Conclusão</p></div>
+            <div><p className="text-base font-bold tabular-nums text-destructive">{appointments.missRate}%</p><p className="text-[10px] text-muted-foreground">Faltas</p></div>
+            <div><p className="text-base font-bold tabular-nums">{appointments.upcoming}</p><p className="text-[10px] text-muted-foreground">Próximos</p></div>
+          </div>
+        </div>
+
+        {/* Financeiro */}
+        <div className="rounded-xl border border-border bg-card p-5">
+          <p className="text-sm font-semibold mb-3">Financeiro</p>
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between"><span className="text-muted-foreground">Receita total</span><span className="font-semibold tabular-nums">{formatBRL(financial.totalRevenue)}</span></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">Receita do mês</span><span className="font-medium tabular-nums">{formatBRL(financial.monthRevenue)}</span></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">Ticket médio</span><span className="font-medium tabular-nums">{formatBRL(financial.avgTicket)}</span></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">Comissões</span><span className="font-medium tabular-nums">{formatBRL(financial.commissions)}</span></div>
+          </div>
+          {financial.byPaymentMethod.length > 0 && (
+            <div className="mt-3 pt-3 border-t border-border/50 space-y-1.5">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Por forma de pagamento</p>
+              {financial.byPaymentMethod.map(p => (
+                <div key={p.method ?? "none"} className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">{p.method ? (PAYMENT_LABELS[p.method] ?? p.method) : "Não informado"} ({p.count})</span>
+                  <span className="tabular-nums">{formatBRL(p.total)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Atividade recente */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Últimos atendimentos */}
+        <div className="rounded-xl border border-border bg-card p-5">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-sm font-semibold">Últimos atendimentos</p>
+            <span className="flex items-center gap-1 text-[11px] text-muted-foreground"><Send size={11} /> {whatsapp.sent} msgs{whatsapp.errors > 0 && <span className="text-destructive"> · {whatsapp.errors} erros</span>}</span>
+          </div>
+          {appointments.recent.length === 0 ? (
+            <p className="text-xs text-muted-foreground">Nenhum atendimento ainda.</p>
+          ) : (
+            <div className="divide-y divide-border/50">
+              {appointments.recent.map((a, i) => (
+                <div key={i} className="flex items-center gap-2 py-1.5">
+                  <span className="text-sm flex-1 truncate">{a.clientName}</span>
+                  {a.procedure && <span className="text-[11px] text-muted-foreground truncate max-w-[40%]">{a.procedure}</span>}
+                  <span className="text-[11px] text-muted-foreground tabular-nums">{new Date(a.date + "T12:00:00").toLocaleDateString("pt-BR")}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Clientes recentes */}
+        <div className="rounded-xl border border-border bg-card p-5">
+          <p className="text-sm font-semibold mb-3">Clientes recentes</p>
+          {clients.recent.length === 0 ? (
+            <p className="text-xs text-muted-foreground">Nenhum cliente cadastrado.</p>
+          ) : (
+            <div className="divide-y divide-border/50">
+              {clients.recent.map((c, i) => (
+                <div key={i} className="flex items-center justify-between py-1.5">
+                  <span className="text-sm truncate">{c.name}</span>
+                  <span className="text-[11px] text-muted-foreground tabular-nums">{new Date(c.createdAt).toLocaleDateString("pt-BR")}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          {team.members.length > 0 && (
+            <div className="mt-3 pt-3 border-t border-border/50">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">Equipe ({team.total})</p>
+              <div className="flex flex-wrap gap-1.5">
+                {team.members.map((m, i) => (
+                  <span key={i} className={cn("text-[11px] px-2 py-0.5 rounded-full", m.active ? "bg-muted" : "bg-muted/40 text-muted-foreground line-through")}>
+                    {m.name} · {m.role}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Componente principal ──────────────────────────────────────────────────────
 
 const EMPTY_METRICS: Metrics = {
@@ -179,7 +394,10 @@ export function AdminDashboard() {
   const [metrics, setMetrics] = useState<Metrics>(EMPTY_METRICS)
   const [metricsLoading, setMetricsLoading] = useState(true)
   const [orgs, setOrgs] = useState<Org[]>([])
-  const [expandedOrg, setExpandedOrg] = useState<string | null>(null)
+  const [selectedClinic, setSelectedClinic] = useState<string | null>(null)
+  const [clinicDetail, setClinicDetail] = useState<ClinicDetail | null>(null)
+  const [loadingDetail, setLoadingDetail] = useState(false)
+  const [clinicSearch, setClinicSearch] = useState("")
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [inboundEmails, setInboundEmails] = useState<InboundEmail[]>([])
   const [expandedEmail, setExpandedEmail] = useState<string | null>(null)
@@ -304,6 +522,25 @@ export function AdminDashboard() {
     setActionLoading(null)
   }
 
+  async function openClinic(orgId: string) {
+    setSelectedClinic(orgId)
+    setClinicDetail(null)
+    setLoadingDetail(true)
+    try {
+      const detail = await getClinicDetailAction(orgId)
+      setClinicDetail(detail)
+    } catch (err) {
+      console.error("[Admin] Falha ao carregar detalhe da clínica:", err)
+    } finally {
+      setLoadingDetail(false)
+    }
+  }
+
+  function closeClinic() {
+    setSelectedClinic(null)
+    setClinicDetail(null)
+  }
+
   async function handleExpandEmail(id: string) {
     setExpandedEmail(expandedEmail === id ? null : id)
     const email = inboundEmails.find(e => e.id === id)
@@ -414,115 +651,261 @@ export function AdminDashboard() {
         </div>
       )
 
-      case "clinicas": return (
-        <div className="space-y-4">
-          {orgs.length === 0 && (
-            <div className="py-16 text-center text-sm text-muted-foreground">Nenhuma clínica cadastrada.</div>
-          )}
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {orgs.map((org) => {
-              const initials = org.name.split(" ").slice(0, 2).map(w => w[0]).join("").toUpperCase()
-              const expanded = expandedOrg === org.id
-              const now = new Date()
-              const trialEnd = org.trialEndsAt ? new Date(org.trialEndsAt) : null
-              const trialExpired = org.subscriptionStatus === "trialing" && trialEnd !== null && trialEnd < now
-              const trialDaysLeft = trialEnd && !trialExpired
-                ? Math.ceil((trialEnd.getTime() - now.getTime()) / 86400000)
-                : null
-              const trialDaysAgo = trialExpired && trialEnd
-                ? Math.floor((now.getTime() - trialEnd.getTime()) / 86400000)
-                : null
+      case "clinicas": {
+        // ── Detalhe inline de uma clínica ──
+        if (selectedClinic) {
+          return (
+            <ClinicDetailPanel
+              detail={clinicDetail}
+              loading={loadingDetail}
+              actionLoading={actionLoading}
+              onBack={closeClinic}
+              onExtendTrial={handleExtendTrial}
+              onSetLifetime={handleSetLifetime}
+              onCancel={(id, name) => setPendingCancelOrg({ id, name })}
+            />
+          )
+        }
 
-              return (
-                <div key={org.id} className={cn(
-                  "rounded-xl border bg-card flex flex-col overflow-hidden",
-                  trialExpired ? "border-destructive/40" : "border-border"
-                )}>
-                  {/* Faixa de trial expirado */}
-                  {trialExpired && (
-                    <div className="bg-destructive/10 px-4 py-1.5 flex items-center gap-2">
-                      <span className="text-[11px] font-semibold text-destructive">
-                        Trial encerrado há {trialDaysAgo === 0 ? "menos de 1 dia" : `${trialDaysAgo} dia${trialDaysAgo !== 1 ? "s" : ""}`}
-                      </span>
-                    </div>
-                  )}
+        // ── Dashboard geral + grade ──
+        const now = new Date()
+        const agg = orgs.reduce((acc, o) => {
+          acc.clients += o.clients; acc.appointments += o.appointments
+          acc.photos += o.photos; acc.revenue += o.revenue
+          return acc
+        }, { clients: 0, appointments: 0, photos: 0, revenue: 0 })
 
-                  {/* Card header */}
-                  <div className="flex items-center gap-3 px-4 py-4">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">{initials}</div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-sm font-semibold truncate">{org.name}</span>
-                        <span className={cn(
-                          "text-[10px] font-semibold px-1.5 py-0.5 rounded-full",
-                          trialExpired ? "text-destructive bg-destructive/10" : statusColor(org.subscriptionStatus)
-                        )}>
-                          {trialExpired ? "Trial expirado" : statusLabel(org.subscriptionStatus)}
-                        </span>
+        const statusDist = orgs.reduce<Record<string, number>>((acc, o) => {
+          const trialEnd = o.trialEndsAt ? new Date(o.trialEndsAt) : null
+          const expired = o.subscriptionStatus === "trialing" && trialEnd !== null && trialEnd < now
+          const key = expired ? "expired" : o.subscriptionStatus
+          acc[key] = (acc[key] ?? 0) + 1
+          return acc
+        }, {})
+
+        const ranking = [...orgs].sort((a, b) => b.appointments - a.appointments).slice(0, 5)
+
+        const trialEndingSoon = orgs.filter(o => {
+          if (o.subscriptionStatus !== "trialing" || !o.trialEndsAt) return false
+          const days = Math.ceil((new Date(o.trialEndsAt).getTime() - now.getTime()) / 86400000)
+          return days >= 0 && days <= 3
+        })
+        const inactive = orgs.filter(o => {
+          if (o.subscriptionStatus === "canceled") return false
+          if (!o.lastActivityAt) return true
+          const days = Math.floor((now.getTime() - new Date(o.lastActivityAt + "T12:00:00").getTime()) / 86400000)
+          return days > 30
+        })
+
+        const search = clinicSearch.trim().toLowerCase()
+        const filteredOrgs = search
+          ? orgs.filter(o => o.name.toLowerCase().includes(search) || o.owner?.name?.toLowerCase().includes(search) || o.owner?.email?.toLowerCase().includes(search))
+          : orgs
+
+        const STATUS_PILLS: { key: string; label: string }[] = [
+          { key: "active", label: "Ativas" }, { key: "trialing", label: "Em trial" },
+          { key: "expired", label: "Trial expirado" }, { key: "incomplete", label: "Boleto" },
+          { key: "lifetime", label: "Vitalício" }, { key: "canceled", label: "Canceladas" },
+        ]
+
+        return (
+          <div className="space-y-6">
+            {orgs.length === 0 && (
+              <div className="py-16 text-center text-sm text-muted-foreground">Nenhuma clínica cadastrada.</div>
+            )}
+
+            {orgs.length > 0 && (
+              <>
+                {/* KPIs agregados */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                  {[
+                    { label: "Clientes (todas)",   value: agg.clients,            icon: Users },
+                    { label: "Atendimentos",        value: agg.appointments,       icon: CalendarDays },
+                    { label: "Fotos",               value: agg.photos,             icon: ImageIcon },
+                    { label: "Receita registrada",  value: formatBRL(agg.revenue), icon: DollarSign },
+                  ].map(m => {
+                    const Icon = m.icon
+                    return (
+                      <div key={m.label} className="rounded-xl border border-border bg-card p-5 flex items-center gap-4">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"><Icon size={18} /></div>
+                        <div className="min-w-0">
+                          <p className="text-xs text-muted-foreground">{m.label}</p>
+                          <p className="font-heading text-xl font-bold tabular-nums">{m.value}</p>
+                        </div>
                       </div>
-                      <p className="text-xs text-muted-foreground truncate mt-0.5">{org.owner?.name}</p>
-                    </div>
-                    {/* Dias restantes do trial */}
-                    {trialDaysLeft !== null && (
-                      <div className={cn(
-                        "shrink-0 text-center rounded-lg px-2 py-1",
-                        trialDaysLeft <= 3 ? "bg-amber-50 dark:bg-amber-900/20" : "bg-muted"
-                      )}>
-                        <p className={cn("text-base font-bold tabular-nums leading-none", trialDaysLeft <= 3 ? "text-amber-600 dark:text-amber-400" : "text-foreground")}>
-                          {trialDaysLeft}
-                        </p>
-                        <p className={cn("text-[9px] font-medium", trialDaysLeft <= 3 ? "text-amber-500" : "text-muted-foreground")}>
-                          {trialDaysLeft === 1 ? "dia" : "dias"}
-                        </p>
-                      </div>
-                    )}
-                  </div>
+                    )
+                  })}
+                </div>
 
-                  {/* Stats */}
-                  <div className="grid grid-cols-3 gap-px bg-border mx-4 rounded-lg overflow-hidden mb-4">
-                    {[{ label: "Clientes", value: org.clients }, { label: "Atend.", value: org.appointments }, { label: "Fotos", value: org.photos }].map(s => (
-                      <div key={s.label} className="bg-muted/40 py-2.5 text-center">
-                        <p className="font-bold text-base tabular-nums">{s.value}</p>
-                        <p className="text-[10px] text-muted-foreground">{s.label}</p>
+                {/* Distribuição por status */}
+                <div className="rounded-xl border border-border bg-card p-5">
+                  <p className="text-sm font-semibold mb-3">Distribuição por status</p>
+                  <div className="flex flex-wrap gap-2">
+                    {STATUS_PILLS.filter(s => (statusDist[s.key] ?? 0) > 0).map(s => (
+                      <div key={s.key} className={cn("flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium", s.key === "expired" ? "text-destructive bg-destructive/10" : statusColor(s.key))}>
+                        {s.label}<span className="font-bold tabular-nums">{statusDist[s.key]}</span>
                       </div>
                     ))}
                   </div>
+                </div>
 
-                  {/* Info colapsável */}
-                  {expanded && (
-                    <div className="px-4 pb-3 text-xs text-muted-foreground space-y-0.5 border-t border-border/50 pt-3">
-                      <p className="truncate">{org.owner?.email}</p>
-                      <p>Cadastro: <span className="text-foreground">{new Date(org.createdAt).toLocaleDateString("pt-BR")}</span>
-                        {trialEnd && (
-                          <> · {trialExpired
-                            ? <span className="text-destructive font-medium">Trial encerrou em {trialEnd.toLocaleDateString("pt-BR")}</span>
-                            : <>Trial até <span className="text-foreground">{trialEnd.toLocaleDateString("pt-BR")}</span></>
-                          }</>
-                        )}
-                      </p>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {/* Ranking mais ativas */}
+                  <div className="rounded-xl border border-border bg-card p-5">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Trophy size={15} className="text-amber-500" />
+                      <p className="text-sm font-semibold">Clínicas mais ativas</p>
                     </div>
-                  )}
+                    <div className="space-y-1">
+                      {ranking.map((o, i) => (
+                        <button key={o.id} onClick={() => openClinic(o.id)} className="w-full flex items-center gap-3 rounded-lg px-2 py-1.5 hover:bg-accent transition-colors text-left">
+                          <span className="text-xs font-bold text-muted-foreground w-4 tabular-nums">{i + 1}</span>
+                          <span className="text-sm flex-1 truncate">{o.name}</span>
+                          <span className="text-xs text-muted-foreground tabular-nums">{o.appointments} atend.</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
 
-                  {/* Ações */}
-                  <div className="mt-auto border-t border-border/50 px-4 py-3 flex flex-wrap gap-1.5 items-center">
-                    <button onClick={() => setExpandedOrg(expanded ? null : org.id)} className="text-xs text-muted-foreground hover:text-foreground transition-colors mr-auto">
-                      {expanded ? "Menos" : "Detalhes"}
-                    </button>
-                    <Button size="sm" variant="outline" disabled={actionLoading === org.id} onClick={() => handleExtendTrial(org.id, 7)} className="h-6 text-[11px] px-2">+7d</Button>
-                    <Button size="sm" variant="outline" disabled={actionLoading === org.id} onClick={() => handleExtendTrial(org.id, 30)} className="h-6 text-[11px] px-2">+30d</Button>
-                    {org.subscriptionStatus !== "lifetime" && (
-                      <Button size="sm" variant="outline" disabled={actionLoading === org.id} onClick={() => handleSetLifetime(org.id)} className="h-6 text-[11px] px-2 text-amber-600 border-amber-300 hover:border-amber-500">♾</Button>
-                    )}
-                    {org.subscriptionStatus !== "canceled" && org.subscriptionStatus !== "lifetime" && (
-                      <Button size="sm" variant="outline" disabled={actionLoading === org.id} onClick={() => setPendingCancelOrg({ id: org.id, name: org.name })} className="h-6 text-[11px] px-2 text-destructive border-destructive/30 hover:border-destructive/60">✕</Button>
+                  {/* Clínicas em risco */}
+                  <div className="rounded-xl border border-border bg-card p-5">
+                    <div className="flex items-center gap-2 mb-3">
+                      <AlertTriangle size={15} className="text-destructive" />
+                      <p className="text-sm font-semibold">Clínicas em risco</p>
+                    </div>
+                    {trialEndingSoon.length === 0 && inactive.length === 0 ? (
+                      <p className="text-xs text-muted-foreground">Nenhuma clínica em risco no momento.</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {trialEndingSoon.length > 0 && (
+                          <div>
+                            <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-600 mb-1">Trial acabando (≤3 dias)</p>
+                            <div className="space-y-0.5">
+                              {trialEndingSoon.map(o => (
+                                <button key={o.id} onClick={() => openClinic(o.id)} className="w-full flex items-center justify-between rounded-lg px-2 py-1 hover:bg-accent transition-colors text-left">
+                                  <span className="text-sm truncate">{o.name}</span>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {inactive.length > 0 && (
+                          <div>
+                            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">Sem atividade (30+ dias)</p>
+                            <div className="space-y-0.5">
+                              {inactive.slice(0, 6).map(o => (
+                                <button key={o.id} onClick={() => openClinic(o.id)} className="w-full flex items-center justify-between rounded-lg px-2 py-1 hover:bg-accent transition-colors text-left">
+                                  <span className="text-sm truncate">{o.name}</span>
+                                  <span className="text-[11px] text-muted-foreground">{o.lastActivityAt ? new Date(o.lastActivityAt + "T12:00:00").toLocaleDateString("pt-BR") : "nunca"}</span>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     )}
                   </div>
                 </div>
-              )
-            })}
+
+                {/* Busca + grade */}
+                <div className="space-y-3">
+                  <Input
+                    placeholder="Buscar clínica por nome ou dono..."
+                    value={clinicSearch}
+                    onChange={e => setClinicSearch(e.target.value)}
+                    className="max-w-sm"
+                  />
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                    {filteredOrgs.map((org) => {
+                      const initials = org.name.split(" ").slice(0, 2).map(w => w[0]).join("").toUpperCase()
+                      const trialEnd = org.trialEndsAt ? new Date(org.trialEndsAt) : null
+                      const trialExpired = org.subscriptionStatus === "trialing" && trialEnd !== null && trialEnd < now
+                      const trialDaysLeft = trialEnd && !trialExpired
+                        ? Math.ceil((trialEnd.getTime() - now.getTime()) / 86400000)
+                        : null
+                      const trialDaysAgo = trialExpired && trialEnd
+                        ? Math.floor((now.getTime() - trialEnd.getTime()) / 86400000)
+                        : null
+
+                      return (
+                        <div key={org.id} className={cn(
+                          "rounded-xl border bg-card flex flex-col overflow-hidden",
+                          trialExpired ? "border-destructive/40" : "border-border"
+                        )}>
+                          {trialExpired && (
+                            <div className="bg-destructive/10 px-4 py-1.5 flex items-center gap-2">
+                              <span className="text-[11px] font-semibold text-destructive">
+                                Trial encerrado há {trialDaysAgo === 0 ? "menos de 1 dia" : `${trialDaysAgo} dia${trialDaysAgo !== 1 ? "s" : ""}`}
+                              </span>
+                            </div>
+                          )}
+
+                          <div className="flex items-center gap-3 px-4 py-4">
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">{initials}</div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-sm font-semibold truncate">{org.name}</span>
+                                <span className={cn(
+                                  "text-[10px] font-semibold px-1.5 py-0.5 rounded-full",
+                                  trialExpired ? "text-destructive bg-destructive/10" : statusColor(org.subscriptionStatus)
+                                )}>
+                                  {trialExpired ? "Trial expirado" : statusLabel(org.subscriptionStatus)}
+                                </span>
+                              </div>
+                              <p className="text-xs text-muted-foreground truncate mt-0.5">{org.owner?.name}</p>
+                            </div>
+                            {trialDaysLeft !== null && (
+                              <div className={cn(
+                                "shrink-0 text-center rounded-lg px-2 py-1",
+                                trialDaysLeft <= 3 ? "bg-amber-50 dark:bg-amber-900/20" : "bg-muted"
+                              )}>
+                                <p className={cn("text-base font-bold tabular-nums leading-none", trialDaysLeft <= 3 ? "text-amber-600 dark:text-amber-400" : "text-foreground")}>
+                                  {trialDaysLeft}
+                                </p>
+                                <p className={cn("text-[9px] font-medium", trialDaysLeft <= 3 ? "text-amber-500" : "text-muted-foreground")}>
+                                  {trialDaysLeft === 1 ? "dia" : "dias"}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="grid grid-cols-4 gap-px bg-border mx-4 rounded-lg overflow-hidden mb-4">
+                            {[
+                              { label: "Clientes", value: org.clients },
+                              { label: "Atend.", value: org.appointments },
+                              { label: "Receita", value: formatBRL(org.revenue) },
+                              { label: "Equipe", value: org.team },
+                            ].map(s => (
+                              <div key={s.label} className="bg-muted/40 py-2.5 text-center">
+                                <p className="font-bold text-sm tabular-nums">{s.value}</p>
+                                <p className="text-[10px] text-muted-foreground">{s.label}</p>
+                              </div>
+                            ))}
+                          </div>
+
+                          <div className="mt-auto border-t border-border/50 px-4 py-3 flex flex-wrap gap-1.5 items-center">
+                            <button onClick={() => openClinic(org.id)} className="text-xs font-medium text-primary hover:underline transition-colors mr-auto">
+                              Ver detalhes
+                            </button>
+                            <Button size="sm" variant="outline" disabled={actionLoading === org.id} onClick={() => handleExtendTrial(org.id, 7)} className="h-6 text-[11px] px-2">+7d</Button>
+                            <Button size="sm" variant="outline" disabled={actionLoading === org.id} onClick={() => handleExtendTrial(org.id, 30)} className="h-6 text-[11px] px-2">+30d</Button>
+                            {org.subscriptionStatus !== "lifetime" && (
+                              <Button size="sm" variant="outline" disabled={actionLoading === org.id} onClick={() => handleSetLifetime(org.id)} className="h-6 text-[11px] px-2 text-amber-600 border-amber-300 hover:border-amber-500">♾</Button>
+                            )}
+                            {org.subscriptionStatus !== "canceled" && org.subscriptionStatus !== "lifetime" && (
+                              <Button size="sm" variant="outline" disabled={actionLoading === org.id} onClick={() => setPendingCancelOrg({ id: org.id, name: org.name })} className="h-6 text-[11px] px-2 text-destructive border-destructive/30 hover:border-destructive/60">✕</Button>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
-        </div>
-      )
+        )
+      }
 
 
       case "feedback": return (

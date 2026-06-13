@@ -66,4 +66,24 @@ export async function logWhatsAppEvent(params: {
       payload = COALESCE(EXCLUDED.payload, whatsapp_message_logs.payload),
       updated_at = now()
   `)
+
+  // Gupshup usa IDs diferentes para eventos de status (delivered/read) vs submission.
+  // Quando o conflict não acontece, a linha fica sem organization_id.
+  // Backfill: busca a org mais recente que enviou para esse destino nos últimos 7 dias.
+  if (destination) {
+    await db.execute(sql`
+      UPDATE whatsapp_message_logs
+      SET organization_id = (
+        SELECT l2.organization_id
+        FROM whatsapp_message_logs l2
+        WHERE l2.destination = ${destination}
+          AND l2.organization_id IS NOT NULL
+          AND l2.created_at >= now() - interval '7 days'
+        ORDER BY l2.created_at DESC
+        LIMIT 1
+      )
+      WHERE message_id = ${messageId}
+        AND organization_id IS NULL
+    `)
+  }
 }

@@ -4,9 +4,9 @@ import { db } from "@/db"
 import {
   organizations, organizationMembers, users,
   appointments, clients, transactions, clientPhotos,
-  adminChatMessages, chatSessions,
+  adminChatMessages, chatSessions, procedures, packages, anamnesisAnswers,
 } from "@/db/schema"
-import { eq, count, sum, gte, lt, sql, or, and, desc, asc, isNull } from "drizzle-orm"
+import { eq, count, sum, max, gte, lt, sql, or, and, desc, asc, isNull } from "drizzle-orm"
 import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import { revalidatePath } from "next/cache"
@@ -34,6 +34,7 @@ export async function getAdminMetricsAction() {
     totalOrgsRows, activeOrgsRows, trialingOrgsRows, incompleteBoletoOrgsRows,
     cancelledOrgsRows, newOrgsThisMonthRows, newOrgsLastMonthRows,
     allOrgs, clientCounts, appointmentCounts, photoCounts, ownerMap,
+    revenueCounts, teamCounts, lastActivityRows,
   ] = await Promise.all([
     db.select({ count: count() }).from(organizations),
     db.select({ count: count() }).from(organizations).where(eq(organizations.subscriptionStatus, "active")),
@@ -54,6 +55,9 @@ export async function getAdminMetricsAction() {
       .from(organizationMembers)
       .innerJoin(users, eq(users.id, organizationMembers.userId))
       .where(eq(organizationMembers.role, "owner")),
+    db.select({ orgId: transactions.organizationId, total: sum(transactions.amount) }).from(transactions).groupBy(transactions.organizationId),
+    db.select({ orgId: organizationMembers.organizationId, count: count() }).from(organizationMembers).where(eq(organizationMembers.active, true)).groupBy(organizationMembers.organizationId),
+    db.select({ orgId: appointments.organizationId, last: max(appointments.date) }).from(appointments).groupBy(appointments.organizationId),
   ])
 
   const totalOrgs = totalOrgsRows[0].count
@@ -65,6 +69,9 @@ export async function getAdminMetricsAction() {
   const apptMap = Object.fromEntries(appointmentCounts.map(r => [r.orgId, r.count]))
   const photoMap = Object.fromEntries(photoCounts.map(r => [r.orgId, r.count]))
   const ownerByOrg = Object.fromEntries(ownerMap.map(r => [r.orgId, { email: r.email, name: r.name }]))
+  const revenueMap = Object.fromEntries(revenueCounts.map(r => [r.orgId, Number(r.total ?? 0)]))
+  const teamMap = Object.fromEntries(teamCounts.map(r => [r.orgId, r.count]))
+  const lastActivityMap = Object.fromEntries(lastActivityRows.map(r => [r.orgId, r.last]))
 
   return {
     totalOrgs,
@@ -82,9 +89,117 @@ export async function getAdminMetricsAction() {
       appointments: apptMap[o.id] ?? 0,
       photos: photoMap[o.id] ?? 0,
       owner: ownerByOrg[o.id] ?? null,
+      revenue: revenueMap[o.id] ?? 0,
+      team: teamMap[o.id] ?? 0,
+      lastActivityAt: lastActivityMap[o.id] ?? null,
     })),
   }
 }
+
+export async function getClinicDetailAction(orgId: string) {
+  await assertAdmin()
+
+  const now = new Date()
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+  const today = now.toISOString().slice(0, 10)
+
+  const [
+    orgRow, ownerRow, teamRows,
+    clientsTotalRow, recentClients,
+    apptStatusRows, upcomingRow, recentAppts,
+    photosRow, anamnesisRow, proceduresRow, packagesRow,
+    revenueRow, monthRevenueRow, commissionRow, paymentRows,
+    waTotalRow, waErrorRow,
+  ] = await Promise.all([
+    db.select({
+      id: organizations.id, name: organizations.name, slug: organizations.slug,
+      type: organizations.type, subscriptionStatus: organizations.subscriptionStatus,
+      trialEndsAt: organizations.trialEndsAt, createdAt: organizations.createdAt,
+      phone: organizations.phone, email: organizations.email,
+      instagram: organizations.instagram, address: organizations.address,
+    }).from(organizations).where(eq(organizations.id, orgId)).limit(1),
+    db.select({ name: users.name, email: users.email })
+      .from(organizationMembers)
+      .innerJoin(users, eq(users.id, organizationMembers.userId))
+      .where(and(eq(organizationMembers.organizationId, orgId), eq(organizationMembers.role, "owner")))
+      .limit(1),
+    db.select({ name: users.name, role: organizationMembers.role, active: organizationMembers.active })
+      .from(organizationMembers)
+      .innerJoin(users, eq(users.id, organizationMembers.userId))
+      .where(eq(organizationMembers.organizationId, orgId)),
+    db.select({ count: count() }).from(clients).where(eq(clients.organizationId, orgId)),
+    db.select({ name: clients.name, createdAt: clients.createdAt })
+      .from(clients).where(eq(clients.organizationId, orgId))
+      .orderBy(desc(clients.createdAt)).limit(5),
+    db.select({ status: appointments.status, count: count() })
+      .from(appointments).where(eq(appointments.organizationId, orgId))
+      .groupBy(appointments.status),
+    db.select({ count: count() }).from(appointments)
+      .where(and(eq(appointments.organizationId, orgId), gte(appointments.date, today))),
+    db.select({
+      date: appointments.date, startTime: appointments.startTime,
+      clientName: clients.name, procedure: appointments.procedure, status: appointments.status,
+    })
+      .from(appointments)
+      .innerJoin(clients, eq(clients.id, appointments.clientId))
+      .where(eq(appointments.organizationId, orgId))
+      .orderBy(desc(appointments.date), desc(appointments.startTime)).limit(6),
+    db.select({ count: count() }).from(clientPhotos).where(eq(clientPhotos.organizationId, orgId)),
+    db.select({ count: count() }).from(anamnesisAnswers).where(eq(anamnesisAnswers.organizationId, orgId)),
+    db.select({ count: count() }).from(procedures).where(and(eq(procedures.organizationId, orgId), eq(procedures.active, true))),
+    db.select({ count: count() }).from(packages).where(eq(packages.organizationId, orgId)),
+    db.select({ total: sum(transactions.amount) }).from(transactions).where(eq(transactions.organizationId, orgId)),
+    db.select({ total: sum(transactions.amount) }).from(transactions)
+      .where(and(eq(transactions.organizationId, orgId), gte(transactions.date, startOfMonth.toISOString().slice(0, 10)))),
+    db.select({ total: sum(transactions.commissionAmount) }).from(transactions).where(eq(transactions.organizationId, orgId)),
+    db.select({ method: transactions.paymentMethod, total: sum(transactions.amount), count: count() })
+      .from(transactions).where(eq(transactions.organizationId, orgId))
+      .groupBy(transactions.paymentMethod),
+    db.execute(sql`SELECT count(*)::int as total FROM whatsapp_message_logs WHERE organization_id = ${orgId}`),
+    db.execute(sql`SELECT count(*)::int as total FROM whatsapp_message_logs WHERE organization_id = ${orgId} AND error IS NOT NULL`),
+  ])
+
+  if (!orgRow[0]) throw new Error("NOT_FOUND")
+
+  const waRows = (Array.isArray(waTotalRow) ? waTotalRow : (waTotalRow as { rows?: unknown[] }).rows ?? []) as { total: number }[]
+  const waErrRows = (Array.isArray(waErrorRow) ? waErrorRow : (waErrorRow as { rows?: unknown[] }).rows ?? []) as { total: number }[]
+
+  const statusCounts: Record<string, number> = {}
+  for (const r of apptStatusRows) statusCounts[r.status] = r.count
+  const totalAppts = Object.values(statusCounts).reduce((a, b) => a + b, 0)
+  const completed = statusCounts.completed ?? 0
+  const missed = statusCounts.missed ?? 0
+  const totalRevenue = Number(revenueRow[0]?.total ?? 0)
+
+  return {
+    org: orgRow[0],
+    owner: ownerRow[0] ?? null,
+    team: { total: teamRows.length, members: teamRows },
+    clients: { total: clientsTotalRow[0].count, recent: recentClients },
+    appointments: {
+      total: totalAppts,
+      byStatus: statusCounts,
+      upcoming: upcomingRow[0].count,
+      completionRate: totalAppts > 0 ? Math.round((completed / totalAppts) * 100) : 0,
+      missRate: totalAppts > 0 ? Math.round((missed / totalAppts) * 100) : 0,
+      recent: recentAppts,
+    },
+    photos: photosRow[0].count,
+    anamnesisFilled: anamnesisRow[0].count,
+    procedures: proceduresRow[0].count,
+    packages: packagesRow[0].count,
+    financial: {
+      totalRevenue,
+      monthRevenue: Number(monthRevenueRow[0]?.total ?? 0),
+      commissions: Number(commissionRow[0]?.total ?? 0),
+      avgTicket: completed > 0 ? Math.round(totalRevenue / completed) : 0,
+      byPaymentMethod: paymentRows.map(r => ({ method: r.method, total: Number(r.total ?? 0), count: r.count })),
+    },
+    whatsapp: { sent: waRows[0]?.total ?? 0, errors: waErrRows[0]?.total ?? 0 },
+  }
+}
+
+export type ClinicDetail = Awaited<ReturnType<typeof getClinicDetailAction>>
 
 export async function extendTrialAction(orgId: string, days: number) {
   await requireAdmin()
