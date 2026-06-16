@@ -6,6 +6,13 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.9.0",
+    date: "2026-06-16",
+    items: [
+      { type: "improvement", text: "Cadastro e perfil: ao selecionar \"Outro segmento de beleza\", agora abre um campo para você digitar livremente sua profissão ou área de atuação" },
+    ],
+  },
+  {
     version: "1.8.0",
     date: "2026-06-13",
     items: [
