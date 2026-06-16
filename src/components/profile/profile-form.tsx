@@ -21,6 +21,7 @@ const schema = z.object({
   instagram: z.string().optional(),
   professionalDocument: z.string().optional(),
   professionalDocumentType: z.string().optional(),
+  professionSegment: z.string().optional(),
 })
 
 type FormData = z.infer<typeof schema>
@@ -38,6 +39,20 @@ const professionSegmentLabels: Record<string, string> = {
   outro_beleza: "Outro segmento de beleza",
 }
 
+const otherSegments = [
+  { value: "designer_cilios", label: "Designer de cílios" },
+  { value: "manicure_nail_designer", label: "Manicure / Nail designer" },
+  { value: "micropigmentadora", label: "Micropigmentadora" },
+  { value: "cabeleireira", label: "Cabeleireira" },
+  { value: "massoterapeuta", label: "Massoterapeuta" },
+  { value: "outro_beleza", label: "Outro segmento de beleza" },
+]
+
+const fixedSegmentValues = new Set(otherSegments.map((s) => s.value))
+
+const isCustomSegment = (seg: string | null | undefined) =>
+  !!seg && !fixedSegmentValues.has(seg)
+
 export function ProfileForm({ user }: { user: User }) {
   const { update: updateSession } = useSession()
   const [avatarPreview, setAvatarPreview] = useState<string | null>(user.image ? mediaUrl(user.image) : null)
@@ -46,8 +61,11 @@ export function ProfileForm({ user }: { user: User }) {
   const [error, setError] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const [isPending, startTransition] = useTransition()
+  const [showCustomSegment, setShowCustomSegment] = useState(
+    user.profession === "outro" && isCustomSegment(user.professionSegment)
+  )
 
-  const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
+  const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: {
       name: user.name,
@@ -57,8 +75,11 @@ export function ProfileForm({ user }: { user: User }) {
       instagram: user.instagram ?? "",
       professionalDocument: user.professionalDocument ?? "",
       professionalDocumentType: user.professionalDocumentType ?? "",
+      professionSegment: user.professionSegment ?? "",
     },
   })
+
+  const selectedSegment = watch("professionSegment")
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -92,7 +113,10 @@ export function ProfileForm({ user }: { user: User }) {
   async function onSubmit(data: FormData) {
     setError(null)
     startTransition(async () => {
-      const result = await updateProfileAction(data)
+      const result = await updateProfileAction({
+        ...data,
+        professionSegment: user.profession === "outro" ? data.professionSegment : undefined,
+      })
       if (!result.success) { setError(result.error ?? "Erro ao salvar."); return }
       await updateSession()
       setSuccess(true)
@@ -105,7 +129,9 @@ export function ProfileForm({ user }: { user: User }) {
       ? "Biomédico(a)"
       : user.profession === "esteticista"
         ? "Esteticista"
-        : professionSegmentLabels[user.professionSegment ?? ""] ?? "Outro segmento"
+        : (user.professionSegment
+            ? (professionSegmentLabels[user.professionSegment] ?? user.professionSegment)
+            : "Outro segmento")
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -187,6 +213,42 @@ export function ProfileForm({ user }: { user: User }) {
       {/* Dados profissionais */}
       <div className="surface space-y-4">
         <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Dados profissionais</p>
+
+        {user.profession === "outro" && (
+          <div className="space-y-2">
+            <Label>Segmento / área de atuação</Label>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {otherSegments.map((segment) => (
+                <button
+                  key={segment.value}
+                  type="button"
+                  onClick={() => {
+                    if (segment.value === "outro_beleza") {
+                      setShowCustomSegment(true)
+                      setValue("professionSegment", "")
+                    } else {
+                      setShowCustomSegment(false)
+                      setValue("professionSegment", segment.value)
+                    }
+                  }}
+                  className={`rounded-xl border px-3 py-2.5 text-left text-sm transition-all
+                    ${(segment.value === "outro_beleza" ? showCustomSegment : selectedSegment === segment.value)
+                      ? "border-primary bg-primary/5 text-foreground shadow-sm"
+                      : "border-border text-muted-foreground hover:border-primary/40 hover:bg-muted/50"}`}
+                >
+                  {segment.label}
+                </button>
+              ))}
+            </div>
+            {showCustomSegment && (
+              <Input
+                placeholder="Digite sua profissão ou área de atuação..."
+                {...register("professionSegment")}
+                autoFocus
+              />
+            )}
+          </div>
+        )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">

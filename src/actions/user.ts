@@ -22,6 +22,7 @@ export async function updateProfileAction(data: {
   instagram?: string
   professionalDocument?: string
   professionalDocumentType?: string
+  professionSegment?: string
 }): Promise<ActionResult> {
   const { userId } = await requireSession()
 
@@ -35,6 +36,7 @@ export async function updateProfileAction(data: {
       instagram: data.instagram || null,
       professionalDocument: data.professionalDocument || null,
       professionalDocumentType: data.professionalDocumentType || null,
+      professionSegment: data.professionSegment || null,
       updatedAt: new Date(),
     })
     .where(eq(users.id, userId))

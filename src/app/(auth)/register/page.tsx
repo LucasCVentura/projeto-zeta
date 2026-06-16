@@ -81,11 +81,11 @@ const schema = z
         message: "Informe o número do documento",
       })
     }
-    if (d.profession === "outro" && !d.professionSegment) {
+    if (d.profession === "outro" && (!d.professionSegment || d.professionSegment.trim().length < 2)) {
       ctx.addIssue({
         code: "custom",
         path: ["professionSegment"],
-        message: "Selecione seu segmento",
+        message: "Informe sua profissão ou área de atuação",
       })
     }
   })
@@ -119,6 +119,7 @@ export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [step, setStep] = useState<1 | 2 | 3>(1)
+  const [showCustomSegment, setShowCustomSegment] = useState(false)
   const router = useRouter()
 
   const {
@@ -272,9 +273,17 @@ export default function RegisterPage() {
                     <button
                       key={segment.value}
                       type="button"
-                      onClick={() => setValue("professionSegment", segment.value, { shouldValidate: true })}
+                      onClick={() => {
+                        if (segment.value === "outro_beleza") {
+                          setShowCustomSegment(true)
+                          setValue("professionSegment", "", { shouldValidate: false })
+                        } else {
+                          setShowCustomSegment(false)
+                          setValue("professionSegment", segment.value, { shouldValidate: true })
+                        }
+                      }}
                       className={`rounded-xl border px-3 py-2.5 text-left text-sm transition-all
-                        ${selectedSegment === segment.value
+                        ${(segment.value === "outro_beleza" ? showCustomSegment : selectedSegment === segment.value)
                           ? "border-primary bg-primary/5 text-foreground shadow-sm"
                           : "border-border text-muted-foreground hover:border-primary/40 hover:bg-muted/50"}`}
                     >
@@ -282,6 +291,13 @@ export default function RegisterPage() {
                     </button>
                   ))}
                 </div>
+                {showCustomSegment && (
+                  <Input
+                    placeholder="Digite sua profissão ou área de atuação..."
+                    {...register("professionSegment")}
+                    autoFocus
+                  />
+                )}
                 {errors.professionSegment && <p className="text-destructive text-xs">{errors.professionSegment.message}</p>}
               </div>
             )}
