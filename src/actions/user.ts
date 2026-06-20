@@ -23,6 +23,7 @@ export async function updateProfileAction(data: {
   professionalDocument?: string
   professionalDocumentType?: string
   professionSegment?: string
+  profession?: "esteticista" | "biomedico" | "outro"
 }): Promise<ActionResult> {
   const { userId } = await requireSession()
 
@@ -37,6 +38,7 @@ export async function updateProfileAction(data: {
       professionalDocument: data.professionalDocument || null,
       professionalDocumentType: data.professionalDocumentType || null,
       professionSegment: data.professionSegment || null,
+      ...(data.profession ? { profession: data.profession } : {}),
       updatedAt: new Date(),
     })
     .where(eq(users.id, userId))

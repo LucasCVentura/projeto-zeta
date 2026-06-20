@@ -53,6 +53,12 @@ const fixedSegmentValues = new Set(otherSegments.map((s) => s.value))
 const isCustomSegment = (seg: string | null | undefined) =>
   !!seg && !fixedSegmentValues.has(seg)
 
+const professions = [
+  { value: "esteticista", label: "Esteticista" },
+  { value: "biomedico", label: "Biomédico(a) Esteta" },
+  { value: "outro", label: "Outro segmento" },
+]
+
 export function ProfileForm({ user }: { user: User }) {
   const { update: updateSession } = useSession()
   const [avatarPreview, setAvatarPreview] = useState<string | null>(user.image ? mediaUrl(user.image) : null)
@@ -61,6 +67,9 @@ export function ProfileForm({ user }: { user: User }) {
   const [error, setError] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const [isPending, startTransition] = useTransition()
+  const [selectedProfession, setSelectedProfession] = useState<"esteticista" | "biomedico" | "outro">(
+    user.profession ?? "esteticista"
+  )
   const [showCustomSegment, setShowCustomSegment] = useState(
     user.profession === "outro" && isCustomSegment(user.professionSegment)
   )
@@ -115,7 +124,8 @@ export function ProfileForm({ user }: { user: User }) {
     startTransition(async () => {
       const result = await updateProfileAction({
         ...data,
-        professionSegment: user.profession === "outro" ? data.professionSegment : undefined,
+        profession: selectedProfession,
+        professionSegment: selectedProfession === "outro" ? data.professionSegment : undefined,
       })
       if (!result.success) { setError(result.error ?? "Erro ao salvar."); return }
       await updateSession()
@@ -214,7 +224,32 @@ export function ProfileForm({ user }: { user: User }) {
       <div className="surface space-y-4">
         <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Dados profissionais</p>
 
-        {user.profession === "outro" && (
+        <div className="space-y-2">
+          <Label>Profissão</Label>
+          <div className="grid gap-2 sm:grid-cols-3">
+            {professions.map((p) => (
+              <button
+                key={p.value}
+                type="button"
+                onClick={() => {
+                  setSelectedProfession(p.value as "esteticista" | "biomedico" | "outro")
+                  if (p.value !== "outro") {
+                    setShowCustomSegment(false)
+                    setValue("professionSegment", "")
+                  }
+                }}
+                className={`rounded-xl border px-3 py-2.5 text-left text-sm transition-all
+                  ${selectedProfession === p.value
+                    ? "border-primary bg-primary/5 text-foreground shadow-sm"
+                    : "border-border text-muted-foreground hover:border-primary/40 hover:bg-muted/50"}`}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {selectedProfession === "outro" && (
           <div className="space-y-2">
             <Label>Segmento / área de atuação</Label>
             <div className="grid gap-2 sm:grid-cols-2">
