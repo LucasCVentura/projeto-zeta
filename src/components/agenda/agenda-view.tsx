@@ -468,6 +468,13 @@ export function AgendaView({ initialDate, slots: initialSlots, hasConfig, slotDu
 
 // ── Week View ─────────────────────────────────────────────────────────────────
 
+const STATUS_BORDER: Record<string, string> = {
+  waiting:   "border-l-amber-400",
+  confirmed: "border-l-blue-500",
+  completed: "border-l-emerald-500",
+  missed:    "border-l-red-400",
+}
+
 function WeekView({
   weekDays,
   monthData,
@@ -488,7 +495,7 @@ function WeekView({
   }
 
   return (
-    <div className="grid grid-cols-7 gap-1">
+    <div className="grid grid-cols-7 divide-x divide-border border border-border rounded-xl overflow-hidden">
       {weekDays.map((d) => {
         const dayObj = new Date(d + "T12:00:00")
         const dayLabel = DAY_LABELS[dayObj.getDay()]
@@ -498,11 +505,11 @@ function WeekView({
         const appts = monthData[d] ?? []
 
         return (
-          <div key={d} className="flex flex-col gap-1 min-w-0">
+          <div key={d} className="flex flex-col min-w-0">
             <button
               onClick={() => onDayClick(d)}
               className={cn(
-                "flex flex-col items-center rounded-xl py-2 transition-colors",
+                "flex flex-col items-center py-2.5 border-b border-border transition-colors w-full",
                 isSelected
                   ? "bg-primary text-primary-foreground"
                   : isToday
@@ -513,22 +520,20 @@ function WeekView({
               <span className="text-[10px] font-medium">{dayLabel}</span>
               <span className="text-sm font-bold">{dayNum}</span>
             </button>
-            <div className="flex flex-col gap-0.5">
-              {appts.length === 0 ? (
-                <div className="py-2 text-center text-[10px] text-muted-foreground/30">—</div>
-              ) : (
-                appts.map((a, i) => (
-                  <button
-                    key={i}
-                    onClick={() => onDayClick(d)}
-                    className="flex items-center gap-1 rounded-lg px-1 py-1 text-left hover:bg-accent transition-colors w-full min-w-0"
-                  >
-                    <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", STATUS_DOT[a.status] ?? "bg-muted-foreground")} />
-                    <span className="text-[10px] text-muted-foreground shrink-0">{a.time}</span>
-                    <span className="text-[10px] truncate">{a.clientName.split(" ")[0]}</span>
-                  </button>
-                ))
-              )}
+            <div className="flex flex-col gap-1 p-1">
+              {appts.map((a, i) => (
+                <button
+                  key={i}
+                  onClick={() => onDayClick(d)}
+                  className={cn(
+                    "w-full border-l-2 rounded-r-md bg-muted/40 px-1.5 py-1 text-left hover:bg-muted/70 transition-colors min-w-0",
+                    STATUS_BORDER[a.status] ?? "border-l-muted-foreground"
+                  )}
+                >
+                  <span className="block text-[9px] text-muted-foreground leading-none mb-0.5">{a.time}</span>
+                  <span className="block text-[10px] font-medium truncate leading-tight">{a.clientName.split(" ")[0]}</span>
+                </button>
+              ))}
             </div>
           </div>
         )
@@ -546,6 +551,13 @@ const STATUS_DOT: Record<string, string> = {
   confirmed: "bg-blue-500",
   completed: "bg-emerald-500",
   missed:    "bg-red-400",
+}
+
+const STATUS_PILL_BG: Record<string, string> = {
+  waiting:   "bg-amber-400/20 text-amber-500",
+  confirmed: "bg-blue-500/20 text-blue-400",
+  completed: "bg-emerald-500/20 text-emerald-500",
+  missed:    "bg-red-400/20 text-red-400",
 }
 
 function MonthView({
@@ -613,7 +625,7 @@ function MonthView({
                 key={d}
                 onClick={() => onDayClick(d)}
                 className={cn(
-                  "flex flex-col items-center rounded-xl py-2 px-0.5 min-h-[60px] transition-colors",
+                  "flex flex-col items-start rounded-xl py-2 px-1.5 min-h-18 transition-colors gap-1",
                   isSelected
                     ? "bg-primary text-primary-foreground"
                     : isToday
@@ -623,22 +635,26 @@ function MonthView({
                     : "opacity-30 hover:bg-accent"
                 )}
               >
-                <span className="text-sm font-medium leading-none">
+                <span className="text-sm font-medium leading-none w-full text-center">
                   {new Date(d + "T12:00:00").getDate()}
                 </span>
-                <div className="mt-1.5 flex flex-wrap justify-center gap-0.5">
-                  {appts.slice(0, 3).map((a, i) => (
+                <div className="flex flex-col gap-0.5 w-full">
+                  {appts.slice(0, 2).map((a, i) => (
                     <span
                       key={i}
                       className={cn(
-                        "h-1.5 w-1.5 rounded-full",
-                        isSelected ? "bg-primary-foreground/70" : STATUS_DOT[a.status] ?? "bg-muted-foreground"
+                        "block truncate rounded px-1 text-[9px] font-medium leading-3.5",
+                        isSelected
+                          ? "bg-primary-foreground/20 text-primary-foreground"
+                          : STATUS_PILL_BG[a.status] ?? "bg-muted text-muted-foreground"
                       )}
-                    />
+                    >
+                      {a.time}
+                    </span>
                   ))}
-                  {appts.length > 3 && (
-                    <span className={cn("text-[9px] leading-none", isSelected ? "text-primary-foreground/70" : "text-muted-foreground")}>
-                      +{appts.length - 3}
+                  {appts.length > 2 && (
+                    <span className={cn("text-[9px] leading-none pl-1", isSelected ? "text-primary-foreground/70" : "text-muted-foreground")}>
+                      +{appts.length - 2}
                     </span>
                   )}
                 </div>
