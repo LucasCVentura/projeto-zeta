@@ -6,10 +6,12 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
-    version: "1.9.0",
-    date: "2026-06-16",
+    version: "2.0.0",
+    date: "2026-06-20",
     items: [
+      { type: "new",         text: "Visão semanal na agenda: veja todos os agendamentos da semana de uma vez e clique em qualquer dia para abrir a visão detalhada" },
       { type: "improvement", text: "Cadastro e perfil: ao selecionar \"Outro segmento de beleza\", agora abre um campo para você digitar livremente sua profissão ou área de atuação" },
+      { type: "improvement", text: "Perfil: profissão agora é editável — você pode alterar entre Esteticista, Biomédico(a) ou Outro segmento diretamente no seu perfil" },
     ],
   },
   {

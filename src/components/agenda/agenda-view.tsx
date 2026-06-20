@@ -99,7 +99,7 @@ export function AgendaView({ initialDate, slots: initialSlots, hasConfig, slotDu
     notes?: string | null
   }>({ open: false, appointmentId: "" })
   const [isPending, startTransition] = useTransition()
-  const [view, setView] = useState<"day" | "month">("day")
+  const [view, setView] = useState<"day" | "week" | "month">("day")
   const [monthData, setMonthData] = useState<Record<string, MonthAppointment[]>>({})
   const [isLoadingMonth, setIsLoadingMonth] = useState(false)
 
@@ -107,13 +107,13 @@ export function AgendaView({ initialDate, slots: initialSlots, hasConfig, slotDu
     const [y, m] = dateStr.split("-").map(Number)
     setIsLoadingMonth(true)
     const data = await getMonthAppointments(y, m)
-    setMonthData(data)
+    setMonthData((prev) => ({ ...prev, ...data }))
     setIsLoadingMonth(false)
   }
 
-  function switchView(v: "day" | "month") {
+  function switchView(v: "day" | "week" | "month") {
     setView(v)
-    if (v === "month") loadMonth(date)
+    if (v === "month" || v === "week") loadMonth(date)
   }
 
   function navigateMonth(dir: -1 | 1) {
@@ -123,6 +123,15 @@ export function AgendaView({ initialDate, slots: initialSlots, hasConfig, slotDu
     setDate(newDate)
     router.push(`/agenda?data=${newDate}`)
     loadMonth(newDate)
+  }
+
+  function navigateWeek(dir: -1 | 1) {
+    const newDate = addDays(date, dir * 7)
+    const [oldM] = date.split("-").slice(1).map(Number)
+    const [newM] = newDate.split("-").slice(1).map(Number)
+    setDate(newDate)
+    router.push(`/agenda?data=${newDate}`)
+    if (oldM !== newM) loadMonth(newDate)
   }
 
   function handleDayClick(d: string) {
@@ -188,7 +197,7 @@ export function AgendaView({ initialDate, slots: initialSlots, hasConfig, slotDu
       {/* Navegação de data */}
       <div className="space-y-4">
         {view === "day" ? (
-          /* Semana */
+          /* Strip de dias — visão dia */
           <div className="flex items-center justify-between gap-2">
             <button
               onClick={() => navigate(addDays(date, -7))}
@@ -233,6 +242,31 @@ export function AgendaView({ initialDate, slots: initialSlots, hasConfig, slotDu
               </svg>
             </button>
           </div>
+        ) : view === "week" ? (
+          /* Semana — cabeçalho com range */
+          <div className="flex items-center justify-between gap-2">
+            <button
+              onClick={() => navigateWeek(-1)}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border hover:bg-accent transition-colors"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M15 18l-6-6 6-6" />
+              </svg>
+            </button>
+            <p className="text-sm font-medium">
+              {new Date(weekDays[0] + "T12:00:00").toLocaleDateString("pt-BR", { day: "numeric", month: "short" })}
+              {" – "}
+              {new Date(weekDays[6] + "T12:00:00").toLocaleDateString("pt-BR", { day: "numeric", month: "short", year: "numeric" })}
+            </p>
+            <button
+              onClick={() => navigateWeek(1)}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border hover:bg-accent transition-colors"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M9 18l6-6-6-6" />
+              </svg>
+            </button>
+          </div>
         ) : (
           /* Mês — cabeçalho de navegação */
           <div className="flex items-center justify-between gap-2">
@@ -262,6 +296,10 @@ export function AgendaView({ initialDate, slots: initialSlots, hasConfig, slotDu
         <div className="flex items-center justify-between">
           {view === "day" ? (
             <p className="capitalize text-sm text-muted-foreground">{formatDate(date)}</p>
+          ) : view === "week" ? (
+            <p className="text-sm text-muted-foreground">
+              {weekDays.includes(today) ? "Semana atual" : ""}
+            </p>
           ) : (
             <p className="text-sm text-muted-foreground">
               {date === today ? "Hoje" : `Selecionado: ${new Date(date + "T12:00:00").toLocaleDateString("pt-BR", { day: "numeric", month: "short" })}`}
@@ -282,7 +320,7 @@ export function AgendaView({ initialDate, slots: initialSlots, hasConfig, slotDu
                 Bloquear
               </Button>
             )}
-            {/* Toggle Dia / Mês */}
+            {/* Toggle Dia / Semana / Mês */}
             <div className="flex rounded-lg border border-border overflow-hidden">
               <button
                 onClick={() => switchView("day")}
@@ -292,6 +330,15 @@ export function AgendaView({ initialDate, slots: initialSlots, hasConfig, slotDu
                 )}
               >
                 Dia
+              </button>
+              <button
+                onClick={() => switchView("week")}
+                className={cn(
+                  "px-3 py-1.5 text-sm transition-colors border-l border-border",
+                  view === "week" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-accent"
+                )}
+              >
+                Semana
               </button>
               <button
                 onClick={() => switchView("month")}
@@ -316,13 +363,22 @@ export function AgendaView({ initialDate, slots: initialSlots, hasConfig, slotDu
         </div>
       )}
 
-      {/* Grade de slots ou visão mensal */}
+      {/* Grade de slots, visão semanal ou mensal */}
       {view === "month" ? (
         <MonthView
           date={date}
           monthData={monthData}
           isLoading={isLoadingMonth}
           today={today}
+          onDayClick={handleDayClick}
+        />
+      ) : view === "week" ? (
+        <WeekView
+          weekDays={weekDays}
+          monthData={monthData}
+          isLoading={isLoadingMonth}
+          today={today}
+          selectedDate={date}
           onDayClick={handleDayClick}
         />
       ) : !hasConfig ? (
@@ -407,6 +463,77 @@ export function AgendaView({ initialDate, slots: initialSlots, hasConfig, slotDu
         procedures={procedures}
       />
     </>
+  )
+}
+
+// ── Week View ─────────────────────────────────────────────────────────────────
+
+function WeekView({
+  weekDays,
+  monthData,
+  isLoading,
+  today,
+  selectedDate,
+  onDayClick,
+}: {
+  weekDays: string[]
+  monthData: Record<string, MonthAppointment[]>
+  isLoading: boolean
+  today: string
+  selectedDate: string
+  onDayClick: (d: string) => void
+}) {
+  if (isLoading) {
+    return <div className="py-16 text-center text-sm text-muted-foreground">Carregando...</div>
+  }
+
+  return (
+    <div className="grid grid-cols-7 gap-1">
+      {weekDays.map((d) => {
+        const dayObj = new Date(d + "T12:00:00")
+        const dayLabel = DAY_LABELS[dayObj.getDay()]
+        const dayNum = dayObj.getDate()
+        const isToday = d === today
+        const isSelected = d === selectedDate
+        const appts = monthData[d] ?? []
+
+        return (
+          <div key={d} className="flex flex-col gap-1 min-w-0">
+            <button
+              onClick={() => onDayClick(d)}
+              className={cn(
+                "flex flex-col items-center rounded-xl py-2 transition-colors",
+                isSelected
+                  ? "bg-primary text-primary-foreground"
+                  : isToday
+                  ? "bg-primary/10 text-primary"
+                  : "hover:bg-accent text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <span className="text-[10px] font-medium">{dayLabel}</span>
+              <span className="text-sm font-bold">{dayNum}</span>
+            </button>
+            <div className="flex flex-col gap-0.5">
+              {appts.length === 0 ? (
+                <div className="py-2 text-center text-[10px] text-muted-foreground/30">—</div>
+              ) : (
+                appts.map((a, i) => (
+                  <button
+                    key={i}
+                    onClick={() => onDayClick(d)}
+                    className="flex items-center gap-1 rounded-lg px-1 py-1 text-left hover:bg-accent transition-colors w-full min-w-0"
+                  >
+                    <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", STATUS_DOT[a.status] ?? "bg-muted-foreground")} />
+                    <span className="text-[10px] text-muted-foreground shrink-0">{a.time}</span>
+                    <span className="text-[10px] truncate">{a.clientName.split(" ")[0]}</span>
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+        )
+      })}
+    </div>
   )
 }
 
