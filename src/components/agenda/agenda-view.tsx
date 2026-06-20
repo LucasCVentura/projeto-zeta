@@ -543,7 +543,7 @@ function WeekView({
         </div>
 
         {/* Grade de horários */}
-        <div className="max-h-130 overflow-y-auto">
+        <div>
           {allTimes.map((time) => (
             <div
               key={time}
@@ -551,7 +551,7 @@ function WeekView({
               style={{ gridTemplateColumns: "48px repeat(7, 1fr)" }}
             >
               {/* Label do horário */}
-              <div className="flex items-center justify-end pr-2 border-r border-border shrink-0">
+              <div className="flex items-start justify-end pt-1.5 pr-2 border-r border-border shrink-0">
                 <span className="text-[10px] text-muted-foreground tabular-nums">{time}</span>
               </div>
 
@@ -561,12 +561,12 @@ function WeekView({
                 const slot = daySlots.find((s) => s.time === time)
 
                 if (!slot) {
-                  return <div key={d} className="h-10 border-r border-border/40 last:border-r-0 bg-muted/10 opacity-40" />
+                  return <div key={d} className="h-14 border-r border-border/40 last:border-r-0 bg-muted/10 opacity-40" />
                 }
 
                 if (slot.isBlocked) {
                   return (
-                    <div key={d} className="h-10 border-r border-border/40 last:border-r-0 flex items-center px-1.5">
+                    <div key={d} className="h-14 border-r border-border/40 last:border-r-0 flex items-center px-1.5 bg-muted/20">
                       <span className="text-[9px] text-muted-foreground/50 truncate">Bloqueado</span>
                     </div>
                   )
@@ -574,25 +574,28 @@ function WeekView({
 
                 if (slot.available) {
                   return (
-                    <div key={d} className="h-10 border-r border-border/40 last:border-r-0 hover:bg-primary/5 transition-colors cursor-pointer" onClick={() => onDayClick(d)} />
+                    <div key={d} className="h-14 border-r border-border/40 last:border-r-0 hover:bg-primary/5 transition-colors cursor-pointer" onClick={() => onDayClick(d)} />
                   )
                 }
 
-                // Slot com agendamento
                 return (
                   <button
                     key={d}
                     onClick={() => onDayClick(d)}
-                    className="h-10 border-r border-border/40 last:border-r-0 px-1"
+                    className="h-14 border-r border-border/40 last:border-r-0 p-1"
                   >
                     <div className={cn(
-                      "h-full w-full border-l-2 rounded-r-sm px-1.5 flex flex-col justify-center hover:opacity-80 transition-opacity",
+                      "h-full w-full border-l-2 rounded-r-sm px-1.5 flex flex-col justify-center hover:opacity-80 transition-opacity bg-muted/40",
                       slot.status ? (STATUS_BORDER[slot.status] ?? "border-l-muted-foreground") : "border-l-muted-foreground",
-                      "bg-muted/40"
                     )}>
-                      <span className="block text-[9px] font-medium truncate leading-tight">
+                      <span className="block text-[10px] font-medium truncate leading-tight">
                         {slot.clientName?.split(" ")[0]}
                       </span>
+                      {slot.procedure && (
+                        <span className="block text-[9px] text-muted-foreground truncate leading-tight mt-0.5">
+                          {slot.procedure}
+                        </span>
+                      )}
                     </div>
                   </button>
                 )
