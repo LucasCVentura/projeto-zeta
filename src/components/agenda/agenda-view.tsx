@@ -8,11 +8,12 @@ import { StatusBadge } from "./status-badge"
 import { AppointmentModal } from "./appointment-modal"
 import { BlockDrawer } from "./block-drawer"
 import { CompleteAppointmentModal } from "./complete-appointment-modal"
-import { updateAppointmentStatusAction, cancelAppointmentAction, getDaySlots, getMonthAppointments } from "@/actions/schedule"
+import { updateAppointmentStatusAction, cancelAppointmentAction, getDaySlots, getMonthAppointments, getWeekSlotsAction } from "@/actions/schedule"
 import type { MonthAppointment } from "@/actions/schedule"
 import { EditAppointmentModal } from "./edit-appointment-modal"
 import Link from "next/link"
 import type { TimeSlot } from "@/lib/schedule"
+
 import type { AppointmentStatus } from "@/db/schema"
 
 type Procedure = { id: string; name: string; price: number | null }
@@ -102,6 +103,8 @@ export function AgendaView({ initialDate, slots: initialSlots, hasConfig, slotDu
   const [view, setView] = useState<"day" | "week" | "month">("day")
   const [monthData, setMonthData] = useState<Record<string, MonthAppointment[]>>({})
   const [isLoadingMonth, setIsLoadingMonth] = useState(false)
+  const [weekSlots, setWeekSlots] = useState<Record<string, TimeSlot[]>>({})
+  const [isLoadingWeek, setIsLoadingWeek] = useState(false)
 
   async function loadMonth(dateStr: string) {
     const [y, m] = dateStr.split("-").map(Number)
@@ -111,9 +114,17 @@ export function AgendaView({ initialDate, slots: initialSlots, hasConfig, slotDu
     setIsLoadingMonth(false)
   }
 
+  async function loadWeekSlots(days: string[]) {
+    setIsLoadingWeek(true)
+    const data = await getWeekSlotsAction(days)
+    setWeekSlots(data)
+    setIsLoadingWeek(false)
+  }
+
   function switchView(v: "day" | "week" | "month") {
     setView(v)
-    if (v === "month" || v === "week") loadMonth(date)
+    if (v === "month") loadMonth(date)
+    if (v === "week") loadWeekSlots(getWeekDays(date))
   }
 
   function navigateMonth(dir: -1 | 1) {
@@ -127,11 +138,9 @@ export function AgendaView({ initialDate, slots: initialSlots, hasConfig, slotDu
 
   function navigateWeek(dir: -1 | 1) {
     const newDate = addDays(date, dir * 7)
-    const [oldM] = date.split("-").slice(1).map(Number)
-    const [newM] = newDate.split("-").slice(1).map(Number)
     setDate(newDate)
     router.push(`/agenda?data=${newDate}`)
-    if (oldM !== newM) loadMonth(newDate)
+    loadWeekSlots(getWeekDays(newDate))
   }
 
   function handleDayClick(d: string) {
@@ -375,8 +384,8 @@ export function AgendaView({ initialDate, slots: initialSlots, hasConfig, slotDu
       ) : view === "week" ? (
         <WeekView
           weekDays={weekDays}
-          monthData={monthData}
-          isLoading={isLoadingMonth}
+          weekSlots={weekSlots}
+          isLoading={isLoadingWeek}
           today={today}
           selectedDate={date}
           onDayClick={handleDayClick}
@@ -477,14 +486,14 @@ const STATUS_BORDER: Record<string, string> = {
 
 function WeekView({
   weekDays,
-  monthData,
+  weekSlots,
   isLoading,
   today,
   selectedDate,
   onDayClick,
 }: {
   weekDays: string[]
-  monthData: Record<string, MonthAppointment[]>
+  weekSlots: Record<string, TimeSlot[]>
   isLoading: boolean
   today: string
   selectedDate: string
@@ -494,50 +503,104 @@ function WeekView({
     return <div className="py-16 text-center text-sm text-muted-foreground">Carregando...</div>
   }
 
-  return (
-    <div className="grid grid-cols-7 divide-x divide-border border border-border rounded-xl overflow-hidden">
-      {weekDays.map((d) => {
-        const dayObj = new Date(d + "T12:00:00")
-        const dayLabel = DAY_LABELS[dayObj.getDay()]
-        const dayNum = dayObj.getDate()
-        const isToday = d === today
-        const isSelected = d === selectedDate
-        const appts = monthData[d] ?? []
+  // Derive time axis from any working day's slots
+  const allTimes = Object.values(weekSlots).find((s) => s.length > 0)?.map((s) => s.time) ?? []
 
-        return (
-          <div key={d} className="flex flex-col min-w-0">
-            <button
-              onClick={() => onDayClick(d)}
-              className={cn(
-                "flex flex-col items-center py-2.5 border-b border-border transition-colors w-full",
-                isSelected
-                  ? "bg-primary text-primary-foreground"
-                  : isToday
-                  ? "bg-primary/10 text-primary"
+  if (allTimes.length === 0) {
+    return (
+      <div className="py-16 text-center text-sm text-muted-foreground">
+        Configure sua agenda para visualizar os horários.
+      </div>
+    )
+  }
+
+  return (
+    <div className="overflow-x-auto">
+      <div className="min-w-150 border border-border rounded-xl overflow-hidden">
+        {/* Header com os dias */}
+        <div className="grid border-b border-border" style={{ gridTemplateColumns: "48px repeat(7, 1fr)" }}>
+          <div className="border-r border-border" />
+          {weekDays.map((d) => {
+            const dayObj = new Date(d + "T12:00:00")
+            const isToday = d === today
+            const isSelected = d === selectedDate
+            return (
+              <button
+                key={d}
+                onClick={() => onDayClick(d)}
+                className={cn(
+                  "flex flex-col items-center py-2.5 border-r border-border last:border-r-0 transition-colors",
+                  isSelected ? "bg-primary text-primary-foreground"
+                  : isToday ? "bg-primary/10 text-primary"
                   : "hover:bg-accent text-muted-foreground hover:text-foreground"
-              )}
+                )}
+              >
+                <span className="text-[10px] font-medium">{DAY_LABELS[dayObj.getDay()]}</span>
+                <span className="text-sm font-bold">{dayObj.getDate()}</span>
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Grade de horários */}
+        <div className="max-h-130 overflow-y-auto">
+          {allTimes.map((time) => (
+            <div
+              key={time}
+              className="grid border-b border-border/50 last:border-b-0"
+              style={{ gridTemplateColumns: "48px repeat(7, 1fr)" }}
             >
-              <span className="text-[10px] font-medium">{dayLabel}</span>
-              <span className="text-sm font-bold">{dayNum}</span>
-            </button>
-            <div className="flex flex-col gap-1 p-1">
-              {appts.map((a, i) => (
-                <button
-                  key={i}
-                  onClick={() => onDayClick(d)}
-                  className={cn(
-                    "w-full border-l-2 rounded-r-md bg-muted/40 px-1.5 py-1 text-left hover:bg-muted/70 transition-colors min-w-0",
-                    STATUS_BORDER[a.status] ?? "border-l-muted-foreground"
-                  )}
-                >
-                  <span className="block text-[9px] text-muted-foreground leading-none mb-0.5">{a.time}</span>
-                  <span className="block text-[10px] font-medium truncate leading-tight">{a.clientName.split(" ")[0]}</span>
-                </button>
-              ))}
+              {/* Label do horário */}
+              <div className="flex items-center justify-end pr-2 border-r border-border shrink-0">
+                <span className="text-[10px] text-muted-foreground tabular-nums">{time}</span>
+              </div>
+
+              {/* Células de cada dia */}
+              {weekDays.map((d) => {
+                const daySlots = weekSlots[d] ?? []
+                const slot = daySlots.find((s) => s.time === time)
+
+                if (!slot) {
+                  return <div key={d} className="h-10 border-r border-border/40 last:border-r-0 bg-muted/10 opacity-40" />
+                }
+
+                if (slot.isBlocked) {
+                  return (
+                    <div key={d} className="h-10 border-r border-border/40 last:border-r-0 flex items-center px-1.5">
+                      <span className="text-[9px] text-muted-foreground/50 truncate">Bloqueado</span>
+                    </div>
+                  )
+                }
+
+                if (slot.available) {
+                  return (
+                    <div key={d} className="h-10 border-r border-border/40 last:border-r-0 hover:bg-primary/5 transition-colors cursor-pointer" onClick={() => onDayClick(d)} />
+                  )
+                }
+
+                // Slot com agendamento
+                return (
+                  <button
+                    key={d}
+                    onClick={() => onDayClick(d)}
+                    className="h-10 border-r border-border/40 last:border-r-0 px-1"
+                  >
+                    <div className={cn(
+                      "h-full w-full border-l-2 rounded-r-sm px-1.5 flex flex-col justify-center hover:opacity-80 transition-opacity",
+                      slot.status ? (STATUS_BORDER[slot.status] ?? "border-l-muted-foreground") : "border-l-muted-foreground",
+                      "bg-muted/40"
+                    )}>
+                      <span className="block text-[9px] font-medium truncate leading-tight">
+                        {slot.clientName?.split(" ")[0]}
+                      </span>
+                    </div>
+                  </button>
+                )
+              })}
             </div>
-          </div>
-        )
-      })}
+          ))}
+        </div>
+      </div>
     </div>
   )
 }

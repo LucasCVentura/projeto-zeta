@@ -14,6 +14,7 @@ import { eq, and, sql, inArray, gte, lte } from "drizzle-orm"
 import { requireSession } from "@/lib/session"
 import { can } from "@/lib/permissions"
 import { generateSlots } from "@/lib/schedule"
+import type { TimeSlot } from "@/lib/schedule"
 import { revalidatePath, revalidateTag, unstable_cache } from "next/cache"
 import type { AppointmentStatus } from "@/db/schema"
 import type { ActionResult } from "./auth"
@@ -85,6 +86,64 @@ export async function getDaySlots(date: string) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const slots = generateSlots(config, date, blocks, appts as any)
   return { slots, hasConfig: true }
+}
+
+export async function getWeekSlotsAction(dates: string[]): Promise<Record<string, TimeSlot[]>> {
+  const { userId, organizationId } = await requireSession()
+
+  const [config] = await db
+    .select()
+    .from(scheduleConfig)
+    .where(and(eq(scheduleConfig.organizationId, organizationId), eq(scheduleConfig.userId, userId)))
+    .limit(1)
+
+  if (!config) return {}
+
+  const startDate = dates[0]
+  const endDate = dates[dates.length - 1]
+
+  const [blocks, appts] = await Promise.all([
+    db.select().from(scheduleBlocks).where(and(
+      eq(scheduleBlocks.organizationId, organizationId),
+      eq(scheduleBlocks.userId, userId),
+      gte(scheduleBlocks.date, startDate),
+      lte(scheduleBlocks.date, endDate)
+    )),
+    db.select({
+      id: appointments.id,
+      date: appointments.date,
+      startTime: appointments.startTime,
+      endTime: appointments.endTime,
+      procedure: appointments.procedure,
+      procedureId: appointments.procedureId,
+      clientPackageId: appointments.clientPackageId,
+      clientId: appointments.clientId,
+      notes: appointments.notes,
+      status: appointments.status,
+      clientName: clients.name,
+      procedurePrice: procedures.price,
+      hasReturn: procedures.hasReturn,
+      returnIntervalDays: procedures.returnIntervalDays,
+    })
+    .from(appointments)
+    .innerJoin(clients, eq(clients.id, appointments.clientId))
+    .leftJoin(procedures, eq(procedures.id, appointments.procedureId))
+    .where(and(
+      eq(appointments.organizationId, organizationId),
+      eq(appointments.professionalId, userId),
+      gte(appointments.date, startDate),
+      lte(appointments.date, endDate)
+    )),
+  ])
+
+  const result: Record<string, TimeSlot[]> = {}
+  for (const date of dates) {
+    const dayBlocks = blocks.filter((b) => b.date === date)
+    const dayAppts = appts.filter((a) => a.date === date)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    result[date] = generateSlots(config, date, dayBlocks, dayAppts as any)
+  }
+  return result
 }
 
 // ── Criar agendamento ─────────────────────────────────────────────────────────
