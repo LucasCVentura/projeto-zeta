@@ -6,6 +6,21 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "2.1.0",
+    date: "2026-06-22",
+    items: [
+      { type: "improvement", text: "Financeiro renovado: gráfico de histórico dos últimos 6 meses, top procedimentos por receita e top 5 clientes do mês" },
+      { type: "new",         text: "Financeiro: novos KPIs de ticket médio e receita projetada com base nos agendamentos futuros ainda não faturados" },
+      { type: "improvement", text: "Financeiro: comparativo de receita com o mês anterior (% de crescimento ou queda) direto no card principal" },
+      { type: "improvement", text: "Financeiro: todos os cards agora são sempre visíveis, com estado vazio quando não há dados no período" },
+      { type: "new",         text: "Financeiro: ícone de informação em cada card explicando o que aquele dado significa" },
+      { type: "new",         text: "Chat admin: aba de Inativos para contato com usuários sem atividade há mais de 1 mês, com magic link de reativação de 7 dias grátis" },
+      { type: "new",         text: "Chat admin: aba de Assinantes para envio de mensagem de depoimento/testemunho aos clientes ativos" },
+      { type: "improvement", text: "Chat admin: preview da mensagem antes de enviar qualquer template — com botão de cancelar ou confirmar" },
+      { type: "improvement", text: "Painel admin: filtro de clínicas por status (Ativas, Trial, Expirado) com badge de dias como cliente para contas ativas" },
+    ],
+  },
+  {
     version: "2.0.0",
     date: "2026-06-20",
     items: [

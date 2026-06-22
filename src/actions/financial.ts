@@ -2,7 +2,7 @@
 
 import { db } from "@/db"
 import { transactions, appointments, clientPackages, packages, supplies, procedureSupplies, procedures, users, organizationMembers, type PaymentMethod } from "@/db/schema"
-import { eq, and, gte, lte, sum, sql } from "drizzle-orm"
+import { eq, and, gte, lte, sum, sql, inArray } from "drizzle-orm"
 import { requireSession } from "@/lib/session"
 import { can } from "@/lib/permissions"
 import { revalidatePath, revalidateTag } from "next/cache"
@@ -276,4 +276,119 @@ export async function getTransactionsAction(year: number, month: number) {
   const totalCost = enriched.reduce((acc, r) => acc + r.cost, 0)
   const totalCommissions = enriched.reduce((acc, r) => acc + (r.commissionAmount ?? 0), 0)
   return { rows: enriched, total, totalCost, totalCommissions, isProfessional: false }
+}
+
+export async function getFinanceiroSummaryAction(year: number, month: number) {
+  const { organizationId, role } = await requireSession()
+  if (role !== "owner" && role !== "financial") return null
+
+  const pad = (n: number) => String(n).padStart(2, "0")
+  const start = `${year}-${pad(month)}-01`
+  const lastDay = new Date(year, month, 0).getDate()
+  const end = `${year}-${pad(month)}-${lastDay}`
+
+  // Mês anterior
+  const prevDate = new Date(year, month - 2, 1)
+  const pY = prevDate.getFullYear()
+  const pM = prevDate.getMonth() + 1
+  const prevStart = `${pY}-${pad(pM)}-01`
+  const prevEnd = `${pY}-${pad(pM)}-${new Date(pY, pM, 0).getDate()}`
+
+  // Início dos últimos 6 meses
+  const hist6 = new Date(year, month - 7, 1)
+  const histStart = `${hist6.getFullYear()}-${pad(hist6.getMonth() + 1)}-01`
+
+  const getRows = (r: unknown): unknown[] =>
+    Array.isArray(r) ? r : ((r as { rows?: unknown[] }).rows ?? [])
+
+  const [prevRes, histRes, procRes, clientRes, projRes] = await Promise.all([
+    db.execute(sql`
+      SELECT COALESCE(SUM(amount), 0)::bigint as total
+      FROM transactions
+      WHERE organization_id = ${organizationId}
+        AND date >= ${prevStart} AND date <= ${prevEnd}
+    `),
+    db.execute(sql`
+      SELECT
+        EXTRACT(YEAR  FROM date::date)::int as year,
+        EXTRACT(MONTH FROM date::date)::int as month,
+        COALESCE(SUM(amount), 0)::bigint    as total
+      FROM transactions
+      WHERE organization_id = ${organizationId}
+        AND date >= ${histStart} AND date <= ${end}
+      GROUP BY 1, 2
+      ORDER BY 1, 2
+    `),
+    db.execute(sql`
+      SELECT
+        COALESCE(p.name, 'Sem procedimento') as name,
+        COALESCE(SUM(t.amount), 0)::bigint   as total,
+        COUNT(t.id)::int                      as count
+      FROM transactions t
+      LEFT JOIN appointments a  ON a.id  = t.appointment_id
+      LEFT JOIN procedures   p  ON p.id  = a.procedure_id
+      WHERE t.organization_id = ${organizationId}
+        AND t.date >= ${start} AND t.date <= ${end}
+        AND t.amount > 0
+      GROUP BY p.name
+      ORDER BY total DESC
+      LIMIT 6
+    `),
+    db.execute(sql`
+      SELECT
+        c.name                               as name,
+        COALESCE(SUM(t.amount), 0)::bigint   as total,
+        COUNT(t.id)::int                     as count
+      FROM transactions t
+      JOIN appointments a ON a.id  = t.appointment_id
+      JOIN clients      c ON c.id  = a.client_id
+      WHERE t.organization_id = ${organizationId}
+        AND t.date >= ${start} AND t.date <= ${end}
+        AND t.amount > 0
+      GROUP BY c.id, c.name
+      ORDER BY total DESC
+      LIMIT 5
+    `),
+    db.execute(sql`
+      SELECT COALESCE(SUM(p.price), 0)::bigint as projected
+      FROM appointments a
+      JOIN procedures p ON p.id = a.procedure_id
+      WHERE a.organization_id = ${organizationId}
+        AND a.date >= ${start} AND a.date <= ${end}
+        AND a.status IN ('waiting', 'confirmed')
+        AND a.client_package_id IS NULL
+        AND NOT EXISTS (
+          SELECT 1 FROM transactions t WHERE t.appointment_id = a.id
+        )
+    `),
+  ])
+
+  const prevTotal = Number((getRows(prevRes)[0] as { total?: string })?.total ?? 0)
+
+  const rawHistory = getRows(histRes) as { year: number; month: number; total: string }[]
+  const history: { year: number; month: number; total: number }[] = []
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(year, month - 1 - i, 1)
+    const y = d.getFullYear()
+    const m = d.getMonth() + 1
+    const found = rawHistory.find((h) => Number(h.year) === y && Number(h.month) === m)
+    history.push({ year: y, month: m, total: Number(found?.total ?? 0) })
+  }
+
+  const procedures = (getRows(procRes) as { name: string; total: string; count: string }[]).map(
+    (r) => ({ name: r.name, total: Number(r.total), count: Number(r.count) })
+  )
+
+  const topClients = (getRows(clientRes) as { name: string; total: string; count: string }[]).map(
+    (r) => ({ name: r.name, total: Number(r.total), count: Number(r.count) })
+  )
+
+  const projected = Number((getRows(projRes)[0] as { projected?: string })?.projected ?? 0)
+
+  const teamRes = await db.execute(sql`
+    SELECT COUNT(*)::int as count FROM organization_members WHERE organization_id = ${organizationId}
+  `)
+  const hasTeam = Number((getRows(teamRes)[0] as { count?: string })?.count ?? 1) > 1
+
+  return { prevTotal, history, procedures, topClients, projected, hasTeam }
 }
