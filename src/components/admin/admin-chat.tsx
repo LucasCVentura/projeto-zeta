@@ -107,6 +107,7 @@ function NewConversationPanel({
   const [loading, setLoading] = useState<string | null>(null)
   const [sent, setSent] = useState<Set<string>>(new Set())
   const [search, setSearch] = useState("")
+  const [preview, setPreview] = useState<{ org: TrialOrg; content: string; templateId: string; templateName: string } | null>(null)
 
   const activeOrgs =
     tab === "trial" ? trialOrgs :
@@ -131,9 +132,36 @@ function NewConversationPanel({
     )
   )
 
-  async function handleSendTemplate(org: TrialOrg) {
+  function buildPreviewContent(org: TrialOrg, currentTab: OutreachTab) {
+    const firstName = org.ownerName.split(" ")[0]
+    if (currentTab === "expired") {
+      return `Oi ${firstName}, tudo bem? 😊\n\nAqui é o Lucas, do Kira. Vi que seu período de teste acabou e queria entender melhor como foi sua experiência.\n\nTeve alguma dificuldade? Posso te ajudar com algo? Me conta!`
+    }
+    if (currentTab === "testimonial") {
+      return `Olá ${firstName}, ficamos muito felizes que você escolheu o Kira e sua assinatura já consta como ativa! 🎉\n\nGostaríamos de saber o que te fez assinar o Kira, e o que ele te ajuda no dia a dia da sua clínica — e com a sua permissão gostaríamos de adicionar esse feedback no nosso site e instagram. 😊`
+    }
+    if (currentTab === "winback") {
+      return `Olá ${firstName}, nós do Kira estamos sentindo sua falta! 😢\n\nO que falta pra você começar a organizar sua agenda e financeiro tudo em um só lugar?\n\nClica no link abaixo e reative sua conta ganhando mais *7 dias grátis* pra testar novamente — tenho certeza que não vai se arrepender! 🎁\n\nkiraclinic.com.br/reativar/[link gerado ao enviar]`
+    }
+    return `Oi ${firstName}, tudo bem? 😊\n\nAqui é o Lucas, do Kira. Vi que você está testando o sistema e queria bater um papo rápido pra saber como está sendo sua experiência.\n\nTem alguma dúvida ou algo que posso te ajudar? Me conta!`
+  }
+
+  function handleOpenPreview(org: TrialOrg) {
     if (!org.phone || !activeTemplateId) return
+    setPreview({
+      org,
+      content: buildPreviewContent(org, tab),
+      templateId: activeTemplateId,
+      templateName,
+    })
+  }
+
+  async function handleConfirmSend() {
+    if (!preview) return
+    const { org, templateId, templateName: tName } = preview
+    if (!org.phone) return
     setLoading(org.orgId)
+    setPreview(null)
     try {
       const firstName = org.ownerName.split(" ")[0]
       let content: string | undefined
@@ -150,9 +178,9 @@ function NewConversationPanel({
         content = `Olá ${firstName}, nós do Kira estamos sentindo sua falta! 😢\n\nO que falta pra você começar a organizar sua agenda e financeiro tudo em um só lugar?\n\nClica no link abaixo e reative sua conta ganhando mais *7 dias grátis* pra testar novamente — tenho certeza que não vai se arrepender! 🎁\n\n${link}`
       }
 
-      await sendAdminChatTemplateAction(org.phone, org.ownerName, activeTemplateId, {
+      await sendAdminChatTemplateAction(org.phone, org.ownerName, templateId, {
         content,
-        templateUsed: templateName,
+        templateUsed: tName,
         templateParams,
       })
       setSent(prev => new Set([...prev, org.orgId]))
@@ -168,10 +196,44 @@ function NewConversationPanel({
     setTab(t)
     setSearch("")
     setSent(new Set())
+    setPreview(null)
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="relative flex flex-col h-full">
+      {/* Modal de preview */}
+      {preview && (
+        <div className="absolute inset-0 z-10 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="w-full max-w-sm rounded-2xl bg-card border border-border shadow-xl flex flex-col overflow-hidden">
+            <div className="px-4 py-3 border-b border-border flex items-center justify-between">
+              <p className="text-sm font-semibold">Preview da mensagem</p>
+              <p className="text-xs text-muted-foreground">{preview.org.ownerName} · {formatPhone(preview.org.phone!)}</p>
+            </div>
+            <div className="px-4 py-4 bg-muted/30 max-h-72 overflow-y-auto">
+              <div className="ml-4 max-w-[85%] rounded-2xl rounded-br-sm bg-primary text-primary-foreground px-3.5 py-2.5 shadow-sm self-end">
+                <p className="text-sm whitespace-pre-wrap leading-snug">{preview.content}</p>
+                <p className="text-[10px] opacity-50 mt-1 text-right">template</p>
+              </div>
+            </div>
+            <div className="px-4 py-3 border-t border-border flex gap-2">
+              <button
+                onClick={() => setPreview(null)}
+                className="flex-1 rounded-lg border border-border py-2 text-sm font-medium text-muted-foreground hover:bg-muted transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleConfirmSend}
+                disabled={!!loading}
+                className="flex-1 rounded-lg bg-primary py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
+              >
+                {loading ? "Enviando..." : "Enviar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
         <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
           <ChevronLeft size={18} />
@@ -268,7 +330,7 @@ function NewConversationPanel({
               size="sm"
               variant={sent.has(org.orgId) ? "outline" : "default"}
               disabled={!!loading || sent.has(org.orgId) || !activeTemplateId}
-              onClick={() => handleSendTemplate(org)}
+              onClick={() => handleOpenPreview(org)}
               className={cn(
                 "shrink-0 h-7 text-xs gap-1",
                 !sent.has(org.orgId) && tab === "expired" && "bg-red-600 hover:bg-red-700 text-white border-0",
