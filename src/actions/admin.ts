@@ -411,11 +411,10 @@ export async function sendAdminChatTemplateAction(
 
   const normalizedPhone = normalizePhone(phone)
   const { sendWhatsAppTemplate } = await import("@/lib/whatsapp-client")
-  const firstName = name.split(" ")[0]
-  const params = options?.templateParams ?? [firstName]
+  const params = options?.templateParams ?? [name]
   const result = await sendWhatsAppTemplate(normalizedPhone, templateId, params)
 
-  const content = options?.content ?? `Oi ${firstName}, tudo bem? 😊\n\nAqui é o Lucas, do Kira. Vi que você está testando o sistema e queria bater um papo rápido pra saber como está sendo sua experiência.\n\nTem alguma dúvida ou algo que posso te ajudar? Me conta!`
+  const content = options?.content ?? `Oi ${name}, tudo bem? 😊\n\nAqui é o Lucas, do Kira. Vi que você está testando o sistema e queria bater um papo rápido pra saber como está sendo sua experiência.\n\nTem alguma dúvida ou algo que posso te ajudar? Me conta!`
 
   await db.insert(adminChatMessages).values({
     phone: normalizedPhone,

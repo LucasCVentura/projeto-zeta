@@ -133,17 +133,17 @@ function NewConversationPanel({
   )
 
   function buildPreviewContent(org: TrialOrg, currentTab: OutreachTab) {
-    const firstName = org.ownerName.split(" ")[0]
+    const name = org.ownerName
     if (currentTab === "expired") {
-      return `Oi ${firstName}, tudo bem? 😊\n\nAqui é o Lucas, do Kira. Vi que seu período de teste acabou e queria entender melhor como foi sua experiência.\n\nTeve alguma dificuldade? Posso te ajudar com algo? Me conta!`
+      return `Oi ${name}, tudo bem? 😊\n\nAqui é o Lucas, do Kira. Vi que seu período de teste acabou e queria entender melhor como foi sua experiência.\n\nTeve alguma dificuldade? Posso te ajudar com algo? Me conta!`
     }
     if (currentTab === "testimonial") {
-      return `Olá ${firstName}, ficamos muito felizes que você escolheu o Kira e sua assinatura já consta como ativa! 🎉\n\nGostaríamos de saber o que te fez assinar o Kira, e o que ele te ajuda no dia a dia da sua clínica — e com a sua permissão gostaríamos de adicionar esse feedback no nosso site e instagram. 😊`
+      return `Olá ${name}, ficamos muito felizes que você escolheu o Kira e sua assinatura já consta como ativa! 🎉\n\nGostaríamos de saber o que te fez assinar o Kira, e o que ele te ajuda no dia a dia da sua clínica — e com a sua permissão gostaríamos de adicionar esse feedback no nosso site e instagram. 😊`
     }
     if (currentTab === "winback") {
-      return `Olá ${firstName}, nós do Kira estamos sentindo sua falta! 😢\n\nO que falta pra você começar a organizar sua agenda e financeiro tudo em um só lugar?\n\nClica no link abaixo e reative sua conta ganhando mais *7 dias grátis* pra testar novamente — tenho certeza que não vai se arrepender! 🎁\n\nkiraclinic.com.br/reativar/[link gerado ao enviar]`
+      return `Olá ${name}, nós do Kira estamos sentindo sua falta! 😢\n\nO que falta pra você começar a organizar sua agenda e financeiro tudo em um só lugar?\n\nClica no link abaixo e reative sua conta ganhando mais *7 dias grátis* pra testar novamente — tenho certeza que não vai se arrepender! 🎁\n\nkiraclinic.com.br/reativar/[link gerado ao enviar]`
     }
-    return `Oi ${firstName}, tudo bem? 😊\n\nAqui é o Lucas, do Kira. Vi que você está testando o sistema e queria bater um papo rápido pra saber como está sendo sua experiência.\n\nTem alguma dúvida ou algo que posso te ajudar? Me conta!`
+    return `Oi ${name}, tudo bem? 😊\n\nAqui é o Lucas, do Kira. Vi que você está testando o sistema e queria bater um papo rápido pra saber como está sendo sua experiência.\n\nTem alguma dúvida ou algo que posso te ajudar? Me conta!`
   }
 
   function handleOpenPreview(org: TrialOrg) {
@@ -163,19 +163,19 @@ function NewConversationPanel({
     setLoading(org.orgId)
     setPreview(null)
     try {
-      const firstName = org.ownerName.split(" ")[0]
+      const name = org.ownerName
       let content: string | undefined
-      let templateParams: string[] = [firstName]
+      let templateParams: string[] = [name]
 
       if (tab === "expired") {
-        content = `Oi ${firstName}, tudo bem? 😊\n\nAqui é o Lucas, do Kira. Vi que seu período de teste acabou e queria entender melhor como foi sua experiência.\n\nTeve alguma dificuldade? Posso te ajudar com algo? Me conta!`
+        content = `Oi ${name}, tudo bem? 😊\n\nAqui é o Lucas, do Kira. Vi que seu período de teste acabou e queria entender melhor como foi sua experiência.\n\nTeve alguma dificuldade? Posso te ajudar com algo? Me conta!`
       } else if (tab === "testimonial") {
-        content = `Olá ${firstName}, ficamos muito felizes que você escolheu o Kira e sua assinatura já consta como ativa! 🎉\n\nGostaríamos de saber o que te fez assinar o Kira, e o que ele te ajuda no dia a dia da sua clínica — e com a sua permissão gostaríamos de adicionar esse feedback no nosso site e instagram. 😊`
+        content = `Olá ${name}, ficamos muito felizes que você escolheu o Kira e sua assinatura já consta como ativa! 🎉\n\nGostaríamos de saber o que te fez assinar o Kira, e o que ele te ajuda no dia a dia da sua clínica — e com a sua permissão gostaríamos de adicionar esse feedback no nosso site e instagram. 😊`
       } else if (tab === "winback") {
         const token = await generateReactivationTokenAction(org.orgId)
         const link = `https://www.kiraclinic.com.br/reativar/${token}`
-        templateParams = [firstName, link]
-        content = `Olá ${firstName}, nós do Kira estamos sentindo sua falta! 😢\n\nO que falta pra você começar a organizar sua agenda e financeiro tudo em um só lugar?\n\nClica no link abaixo e reative sua conta ganhando mais *7 dias grátis* pra testar novamente — tenho certeza que não vai se arrepender! 🎁\n\n${link}`
+        templateParams = [name, link]
+        content = `Olá ${name}, nós do Kira estamos sentindo sua falta! 😢\n\nO que falta pra você começar a organizar sua agenda e financeiro tudo em um só lugar?\n\nClica no link abaixo e reative sua conta ganhando mais *7 dias grátis* pra testar novamente — tenho certeza que não vai se arrepender! 🎁\n\n${link}`
       }
 
       await sendAdminChatTemplateAction(org.phone, org.ownerName, templateId, {
