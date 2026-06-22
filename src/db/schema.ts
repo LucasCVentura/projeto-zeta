@@ -808,11 +808,28 @@ export const whatsappSystemTemplateSettings = pgTable("whatsapp_system_template_
   reminderConfirmationTemplateId: text("reminder_confirmation_template_id"),
   postVisitTemplateId: text("post_visit_template_id"),
   trialOutreachTemplateId: text("trial_outreach_template_id"),
+  testimonialOutreachTemplateId: text("testimonial_outreach_template_id"),
+  winbackOutreachTemplateId: text("winback_outreach_template_id"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 })
 
 export type WhatsAppSystemTemplateSetting = typeof whatsappSystemTemplateSettings.$inferSelect
+
+// ── trial_reactivation_tokens ─────────────────────────────────────────────────
+
+export const trialReactivationTokens = pgTable("trial_reactivation_tokens", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  token: text("token").notNull().unique(),
+  organizationId: text("organization_id").notNull(),
+  usedAt: timestamp("used_at"),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+})
+
+export type TrialReactivationToken = typeof trialReactivationTokens.$inferSelect
 
 // ── push_subscriptions ────────────────────────────────────────────────────────
 

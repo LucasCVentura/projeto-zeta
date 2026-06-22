@@ -46,6 +46,7 @@ type WhatsAppTemplateSetting = {
   bookingSummaryTemplateId: string | null; packageSummaryTemplateId: string | null
   reminderConfirmationTemplateId: string | null; postVisitTemplateId: string | null
   trialOutreachTemplateId: string | null; trialExpiredOutreachTemplateId: string | null
+  testimonialOutreachTemplateId: string | null; winbackOutreachTemplateId: string | null
 }
 
 // ── Constantes ────────────────────────────────────────────────────────────────
@@ -417,6 +418,8 @@ export function AdminDashboard() {
   const [postVisitTemplateId, setPostVisitTemplateId] = useState("")
   const [trialOutreachTemplateId, setTrialOutreachTemplateId] = useState("")
   const [trialExpiredOutreachTemplateId, setTrialExpiredOutreachTemplateId] = useState("")
+  const [testimonialOutreachTemplateId, setTestimonialOutreachTemplateId] = useState("")
+  const [winbackOutreachTemplateId, setWinbackOutreachTemplateId] = useState("")
   const [pendingCancelOrg, setPendingCancelOrg] = useState<{ id: string; name: string } | null>(null)
   const [activeSection, setActiveSection] = useState("overview")
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -444,6 +447,8 @@ export function AdminDashboard() {
       setPostVisitTemplateId(t.postVisitTemplateId ?? "")
       setTrialOutreachTemplateId(t.trialOutreachTemplateId ?? "")
       setTrialExpiredOutreachTemplateId(t.trialExpiredOutreachTemplateId ?? "")
+      setTestimonialOutreachTemplateId(t.testimonialOutreachTemplateId ?? "")
+      setWinbackOutreachTemplateId(t.winbackOutreachTemplateId ?? "")
     }).catch(() => {})
   }, [])
 
@@ -555,7 +560,7 @@ export function AdminDashboard() {
       await saveWhatsAppTemplateSettingAction({
         bookingSummaryTemplateId: bookingTemplateId, packageSummaryTemplateId: packageTemplateId,
         reminderConfirmationTemplateId: reminderTemplateId, postVisitTemplateId,
-        trialOutreachTemplateId, trialExpiredOutreachTemplateId,
+        trialOutreachTemplateId, trialExpiredOutreachTemplateId, testimonialOutreachTemplateId, winbackOutreachTemplateId,
       })
     } catch { setTemplateError("Não foi possível salvar. Tente novamente.") }
     finally { setTemplateSaving(false) }
@@ -1168,6 +1173,14 @@ export function AdminDashboard() {
               <p className="text-sm font-medium">Reativação trial expirado <code className="text-xs bg-muted px-1.5 py-0.5 rounded ml-1">kira_trial_expired_outreach</code></p>
               <Input value={trialExpiredOutreachTemplateId} onChange={e => setTrialExpiredOutreachTemplateId(e.target.value)} placeholder="UUID do template trial expirado" className="font-mono text-xs" />
             </div>
+            <div className="space-y-1.5">
+              <p className="text-sm font-medium">Depoimento de assinantes <code className="text-xs bg-muted px-1.5 py-0.5 rounded ml-1">kira_testimonial_outreach</code></p>
+              <Input value={testimonialOutreachTemplateId} onChange={e => setTestimonialOutreachTemplateId(e.target.value)} placeholder="UUID do template de depoimento" className="font-mono text-xs" />
+            </div>
+            <div className="space-y-1.5">
+              <p className="text-sm font-medium">Recuperação de inativos <code className="text-xs bg-muted px-1.5 py-0.5 rounded ml-1">kira_winback_outreach</code></p>
+              <Input value={winbackOutreachTemplateId} onChange={e => setWinbackOutreachTemplateId(e.target.value)} placeholder="UUID do template winback" className="font-mono text-xs" />
+            </div>
             {templateError && <p className="text-xs text-destructive">{templateError}</p>}
             <Button onClick={handleSaveTemplate} disabled={templateSaving} className="w-full">
               {templateSaving ? "Salvando..." : "Salvar configurações"}
@@ -1176,7 +1189,7 @@ export function AdminDashboard() {
         </div>
       )
 
-      case "chat": return <AdminChat trialOutreachTemplateId={trialOutreachTemplateId || null} trialExpiredOutreachTemplateId={trialExpiredOutreachTemplateId || null} />
+      case "chat": return <AdminChat trialOutreachTemplateId={trialOutreachTemplateId || null} trialExpiredOutreachTemplateId={trialExpiredOutreachTemplateId || null} testimonialOutreachTemplateId={testimonialOutreachTemplateId || null} winbackOutreachTemplateId={winbackOutreachTemplateId || null} />
 
       case "suporte": {
         const selectedEmail = inboundEmails.find(e => e.id === expandedEmail) ?? null

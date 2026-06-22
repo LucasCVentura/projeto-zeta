@@ -8,6 +8,9 @@ import {
   sendAdminChatTemplateAction,
   getTrialOrgsForChatAction,
   getExpiredTrialOrgsForChatAction,
+  getActiveSubscribersForChatAction,
+  getWinbackOrgsForChatAction,
+  generateReactivationTokenAction,
   archiveConversationAction,
 } from "@/actions/admin"
 import type { AdminChatMessage } from "@/db/schema"
@@ -75,20 +78,28 @@ function Avatar({ name, size = "md" }: { name: string; size?: "sm" | "md" }) {
 
 // ── Painel de nova conversa ───────────────────────────────────────────────────
 
-type OutreachTab = "trial" | "expired"
+type OutreachTab = "trial" | "expired" | "testimonial" | "winback"
 
 function NewConversationPanel({
   trialOrgs,
   expiredOrgs,
+  activeSubscribers,
+  winbackOrgs,
   trialOutreachTemplateId,
   trialExpiredOutreachTemplateId,
+  testimonialOutreachTemplateId,
+  winbackOutreachTemplateId,
   onStarted,
   onClose,
 }: {
   trialOrgs: TrialOrg[]
   expiredOrgs: TrialOrg[]
+  activeSubscribers: TrialOrg[]
+  winbackOrgs: TrialOrg[]
   trialOutreachTemplateId: string | null
   trialExpiredOutreachTemplateId: string | null
+  testimonialOutreachTemplateId: string | null
+  winbackOutreachTemplateId: string | null
   onStarted: (phone: string, name: string) => void
   onClose: () => void
 }) {
@@ -97,9 +108,21 @@ function NewConversationPanel({
   const [sent, setSent] = useState<Set<string>>(new Set())
   const [search, setSearch] = useState("")
 
-  const activeOrgs = tab === "trial" ? trialOrgs : expiredOrgs
-  const activeTemplateId = tab === "trial" ? trialOutreachTemplateId : trialExpiredOutreachTemplateId
-  const templateName = tab === "trial" ? "kira_trial_outreach" : "kira_trial_expired_outreach"
+  const activeOrgs =
+    tab === "trial" ? trialOrgs :
+    tab === "expired" ? expiredOrgs :
+    tab === "testimonial" ? activeSubscribers :
+    winbackOrgs
+  const activeTemplateId =
+    tab === "trial" ? trialOutreachTemplateId :
+    tab === "expired" ? trialExpiredOutreachTemplateId :
+    tab === "testimonial" ? testimonialOutreachTemplateId :
+    winbackOutreachTemplateId
+  const templateName =
+    tab === "trial" ? "kira_trial_outreach" :
+    tab === "expired" ? "kira_trial_expired_outreach" :
+    tab === "testimonial" ? "kira_testimonial_outreach" :
+    "kira_winback_outreach"
 
   const filtered = activeOrgs.filter(o =>
     o.phone && (
@@ -113,12 +136,24 @@ function NewConversationPanel({
     setLoading(org.orgId)
     try {
       const firstName = org.ownerName.split(" ")[0]
-      const content = tab === "expired"
-        ? `Oi ${firstName}, tudo bem? 😊\n\nAqui é o Lucas, do Kira. Vi que seu período de teste acabou e queria entender melhor como foi sua experiência.\n\nTeve alguma dificuldade? Posso te ajudar com algo? Me conta!`
-        : undefined
+      let content: string | undefined
+      let templateParams: string[] = [firstName]
+
+      if (tab === "expired") {
+        content = `Oi ${firstName}, tudo bem? 😊\n\nAqui é o Lucas, do Kira. Vi que seu período de teste acabou e queria entender melhor como foi sua experiência.\n\nTeve alguma dificuldade? Posso te ajudar com algo? Me conta!`
+      } else if (tab === "testimonial") {
+        content = `Olá ${firstName}, ficamos muito felizes que você escolheu o Kira e sua assinatura já consta como ativa! 🎉\n\nGostaríamos de saber o que te fez assinar o Kira, e o que ele te ajuda no dia a dia da sua clínica — e com a sua permissão gostaríamos de adicionar esse feedback no nosso site e instagram. 😊`
+      } else if (tab === "winback") {
+        const token = await generateReactivationTokenAction(org.orgId)
+        const link = `https://www.kiraclinic.com.br/reativar/${token}`
+        templateParams = [firstName, link]
+        content = `Olá ${firstName}, nós do Kira estamos sentindo sua falta! 😢\n\nO que falta pra você começar a organizar sua agenda e financeiro tudo em um só lugar?\n\nClica no link abaixo e reative sua conta ganhando mais *7 dias grátis* pra testar novamente — tenho certeza que não vai se arrepender! 🎁\n\n${link}`
+      }
+
       await sendAdminChatTemplateAction(org.phone, org.ownerName, activeTemplateId, {
         content,
         templateUsed: templateName,
+        templateParams,
       })
       setSent(prev => new Set([...prev, org.orgId]))
       onStarted(org.phone, org.ownerName)
@@ -127,6 +162,12 @@ function NewConversationPanel({
     } finally {
       setLoading(null)
     }
+  }
+
+  function resetTab(t: OutreachTab) {
+    setTab(t)
+    setSearch("")
+    setSent(new Set())
   }
 
   return (
@@ -139,9 +180,9 @@ function NewConversationPanel({
       </div>
 
       {/* Abas */}
-      <div className="flex px-3 pt-2 pb-0 gap-1 border-b border-border">
+      <div className="flex flex-wrap px-3 pt-2 pb-0 gap-1 border-b border-border">
         <button
-          onClick={() => { setTab("trial"); setSearch(""); setSent(new Set()) }}
+          onClick={() => resetTab("trial")}
           className={cn(
             "px-3 py-1.5 text-xs font-medium rounded-t-md transition-colors",
             tab === "trial"
@@ -152,7 +193,7 @@ function NewConversationPanel({
           Em trial ({trialOrgs.filter(o => o.phone).length})
         </button>
         <button
-          onClick={() => { setTab("expired"); setSearch(""); setSent(new Set()) }}
+          onClick={() => resetTab("expired")}
           className={cn(
             "px-3 py-1.5 text-xs font-medium rounded-t-md transition-colors",
             tab === "expired"
@@ -162,11 +203,39 @@ function NewConversationPanel({
         >
           Trial expirado ({expiredOrgs.filter(o => o.phone).length})
         </button>
+        <button
+          onClick={() => resetTab("winback")}
+          className={cn(
+            "px-3 py-1.5 text-xs font-medium rounded-t-md transition-colors",
+            tab === "winback"
+              ? "bg-orange-500 text-white"
+              : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          Inativos ({winbackOrgs.filter(o => o.phone).length})
+        </button>
+        <button
+          onClick={() => resetTab("testimonial")}
+          className={cn(
+            "px-3 py-1.5 text-xs font-medium rounded-t-md transition-colors",
+            tab === "testimonial"
+              ? "bg-emerald-600 text-white"
+              : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          Assinantes ({activeSubscribers.filter(o => o.phone).length})
+        </button>
       </div>
 
       {!activeTemplateId && (
         <div className="px-4 py-2.5 bg-amber-50 border-b border-amber-200 text-xs text-amber-700">
           Configure o ID do template <strong>{templateName}</strong> em Config WhatsApp.
+        </div>
+      )}
+
+      {tab === "winback" && activeTemplateId && (
+        <div className="px-4 py-2.5 bg-orange-50 border-b border-orange-200 text-xs text-orange-700">
+          Trial expirado há mais de 1 mês. O link de reativação (+7 dias) é gerado automaticamente ao contatar.
         </div>
       )}
 
@@ -189,7 +258,7 @@ function NewConversationPanel({
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium truncate">{org.ownerName}</p>
               <p className="text-xs text-muted-foreground truncate">{org.orgName} · {formatPhone(org.phone!)}</p>
-              {tab === "expired" && org.trialEndsAt && (
+              {(tab === "expired" || tab === "winback") && org.trialEndsAt && (
                 <p className="text-[10px] text-red-500 mt-0.5">
                   Expirou em {new Date(org.trialEndsAt).toLocaleDateString("pt-BR")}
                 </p>
@@ -197,10 +266,15 @@ function NewConversationPanel({
             </div>
             <Button
               size="sm"
-              variant={sent.has(org.orgId) ? "outline" : tab === "expired" ? "destructive" : "default"}
+              variant={sent.has(org.orgId) ? "outline" : "default"}
               disabled={!!loading || sent.has(org.orgId) || !activeTemplateId}
               onClick={() => handleSendTemplate(org)}
-              className="shrink-0 h-7 text-xs gap-1"
+              className={cn(
+                "shrink-0 h-7 text-xs gap-1",
+                !sent.has(org.orgId) && tab === "expired" && "bg-red-600 hover:bg-red-700 text-white border-0",
+                !sent.has(org.orgId) && tab === "winback" && "bg-orange-500 hover:bg-orange-600 text-white border-0",
+                !sent.has(org.orgId) && tab === "testimonial" && "bg-emerald-600 hover:bg-emerald-700 text-white border-0",
+              )}
             >
               <Sparkles size={11} />
               {sent.has(org.orgId) ? "Enviado" : loading === org.orgId ? "..." : "Contatar"}
@@ -213,6 +287,10 @@ function NewConversationPanel({
               ? "Nenhum resultado."
               : tab === "expired"
               ? "Nenhum trial expirado encontrado."
+              : tab === "winback"
+              ? "Nenhum inativo há mais de 1 mês com telefone cadastrado."
+              : tab === "testimonial"
+              ? "Nenhum assinante ativo com telefone cadastrado."
               : "Nenhum usuário em trial com telefone cadastrado."}
           </p>
         )}
@@ -467,13 +545,19 @@ function ConversationList({
 export function AdminChat({
   trialOutreachTemplateId,
   trialExpiredOutreachTemplateId,
+  testimonialOutreachTemplateId,
+  winbackOutreachTemplateId,
 }: {
   trialOutreachTemplateId: string | null
   trialExpiredOutreachTemplateId: string | null
+  testimonialOutreachTemplateId: string | null
+  winbackOutreachTemplateId: string | null
 }) {
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [trialOrgs, setTrialOrgs] = useState<TrialOrg[]>([])
   const [expiredOrgs, setExpiredOrgs] = useState<TrialOrg[]>([])
+  const [activeSubscribers, setActiveSubscribers] = useState<TrialOrg[]>([])
+  const [winbackOrgs, setWinbackOrgs] = useState<TrialOrg[]>([])
   const [activeConv, setActiveConv] = useState<Conversation | null>(null)
   const [showNew, setShowNew] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -483,10 +567,14 @@ export function AdminChat({
       getAdminChatConversationsAction(true),
       getTrialOrgsForChatAction(),
       getExpiredTrialOrgsForChatAction(),
-    ]).then(([convs, orgs, expired]) => {
+      getActiveSubscribersForChatAction(),
+      getWinbackOrgsForChatAction(),
+    ]).then(([convs, orgs, expired, subscribers, winback]) => {
       setConversations(convs as Conversation[])
       setTrialOrgs(orgs as TrialOrg[])
       setExpiredOrgs(expired as TrialOrg[])
+      setActiveSubscribers(subscribers as TrialOrg[])
+      setWinbackOrgs(winback as TrialOrg[])
       setLoading(false)
     })
 
@@ -539,8 +627,12 @@ export function AdminChat({
           <NewConversationPanel
             trialOrgs={trialOrgs}
             expiredOrgs={expiredOrgs}
+            activeSubscribers={activeSubscribers}
+            winbackOrgs={winbackOrgs}
             trialOutreachTemplateId={trialOutreachTemplateId}
             trialExpiredOutreachTemplateId={trialExpiredOutreachTemplateId}
+            testimonialOutreachTemplateId={testimonialOutreachTemplateId}
+            winbackOutreachTemplateId={winbackOutreachTemplateId}
             onStarted={handleConvStarted}
             onClose={() => setShowNew(false)}
           />

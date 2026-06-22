@@ -5,6 +5,7 @@ import {
   organizations, organizationMembers, users,
   appointments, clients, transactions, clientPhotos,
   adminChatMessages, chatSessions, procedures, packages, anamnesisAnswers,
+  trialReactivationTokens,
 } from "@/db/schema"
 import { eq, count, sum, max, gte, lt, sql, or, and, desc, asc, isNull } from "drizzle-orm"
 import { auth } from "@/lib/auth"
@@ -404,14 +405,15 @@ export async function sendAdminChatTemplateAction(
   phone: string,
   name: string,
   templateId: string,
-  options?: { content?: string; templateUsed?: string }
+  options?: { content?: string; templateUsed?: string; templateParams?: string[] }
 ) {
   await requireAdmin()
 
   const normalizedPhone = normalizePhone(phone)
   const { sendWhatsAppTemplate } = await import("@/lib/whatsapp-client")
   const firstName = name.split(" ")[0]
-  const result = await sendWhatsAppTemplate(normalizedPhone, templateId, [firstName])
+  const params = options?.templateParams ?? [firstName]
+  const result = await sendWhatsAppTemplate(normalizedPhone, templateId, params)
 
   const content = options?.content ?? `Oi ${firstName}, tudo bem? 😊\n\nAqui é o Lucas, do Kira. Vi que você está testando o sistema e queria bater um papo rápido pra saber como está sendo sua experiência.\n\nTem alguma dúvida ou algo que posso te ajudar? Me conta!`
 
@@ -490,6 +492,34 @@ export async function getExpiredTrialOrgsForChatAction() {
       lt(organizations.trialEndsAt, now),
     ))
     .orderBy(desc(organizations.trialEndsAt))
+
+  return rows.map(r => ({
+    ...r,
+    phone: r.ownerPhone ?? r.ownerPhoneFallback ?? null,
+  }))
+}
+
+export async function getActiveSubscribersForChatAction() {
+  await assertAdmin()
+
+  const rows = await db
+    .select({
+      orgId: organizations.id,
+      orgName: organizations.name,
+      ownerName: users.name,
+      ownerPhone: users.whatsapp,
+      ownerPhoneFallback: users.phone,
+      status: organizations.subscriptionStatus,
+      trialEndsAt: organizations.trialEndsAt,
+    })
+    .from(organizations)
+    .innerJoin(organizationMembers, and(
+      eq(organizationMembers.organizationId, organizations.id),
+      eq(organizationMembers.role, "owner")
+    ))
+    .innerJoin(users, eq(users.id, organizationMembers.userId))
+    .where(eq(organizations.subscriptionStatus, "active"))
+    .orderBy(desc(organizations.createdAt))
 
   return rows.map(r => ({
     ...r,
@@ -610,6 +640,8 @@ export type AdminWhatsAppTemplateSetting = {
   postVisitTemplateId: string | null
   trialOutreachTemplateId: string | null
   trialExpiredOutreachTemplateId: string | null
+  testimonialOutreachTemplateId: string | null
+  winbackOutreachTemplateId: string | null
 }
 
 export async function getWhatsAppTemplateSettingsAction(): Promise<AdminWhatsAppTemplateSetting> {
@@ -623,6 +655,8 @@ export async function getWhatsAppTemplateSettingsAction(): Promise<AdminWhatsApp
         ,s.post_visit_template_id as "postVisitTemplateId"
         ,s.trial_outreach_template_id as "trialOutreachTemplateId"
         ,s.trial_expired_outreach_template_id as "trialExpiredOutreachTemplateId"
+        ,s.testimonial_outreach_template_id as "testimonialOutreachTemplateId"
+        ,s.winback_outreach_template_id as "winbackOutreachTemplateId"
       FROM whatsapp_system_template_settings s
       WHERE s.singleton_key = 'default'
       LIMIT 1
@@ -635,6 +669,8 @@ export async function getWhatsAppTemplateSettingsAction(): Promise<AdminWhatsApp
       postVisitTemplateId: one?.postVisitTemplateId ?? null,
       trialOutreachTemplateId: one?.trialOutreachTemplateId ?? null,
       trialExpiredOutreachTemplateId: one?.trialExpiredOutreachTemplateId ?? null,
+      testimonialOutreachTemplateId: one?.testimonialOutreachTemplateId ?? null,
+      winbackOutreachTemplateId: one?.winbackOutreachTemplateId ?? null,
     }
   } catch (err) {
     console.error("[Admin] Falha ao carregar config global de template WhatsApp:", err)
@@ -645,6 +681,8 @@ export async function getWhatsAppTemplateSettingsAction(): Promise<AdminWhatsApp
       postVisitTemplateId: null,
       trialOutreachTemplateId: null,
       trialExpiredOutreachTemplateId: null,
+      testimonialOutreachTemplateId: null,
+      winbackOutreachTemplateId: null,
     }
   }
 }
@@ -656,6 +694,8 @@ export async function saveWhatsAppTemplateSettingAction(input: {
   postVisitTemplateId: string
   trialOutreachTemplateId: string
   trialExpiredOutreachTemplateId: string
+  testimonialOutreachTemplateId: string
+  winbackOutreachTemplateId: string
 }) {
   await requireAdmin()
   const bookingTemplateId = input.bookingSummaryTemplateId.trim() || null
@@ -664,9 +704,11 @@ export async function saveWhatsAppTemplateSettingAction(input: {
   const postVisitTemplateId = input.postVisitTemplateId.trim() || null
   const trialOutreachTemplateId = input.trialOutreachTemplateId.trim() || null
   const trialExpiredOutreachTemplateId = input.trialExpiredOutreachTemplateId.trim() || null
+  const testimonialOutreachTemplateId = input.testimonialOutreachTemplateId.trim() || null
+  const winbackOutreachTemplateId = input.winbackOutreachTemplateId.trim() || null
   await db.execute(sql`
     INSERT INTO whatsapp_system_template_settings (
-      id, singleton_key, booking_summary_template_id, package_summary_template_id, reminder_confirmation_template_id, post_visit_template_id, trial_outreach_template_id, trial_expired_outreach_template_id, created_at, updated_at
+      id, singleton_key, booking_summary_template_id, package_summary_template_id, reminder_confirmation_template_id, post_visit_template_id, trial_outreach_template_id, trial_expired_outreach_template_id, testimonial_outreach_template_id, winback_outreach_template_id, created_at, updated_at
     )
     VALUES (
       ${crypto.randomUUID()},
@@ -677,6 +719,8 @@ export async function saveWhatsAppTemplateSettingAction(input: {
       ${postVisitTemplateId},
       ${trialOutreachTemplateId},
       ${trialExpiredOutreachTemplateId},
+      ${testimonialOutreachTemplateId},
+      ${winbackOutreachTemplateId},
       now(),
       now()
     )
@@ -687,9 +731,92 @@ export async function saveWhatsAppTemplateSettingAction(input: {
       post_visit_template_id = EXCLUDED.post_visit_template_id,
       trial_outreach_template_id = EXCLUDED.trial_outreach_template_id,
       trial_expired_outreach_template_id = EXCLUDED.trial_expired_outreach_template_id,
+      testimonial_outreach_template_id = EXCLUDED.testimonial_outreach_template_id,
+      winback_outreach_template_id = EXCLUDED.winback_outreach_template_id,
       updated_at = now()
   `)
   revalidatePath("/admin")
+}
+
+export async function getWinbackOrgsForChatAction() {
+  await assertAdmin()
+
+  const now = new Date()
+  const oneMonthAgo = new Date(now)
+  oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1)
+
+  const rows = await db
+    .select({
+      orgId: organizations.id,
+      orgName: organizations.name,
+      ownerName: users.name,
+      ownerPhone: users.whatsapp,
+      ownerPhoneFallback: users.phone,
+      status: organizations.subscriptionStatus,
+      trialEndsAt: organizations.trialEndsAt,
+    })
+    .from(organizations)
+    .innerJoin(organizationMembers, and(
+      eq(organizationMembers.organizationId, organizations.id),
+      eq(organizationMembers.role, "owner")
+    ))
+    .innerJoin(users, eq(users.id, organizationMembers.userId))
+    .where(and(
+      eq(organizations.subscriptionStatus, "trialing"),
+      lt(organizations.trialEndsAt, oneMonthAgo),
+    ))
+    .orderBy(desc(organizations.trialEndsAt))
+
+  return rows.map(r => ({
+    ...r,
+    phone: r.ownerPhone ?? r.ownerPhoneFallback ?? null,
+  }))
+}
+
+export async function generateReactivationTokenAction(orgId: string): Promise<string> {
+  await assertAdmin()
+
+  const token = crypto.randomUUID().replace(/-/g, "")
+  const expiresAt = new Date()
+  expiresAt.setDate(expiresAt.getDate() + 30)
+
+  await db.insert(trialReactivationTokens).values({
+    token,
+    organizationId: orgId,
+    expiresAt,
+  })
+
+  return token
+}
+
+export async function reactivateTrialAction(token: string) {
+  const now = new Date()
+
+  const rows = await db
+    .select()
+    .from(trialReactivationTokens)
+    .where(eq(trialReactivationTokens.token, token))
+    .limit(1)
+
+  const record = rows[0]
+  if (!record) return { success: false, error: "Token inválido." }
+  if (record.usedAt) return { success: false, error: "Este link já foi utilizado." }
+  if (record.expiresAt < now) return { success: false, error: "Este link expirou." }
+
+  const newTrialEnd = new Date(now)
+  newTrialEnd.setDate(newTrialEnd.getDate() + 7)
+
+  await db
+    .update(organizations)
+    .set({ subscriptionStatus: "trialing", trialEndsAt: newTrialEnd })
+    .where(eq(organizations.id, record.organizationId))
+
+  await db
+    .update(trialReactivationTokens)
+    .set({ usedAt: now })
+    .where(eq(trialReactivationTokens.token, token))
+
+  return { success: true }
 }
 
 export async function adminChatAction(messages: { role: "user" | "assistant"; content: string }[], metricsContext: string) {
