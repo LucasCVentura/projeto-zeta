@@ -399,6 +399,7 @@ export function AdminDashboard() {
   const [clinicDetail, setClinicDetail] = useState<ClinicDetail | null>(null)
   const [loadingDetail, setLoadingDetail] = useState(false)
   const [clinicSearch, setClinicSearch] = useState("")
+  const [clinicFilter, setClinicFilter] = useState<"active" | "trialing" | "expired" | "all">("active")
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [inboundEmails, setInboundEmails] = useState<InboundEmail[]>([])
   const [expandedEmail, setExpandedEmail] = useState<string | null>(null)
@@ -701,9 +702,15 @@ export function AdminDashboard() {
         })
 
         const search = clinicSearch.trim().toLowerCase()
-        const filteredOrgs = search
-          ? orgs.filter(o => o.name.toLowerCase().includes(search) || o.owner?.name?.toLowerCase().includes(search) || o.owner?.email?.toLowerCase().includes(search))
-          : orgs
+        const filteredOrgs = orgs.filter(o => {
+          const trialEnd = o.trialEndsAt ? new Date(o.trialEndsAt) : null
+          const isExpired = o.subscriptionStatus === "trialing" && trialEnd !== null && trialEnd < now
+          if (search && !o.name.toLowerCase().includes(search) && !o.owner?.name?.toLowerCase().includes(search) && !o.owner?.email?.toLowerCase().includes(search)) return false
+          if (clinicFilter === "active") return o.subscriptionStatus === "active" || o.subscriptionStatus === "lifetime"
+          if (clinicFilter === "trialing") return o.subscriptionStatus === "trialing" && !isExpired
+          if (clinicFilter === "expired") return isExpired
+          return true
+        })
 
         const STATUS_PILLS: { key: string; label: string }[] = [
           { key: "active", label: "Ativas" }, { key: "trialing", label: "Em trial" },
@@ -810,24 +817,54 @@ export function AdminDashboard() {
                   </div>
                 </div>
 
-                {/* Busca + grade */}
+                {/* Busca + filtros + grade */}
                 <div className="space-y-3">
-                  <Input
-                    placeholder="Buscar clínica por nome ou dono..."
-                    value={clinicSearch}
-                    onChange={e => setClinicSearch(e.target.value)}
-                    className="max-w-sm"
-                  />
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Input
+                      placeholder="Buscar clínica por nome ou dono..."
+                      value={clinicSearch}
+                      onChange={e => setClinicSearch(e.target.value)}
+                      className="max-w-xs"
+                    />
+                    <div className="flex gap-1">
+                      {([
+                        { key: "active",   label: `Ativas / Vitalício (${orgs.filter(o => o.subscriptionStatus === "active" || o.subscriptionStatus === "lifetime").length})` },
+                        { key: "trialing", label: `Trial (${orgs.filter(o => { const t = o.trialEndsAt ? new Date(o.trialEndsAt) : null; return o.subscriptionStatus === "trialing" && !(t && t < now) }).length})` },
+                        { key: "expired",  label: `Expirado (${orgs.filter(o => { const t = o.trialEndsAt ? new Date(o.trialEndsAt) : null; return o.subscriptionStatus === "trialing" && t !== null && t < now }).length})` },
+                        { key: "all",      label: `Todas (${orgs.length})` },
+                      ] as const).map(f => (
+                        <button
+                          key={f.key}
+                          onClick={() => setClinicFilter(f.key)}
+                          className={cn(
+                            "px-3 py-1.5 rounded-lg text-xs font-medium transition-colors",
+                            clinicFilter === f.key
+                              ? f.key === "expired" ? "bg-destructive text-white" : "bg-primary text-primary-foreground"
+                              : "bg-muted text-muted-foreground hover:text-foreground"
+                          )}
+                        >
+                          {f.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                    {filteredOrgs.length === 0 && (
+                      <p className="col-span-3 py-10 text-center text-sm text-muted-foreground">Nenhuma clínica neste filtro.</p>
+                    )}
                     {filteredOrgs.map((org) => {
                       const initials = org.name.split(" ").slice(0, 2).map(w => w[0]).join("").toUpperCase()
                       const trialEnd = org.trialEndsAt ? new Date(org.trialEndsAt) : null
                       const trialExpired = org.subscriptionStatus === "trialing" && trialEnd !== null && trialEnd < now
-                      const trialDaysLeft = trialEnd && !trialExpired
+                      const trialDaysLeft = org.subscriptionStatus === "trialing" && trialEnd && !trialExpired
                         ? Math.ceil((trialEnd.getTime() - now.getTime()) / 86400000)
                         : null
                       const trialDaysAgo = trialExpired && trialEnd
                         ? Math.floor((now.getTime() - trialEnd.getTime()) / 86400000)
+                        : null
+                      const isActiveOrLifetime = org.subscriptionStatus === "active" || org.subscriptionStatus === "lifetime"
+                      const daysAsClient = isActiveOrLifetime
+                        ? Math.floor((now.getTime() - new Date(org.createdAt).getTime()) / 86400000)
                         : null
 
                       return (
@@ -857,6 +894,16 @@ export function AdminDashboard() {
                               </div>
                               <p className="text-xs text-muted-foreground truncate mt-0.5">{org.owner?.name}</p>
                             </div>
+                            {daysAsClient !== null && (
+                              <div className="shrink-0 text-center rounded-lg px-2 py-1 bg-emerald-50 dark:bg-emerald-900/20">
+                                <p className="text-base font-bold tabular-nums leading-none text-emerald-600 dark:text-emerald-400">
+                                  {daysAsClient}
+                                </p>
+                                <p className="text-[9px] font-medium text-emerald-500">
+                                  {daysAsClient === 1 ? "dia" : "dias"}
+                                </p>
+                              </div>
+                            )}
                             {trialDaysLeft !== null && (
                               <div className={cn(
                                 "shrink-0 text-center rounded-lg px-2 py-1",
