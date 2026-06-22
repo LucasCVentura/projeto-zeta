@@ -177,8 +177,8 @@ export function PackagesView({ packages: initialPackages, procedures }: Props) {
                 <Users size={15} className="text-primary" />
               </div>
               <div>
-                <p className="text-sm font-medium">Vincule a uma cliente</p>
-                <p className="text-xs text-muted-foreground">Na ficha da cliente, aba Pacotes, associe e registre o pagamento.</p>
+                <p className="text-sm font-medium">Vincule a um cliente</p>
+                <p className="text-xs text-muted-foreground">Na ficha do cliente, aba Pacotes, associe e registre o pagamento.</p>
               </div>
             </div>
             <div className="flex gap-3">
@@ -187,7 +187,7 @@ export function PackagesView({ packages: initialPackages, procedures }: Props) {
               </div>
               <div>
                 <p className="text-sm font-medium">Agende as sessões</p>
-                <p className="text-xs text-muted-foreground">Ainda na ficha da cliente, agende cada sessão do pacote diretamente.</p>
+                <p className="text-xs text-muted-foreground">Ainda na ficha do cliente, agende cada sessão do pacote diretamente.</p>
               </div>
             </div>
           </div>

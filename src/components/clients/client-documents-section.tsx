@@ -154,7 +154,7 @@ export function ClientDocumentsSection({ clientId, documents: initialDocs }: Pro
       <ConfirmDialog
         open={!!pendingDeleteId}
         title="Remover documento"
-        description="Esse documento será removido da ficha da cliente."
+        description="Esse documento será removido da ficha do cliente."
         confirmLabel="Remover"
         loading={!!pendingDeleteId && deletingId === pendingDeleteId}
         onCancel={() => setPendingDeleteId(null)}

@@ -18,7 +18,7 @@ export async function sendWelcomeEmail(to: string, name: string) {
   await resend.emails.send({
     from: FROM_EMAIL,
     to,
-    subject: "Bem-vinda ao Kira! 🌿",
+    subject: "Bem-vindo(a) ao Kira! 🌿",
     react: createElement(WelcomeEmail, { name, appUrl: APP_URL }),
   })
 }
@@ -60,7 +60,7 @@ export async function sendSubscriptionActiveEmail(to: string, name: string) {
   await resend.emails.send({
     from: FROM_EMAIL,
     to,
-    subject: "Assinatura confirmada! Bem-vinda ao Kira Pro 🎉",
+    subject: "Assinatura confirmada! Bem-vindo(a) ao Kira Pro 🎉",
     react: createElement(SubscriptionActiveEmail, { name, appUrl: APP_URL }),
   })
 }
@@ -137,7 +137,7 @@ export async function sendInviteEmail(to: string, orgName: string, token: string
   await resend.emails.send({
     from: FROM_EMAIL,
     to,
-    subject: `Você foi convidada para a equipe ${orgName} no Kira`,
+    subject: `Você foi convidado(a) para a equipe ${orgName} no Kira`,
     react: createElement(InviteEmail, { orgName, role, inviteUrl }),
   })
 }

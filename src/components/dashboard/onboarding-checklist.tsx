@@ -82,7 +82,7 @@ export function OnboardingChecklist({
     {
       id: "client",
       label: "Cadastre seu primeiro cliente",
-      description: "Comece com uma cliente real para sentir o fluxo completo.",
+      description: "Comece com um cliente real para sentir o fluxo completo.",
       href: "/clientes/novo",
       icon: <UserPlus size={18} />,
       done: hasClient,
@@ -102,7 +102,7 @@ export function OnboardingChecklist({
     {
       id: "photo",
       label: "Registre fotos de evolução",
-      description: "Suba fotos na ficha da cliente ou durante a consulta.",
+      description: "Suba fotos na ficha do cliente ou durante a consulta.",
       href: firstClientId ? `/clientes/${firstClientId}/fotos` : "/clientes/novo",
       icon: <Camera size={18} />,
       done: hasPhoto,
@@ -166,7 +166,7 @@ export function OnboardingChecklist({
                 <div className="space-y-1">
                   <h2 className="font-heading text-xl font-semibold">Monte sua primeira rotina no Kira</h2>
                   <p className="text-sm leading-6 text-muted-foreground">
-                    Em poucos minutos você deixa o sistema pronto para atender uma cliente real, registrar evolução e acompanhar sua agenda sem depender de mensagens soltas.
+                    Em poucos minutos você deixa o sistema pronto para atender um cliente real, registrar evolução e acompanhar sua agenda sem depender de mensagens soltas.
                   </p>
                 </div>
               </div>
@@ -197,7 +197,7 @@ export function OnboardingChecklist({
               <div className="grid gap-2 text-xs text-muted-foreground sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
                 <div className="rounded-lg border border-border bg-muted/20 p-3">
                   <p className="font-medium text-foreground">Objetivo</p>
-                  <p className="mt-1">Deixar uma cliente pronta para o primeiro atendimento.</p>
+                  <p className="mt-1">Deixar um cliente pronto para o primeiro atendimento.</p>
                 </div>
                 <div className="rounded-lg border border-border bg-muted/20 p-3">
                   <p className="font-medium text-foreground">Melhor teste</p>

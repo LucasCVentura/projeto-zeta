@@ -76,7 +76,7 @@ export default async function ConvitePage({ params }: { params: Promise<{ token:
         <div className="rounded-2xl border border-border bg-card p-6 space-y-5 shadow-sm">
           <div className="space-y-1 text-center">
             <h1 className="font-heading text-xl font-semibold">
-              {hasPassword ? "Você foi convidada" : `Olá, ${inviteeName.split(" ")[0]}!`}
+              {hasPassword ? "Você foi convidado(a)" : `Olá, ${inviteeName.split(" ")[0]}!`}
             </h1>
             <p className="text-sm text-muted-foreground">
               {hasPassword

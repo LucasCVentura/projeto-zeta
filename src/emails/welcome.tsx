@@ -3,8 +3,8 @@ import { EmailBase, EmailHeading, EmailText, EmailButton, EmailDivider } from ".
 
 export function WelcomeEmail({ name, appUrl }: { name: string; appUrl: string }) {
   return (
-    <EmailBase previewText={`Bem-vinda ao Kira, ${name}! Seu trial de 7 dias começa agora.`}>
-      <EmailHeading>Bem-vinda ao Kira, {name.split(" ")[0]}! 🌿</EmailHeading>
+    <EmailBase previewText={`Bem-vindo(a) ao Kira, ${name}! Seu trial de 7 dias começa agora.`}>
+      <EmailHeading>Bem-vindo(a) ao Kira, {name.split(" ")[0]}! 🌿</EmailHeading>
 
       <EmailText>
         Sua conta foi criada com sucesso. Você tem <strong>7 dias grátis</strong> para explorar tudo que o Kira oferece — sem cartão de crédito.

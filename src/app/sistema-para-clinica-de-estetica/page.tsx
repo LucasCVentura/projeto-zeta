@@ -45,7 +45,7 @@ const content: SeoPageContent = {
     },
     {
       title: "Experiência mais profissional",
-      description: "Organização interna também reflete na percepção da cliente durante o atendimento. Acessar o histórico dela rapidamente, ter as fotos organizadas e registrar o procedimento na hora passa confiança.",
+      description: "Organização interna também reflete na percepção do cliente durante o atendimento. Acessar o histórico rapidamente, ter as fotos organizadas e registrar o procedimento na hora passa confiança.",
     },
   ],
   features: [
@@ -66,7 +66,7 @@ const content: SeoPageContent = {
     },
     {
       title: "Acompanhe cada cliente com contexto",
-      description: "Antes de cada sessão, acesse o histórico de procedimentos, fotos de evolução e observações anteriores. A cliente sente que você se lembra dela — porque você tem tudo registrado.",
+      description: "Antes de cada sessão, acesse o histórico de procedimentos, fotos de evolução e observações anteriores. O cliente percebe que você se lembra do que foi feito — porque você tem tudo registrado.",
     },
     {
       title: "Tenha visibilidade do negócio",
@@ -75,8 +75,8 @@ const content: SeoPageContent = {
   ],
   faqs: [
     {
-      question: "O sistema para clínica de estética do Kira serve para profissional autônoma também?",
-      answer: "Sim. O Kira foi pensado tanto para profissionais autônomas quanto para clínicas com mais de uma profissional. A versão individual organiza agenda, clientes, prontuários e financeiro de uma única profissional. Para clínicas com equipe, é possível gerenciar múltiplos profissionais e ter controle separado por atendente.",
+      question: "O sistema para clínica de estética do Kira serve para profissional autônomo também?",
+      answer: "Sim. O Kira foi pensado tanto para profissionais autônomos quanto para clínicas com mais de um profissional. A versão individual organiza agenda, clientes, prontuários e financeiro de um único profissional. Para clínicas com equipe, é possível gerenciar múltiplos profissionais e ter controle separado por atendente.",
     },
     {
       question: "Preciso instalar algum aplicativo ou programa?",
@@ -84,7 +84,7 @@ const content: SeoPageContent = {
     },
     {
       question: "O Kira envia confirmação de agendamento pelo WhatsApp?",
-      answer: "Sim. O sistema envia lembretes e confirmações automáticas via WhatsApp para as clientes. Isso reduz faltas e economiza o tempo gasto em mensagens manuais. A profissional configura os horários de envio e o sistema cuida do restante.",
+      answer: "Sim. O sistema envia lembretes e confirmações automáticas via WhatsApp para os clientes. Isso reduz faltas e economiza o tempo gasto em mensagens manuais. O profissional configura os horários de envio e o sistema cuida do restante.",
     },
     {
       question: "Consigo controlar pacotes de sessões no Kira?",

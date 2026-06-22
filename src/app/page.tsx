@@ -90,7 +90,7 @@ const solutionLinks = [
   {
     href: "/sistema-para-clinica-de-estetica",
     title: "Para clínicas de estética",
-    description: "Tenha uma visão mais clara dos atendimentos, equipe, estoque, receita e histórico das clientes.",
+    description: "Tenha uma visão mais clara dos atendimentos, equipe, estoque, receita e histórico dos clientes.",
   },
   {
     href: "/prontuario-estetico-digital",
@@ -130,7 +130,7 @@ const testimonials = [
 const faqs = [
   {
     question: "O Kira serve só para biomédica esteta?",
-    answer: "Não. O foco principal do Kira é estética, biomédicas estetas e clínicas de estética, mas profissionais da beleza como designers de cílios, manicures, nail designers e autônomas também podem usar para organizar agenda, clientes, fotos, pacotes e financeiro.",
+    answer: "Não. O foco principal do Kira é estética, biomédicos estetas e clínicas de estética, mas profissionais da beleza como designers de cílios, manicures, nail designers e autônomos também podem usar para organizar agenda, clientes, fotos, pacotes e financeiro.",
   },
   {
     question: "Preciso de cartão para testar?",
@@ -464,7 +464,7 @@ export default function LandingPage() {
               </h2>
             </div>
             <p className="text-muted-foreground leading-relaxed lg:max-w-xl">
-              Depoimentos reais das primeiras profissionais usando o Kira para organizar atendimentos, evolução de clientes e rotina da clínica.
+              Depoimentos reais dos primeiros profissionais usando o Kira para organizar atendimentos, evolução de clientes e rotina da clínica.
             </p>
           </div>
 
@@ -575,7 +575,7 @@ export default function LandingPage() {
           <div className="absolute -bottom-12 -right-12 h-48 w-48 rounded-full bg-white/5" />
           <div className="relative z-10 space-y-5">
             <h2 className="font-heading text-3xl font-bold text-primary-foreground sm:text-4xl">
-              Pronta para transformar<br />sua clínica?
+              Pronto para transformar<br />sua clínica?
             </h2>
             <p className="mx-auto max-w-sm text-primary-foreground/70">
               Junte-se a profissionais que já gerenciam atendimentos, clientes e rotina com mais organização e menos estresse.

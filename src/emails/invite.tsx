@@ -19,11 +19,11 @@ export function InviteEmail({
   inviteUrl: string
 }) {
   return (
-    <EmailBase previewText={`Você foi convidada para a equipe ${orgName} no Kira`}>
+    <EmailBase previewText={`Você foi convidado(a) para a equipe ${orgName} no Kira`}>
       <EmailHeading>Convite para a equipe 🌿</EmailHeading>
 
       <EmailText>
-        Você foi convidada para entrar na clínica <strong>{orgName}</strong> no Kira como <strong>{roleLabels[role]}</strong>.
+        Você foi convidado(a) para entrar na clínica <strong>{orgName}</strong> no Kira como <strong>{roleLabels[role]}</strong>.
       </EmailText>
 
       <EmailText>

@@ -3,11 +3,11 @@ import { EmailBase, EmailHeading, EmailText, EmailButton, EmailDivider } from ".
 
 export function SubscriptionActiveEmail({ name, appUrl }: { name: string; appUrl: string }) {
   return (
-    <EmailBase previewText="Assinatura confirmada! Bem-vinda ao Kira Pro 🎉">
+    <EmailBase previewText="Assinatura confirmada! Bem-vindo(a) ao Kira Pro 🎉">
       <EmailHeading>Assinatura confirmada! 🎉</EmailHeading>
 
       <EmailText>
-        Oi, {name.split(" ")[0]}! Sua assinatura do <strong>Kira Pro</strong> está ativa. Obrigada por confiar no Kira para gerenciar sua clínica.
+        Oi, {name.split(" ")[0]}! Sua assinatura do <strong>Kira Pro</strong> está ativa. Obrigado por confiar no Kira para gerenciar sua clínica.
       </EmailText>
 
       <EmailText>

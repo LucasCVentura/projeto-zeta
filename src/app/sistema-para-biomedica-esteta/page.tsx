@@ -27,21 +27,21 @@ const content: SeoPageContent = {
   eyebrow: "Sistema para biomédica esteta",
   title: "Organize sua rotina de atendimentos, evolução e gestão em um só lugar",
   description: "O Kira ajuda biomédicas estetas a centralizar agenda, clientes, prontuários, fotos de antes e depois, financeiro e pacotes sem depender de WhatsApp, galeria e planilhas soltas. Tudo que importa na rotina da biomédica esteta, em um sistema pensado para essa realidade.",
-  heroCardTitle: "O que o Kira organiza para biomédicas estetas",
+  heroCardTitle: "O que o Kira organiza para biomédicos estetas",
   pains: [
     "Fotos de evolução ficam espalhadas na galeria e difíceis de encontrar depois.",
-    "Histórico da cliente acaba dividido entre WhatsApp, ficha, caderno e memória.",
+    "Histórico do cliente acaba dividido entre WhatsApp, ficha, caderno e memória.",
     "Pacotes de sessões exigem controle manual para saber o que já foi realizado.",
     "Receita, retornos e atendimentos do dia ficam sem uma visão clara.",
   ],
   benefits: [
     {
       title: "Evolução mais fácil de acompanhar",
-      description: "Guarde fotos de antes e depois diretamente no histórico da cliente, junto ao procedimento realizado. Comparar resultados entre sessões, apresentar evolução para a cliente e manter registros organizados fica muito mais simples do que buscar na galeria do celular.",
+      description: "Guarde fotos de antes e depois diretamente no histórico do cliente, junto ao procedimento realizado. Comparar resultados entre sessões, apresentar evolução e manter registros organizados fica muito mais simples do que buscar na galeria do celular.",
     },
     {
       title: "Agenda conectada à operação",
-      description: "Veja seus horários, status dos atendimentos e próximas clientes sem trocar de ferramenta. O Kira envia confirmações automáticas via WhatsApp e permite acessar o prontuário da cliente direto da agenda — tudo no mesmo lugar.",
+      description: "Veja seus horários, status dos atendimentos e próximos agendamentos sem trocar de ferramenta. O Kira envia confirmações automáticas via WhatsApp e permite acessar o prontuário do cliente direto da agenda — tudo no mesmo lugar.",
     },
     {
       title: "Gestão sem planilha",
@@ -58,15 +58,15 @@ const content: SeoPageContent = {
     "Estoque e controle de insumos",
   ],
   workflowTitle: "Do primeiro contato ao acompanhamento da evolução",
-  workflowDescription: "O Kira foi pensado para a jornada da biomédica esteta: registrar a cliente, acompanhar procedimentos ao longo do tempo e ter as informações certas sempre à mão, sem depender de memória ou mensagens antigas.",
+  workflowDescription: "O Kira foi pensado para a jornada do profissional de estética: registrar o cliente, acompanhar procedimentos ao longo do tempo e ter as informações certas sempre à mão, sem depender de memória ou mensagens antigas.",
   workflow: [
     {
       title: "Antes do atendimento",
-      description: "Consulte agenda, histórico da cliente e procedimento previsto antes dela chegar. Acesse as fotos da última sessão, veja as observações do atendimento anterior e já chegue preparada para dar continuidade ao tratamento.",
+      description: "Consulte agenda, histórico do cliente e procedimento previsto antes de cada atendimento. Acesse as fotos da última sessão, veja as observações anteriores e chegue preparado(a) para dar continuidade ao tratamento.",
     },
     {
       title: "Durante e após a sessão",
-      description: "Registre fotos, observações e informações importantes para comparar resultados com mais contexto. O Kira tem área dedicada para evolução fotográfica — as imagens ficam vinculadas à cliente e ao procedimento, não perdidas na galeria.",
+      description: "Registre fotos, observações e informações importantes para comparar resultados com mais contexto. O Kira tem área dedicada para evolução fotográfica — as imagens ficam vinculadas ao cliente e ao procedimento, não perdidas na galeria.",
     },
     {
       title: "Acompanhamento contínuo",
@@ -75,12 +75,12 @@ const content: SeoPageContent = {
   ],
   faqs: [
     {
-      question: "O Kira é específico para biomédica esteta ou serve para outras profissionais?",
+      question: "O Kira é específico para biomédico esteta ou serve para outros profissionais?",
       answer: "O Kira foi desenvolvido com foco nas necessidades de profissionais da estética e biomédicas estetas, mas também é usado por esteticistas, designers de cílios e outros profissionais da beleza. A estrutura de prontuários, fotos de evolução e controle de pacotes atende bem quem trabalha com tratamentos que evoluem ao longo de múltiplas sessões.",
     },
     {
       question: "O Kira substitui meu controle por WhatsApp?",
-      answer: "Ele não substitui sua conversa com a cliente, mas centraliza as informações importantes para você não depender do histórico do WhatsApp para se organizar. Agenda, histórico, fotos e financeiro ficam no Kira — o WhatsApp fica para a relação com a cliente, não para gestão.",
+      answer: "Ele não substitui sua conversa com o cliente, mas centraliza as informações importantes para você não depender do histórico do WhatsApp para se organizar. Agenda, histórico, fotos e financeiro ficam no Kira — o WhatsApp fica para a relação com o cliente, não para gestão.",
     },
     {
       question: "Consigo registrar fotos de antes e depois diretamente no sistema?",
@@ -92,7 +92,7 @@ const content: SeoPageContent = {
     },
     {
       question: "A IA do Kira ajuda no atendimento?",
-      answer: "Sim. O Kira usa IA para análise de fotos de evolução, comparação visual entre sessões e sugestão de procedimentos a partir das fotos. É uma ferramenta de apoio — ela complementa a análise da profissional, não substitui o diagnóstico clínico.",
+      answer: "Sim. O Kira usa IA para análise de fotos de evolução, comparação visual entre sessões e sugestão de procedimentos a partir das fotos. É uma ferramenta de apoio — complementa a análise do profissional, não substitui o diagnóstico clínico.",
     },
     {
       question: "O Kira funciona pelo celular?",

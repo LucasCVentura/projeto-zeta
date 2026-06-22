@@ -25,19 +25,19 @@ export const metadata: Metadata = {
 
 const content: SeoPageContent = {
   eyebrow: "Prontuário estético digital",
-  title: "Histórico da cliente, fotos e evolução organizados no mesmo lugar",
-  description: "O Kira centraliza ficha da cliente, procedimentos realizados, fotos de antes e depois e observações por sessão em um prontuário estético digital — acessível pelo celular, sem depender de caderno, galeria ou WhatsApp para se lembrar do que foi feito.",
+  title: "Histórico do cliente, fotos e evolução organizados no mesmo lugar",
+  description: "O Kira centraliza ficha do cliente, procedimentos realizados, fotos de antes e depois e observações por sessão em um prontuário estético digital — acessível pelo celular, sem depender de caderno, galeria ou WhatsApp para se lembrar do que foi feito.",
   heroCardTitle: "O que o prontuário do Kira organiza",
   pains: [
-    "A ficha da cliente fica incompleta porque parte do histórico está no WhatsApp.",
-    "Fotos de antes e depois se misturam com imagens pessoais ou de outras clientes.",
+    "A ficha do cliente fica incompleta porque parte do histórico está no WhatsApp.",
+    "Fotos de antes e depois se misturam com imagens pessoais ou de outros clientes.",
     "Depois de semanas sem atender, retomar o contexto do tratamento exige esforço.",
     "A evolução do resultado perde valor quando não tem registro organizado para mostrar.",
   ],
   benefits: [
     {
       title: "Prontuário completo e por cliente",
-      description: "Cadastre dados da cliente, informações de saúde relevantes, procedimentos realizados e observações de cada sessão. Tudo vinculado à cliente certa — não misturado com anotações de outras pessoas ou perdido no histórico de mensagens.",
+      description: "Cadastre dados do cliente, informações de saúde relevantes, procedimentos realizados e observações de cada sessão. Tudo vinculado ao cliente certo — não misturado com anotações de outras pessoas ou perdido no histórico de mensagens.",
     },
     {
       title: "Fotos de evolução com contexto",
@@ -45,7 +45,7 @@ const content: SeoPageContent = {
     },
     {
       title: "Continuidade real no atendimento",
-      description: "Antes de cada sessão, consulte o que foi feito, as fotos da última visita e as observações relevantes. Essa contexto melhora a qualidade do atendimento e transmite profissionalismo para a cliente — ela percebe que você se lembra dela.",
+      description: "Antes de cada sessão, consulte o que foi feito, as fotos da última visita e as observações relevantes. Esse contexto melhora a qualidade do atendimento e transmite profissionalismo — o cliente percebe que você se lembra do que foi feito.",
     },
   ],
   features: [
@@ -57,16 +57,16 @@ const content: SeoPageContent = {
     "Agenda conectada ao prontuário",
     "Acesso pelo celular ou computador",
   ],
-  workflowTitle: "Um prontuário que acompanha a cliente ao longo do tempo",
-  workflowDescription: "O prontuário estético digital do Kira foi pensado para a realidade de quem atende a mesma cliente em múltiplas sessões: registrar, acompanhar evolução e ter as informações certas antes de cada atendimento.",
+  workflowTitle: "Um prontuário que acompanha o cliente ao longo do tempo",
+  workflowDescription: "O prontuário estético digital do Kira foi pensado para a realidade de quem atende o mesmo cliente em múltiplas sessões: registrar, acompanhar evolução e ter as informações certas antes de cada atendimento.",
   workflow: [
     {
       title: "Cadastro e primeira ficha",
-      description: "Registre os dados da cliente, informações de saúde relevantes, objetivos e procedimentos de interesse. A ficha fica salva no sistema e pode ser complementada a cada atendimento, construindo um histórico real ao longo do tempo.",
+      description: "Registre os dados do cliente, informações de saúde relevantes, objetivos e procedimentos de interesse. A ficha fica salva no sistema e pode ser complementada a cada atendimento, construindo um histórico real ao longo do tempo.",
     },
     {
       title: "Registro de cada sessão",
-      description: "Após o atendimento, adicione fotos, observações, procedimento realizado e qualquer informação relevante para o próximo retorno. O registro fica vinculado àquela sessão — não ao dia ou ao profissional, mas à evolução daquela cliente.",
+      description: "Após o atendimento, adicione fotos, observações, procedimento realizado e qualquer informação relevante para o próximo retorno. O registro fica vinculado àquela sessão — não ao dia ou ao profissional, mas à evolução daquele cliente.",
     },
     {
       title: "Consulta antes do próximo retorno",
@@ -76,7 +76,7 @@ const content: SeoPageContent = {
   faqs: [
     {
       question: "O prontuário estético digital do Kira é diferente de uma ficha de papel?",
-      answer: "Sim, em vários aspectos. A ficha de papel guarda texto, mas não fotos, não histórico cronológico e não se conecta com a agenda. O prontuário digital do Kira centraliza dados da cliente, procedimentos realizados, fotos de evolução e observações por sessão — tudo acessível pelo celular antes de qualquer atendimento, sem precisar procurar uma ficha física.",
+      answer: "Sim, em vários aspectos. A ficha de papel guarda texto, mas não fotos, não histórico cronológico e não se conecta com a agenda. O prontuário digital do Kira centraliza dados do cliente, procedimentos realizados, fotos de evolução e observações por sessão — tudo acessível pelo celular antes de qualquer atendimento, sem precisar procurar uma ficha física.",
     },
     {
       question: "Posso guardar fotos de antes e depois no prontuário?",
@@ -84,7 +84,7 @@ const content: SeoPageContent = {
     },
     {
       question: "O prontuário fica acessível durante o atendimento?",
-      answer: "Sim. O Kira é responsivo e funciona no navegador do celular. Durante ou antes do atendimento, você acessa o prontuário da cliente diretamente pela agenda — sem precisar abrir outro aplicativo ou procurar a ficha em outro lugar.",
+      answer: "Sim. O Kira é responsivo e funciona no navegador do celular. Durante ou antes do atendimento, você acessa o prontuário do cliente diretamente pela agenda — sem precisar abrir outro aplicativo ou procurar a ficha em outro lugar.",
     },
     {
       question: "Consigo registrar diferentes tipos de procedimentos no mesmo prontuário?",

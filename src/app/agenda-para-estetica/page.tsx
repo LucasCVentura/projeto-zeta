@@ -26,7 +26,7 @@ export const metadata: Metadata = {
 const content: SeoPageContent = {
   eyebrow: "Agenda para estética",
   title: "Organize seus atendimentos sem depender só do WhatsApp",
-  description: "A agenda do Kira ajuda profissionais da estética a visualizar horários, status dos atendimentos e próximas clientes em um só lugar — com confirmações automáticas por WhatsApp, acesso ao histórico da cliente e conexão com financeiro e pacotes.",
+  description: "A agenda do Kira ajuda profissionais da estética a visualizar horários, status dos atendimentos e próximos agendamentos em um só lugar — com confirmações automáticas por WhatsApp, acesso ao histórico do cliente e conexão com financeiro e pacotes.",
   heroCardTitle: "O que a agenda do Kira organiza",
   pains: [
     "Horários ficam espalhados entre WhatsApp, agenda do celular e caderno.",
@@ -41,11 +41,11 @@ const content: SeoPageContent = {
     },
     {
       title: "Confirmações automáticas por WhatsApp",
-      description: "O Kira envia lembretes e confirmações automáticas via WhatsApp para suas clientes. Você configura os horários de envio e o sistema cuida do restante — reduzindo faltas e economizando o tempo gasto em mensagens manuais de confirmação.",
+      description: "O Kira envia lembretes e confirmações automáticas via WhatsApp para seus clientes. Você configura os horários de envio e o sistema cuida do restante — reduzindo faltas e economizando o tempo gasto em mensagens manuais de confirmação.",
     },
     {
       title: "Agenda conectada à operação",
-      description: "Da agenda, acesse o prontuário da cliente, veja o pacote em andamento e registre o atendimento no financeiro. Tudo no mesmo sistema — sem alternar entre ferramentas para ter o contexto completo antes de cada sessão.",
+      description: "Da agenda, acesse o prontuário do cliente, veja o pacote em andamento e registre o atendimento no financeiro. Tudo no mesmo sistema — sem alternar entre ferramentas para ter o contexto completo antes de cada sessão.",
     },
   ],
   features: [
@@ -58,15 +58,15 @@ const content: SeoPageContent = {
     "Acesso pelo celular ou computador",
   ],
   workflowTitle: "Uma agenda conectada ao restante da sua rotina",
-  workflowDescription: "O Kira foi pensado para a rotina de quem atende várias clientes por dia: visualizar o dia, acessar contexto rápido antes de cada atendimento e reduzir o tempo gasto em tarefas administrativas.",
+  workflowDescription: "O Kira foi pensado para a rotina de quem atende vários clientes por dia: visualizar o dia, acessar contexto rápido antes de cada atendimento e reduzir o tempo gasto em tarefas administrativas.",
   workflow: [
     {
-      title: "Comece o dia preparada",
-      description: "Acesse a agenda do dia e veja quem está confirmada, quem ainda não respondeu e qual procedimento está previsto para cada cliente. Lembretes automáticos já foram enviados pelo Kira — você começa o dia sem precisar enviar mensagem para ninguém.",
+      title: "Comece o dia preparado(a)",
+      description: "Acesse a agenda do dia e veja quem confirmou, quem ainda não respondeu e qual procedimento está previsto para cada atendimento. Lembretes automáticos já foram enviados pelo Kira — você começa o dia sem precisar enviar mensagem para ninguém.",
     },
     {
       title: "Acesse o contexto antes de cada sessão",
-      description: "Clique na cliente na agenda e acesse direto o histórico de procedimentos, fotos de evolução e observações anteriores. Você chega preparada para o atendimento e a cliente percebe que você se lembra do que foi feito nas sessões anteriores.",
+      description: "Clique no agendamento e acesse direto o histórico de procedimentos, fotos de evolução e observações anteriores. Você chega preparado(a) para o atendimento e o cliente percebe que você se lembra do que foi feito nas sessões anteriores.",
     },
     {
       title: "Registre e feche o atendimento",
@@ -76,11 +76,11 @@ const content: SeoPageContent = {
   faqs: [
     {
       question: "A agenda do Kira envia confirmação de agendamento pelo WhatsApp?",
-      answer: "Sim. O Kira envia lembretes e confirmações automáticas via WhatsApp para as clientes. Você configura os horários de envio — por exemplo, 24 horas antes do atendimento — e o sistema cuida do restante. Isso reduz faltas e elimina o tempo gasto enviando mensagens manuais de confirmação.",
+      answer: "Sim. O Kira envia lembretes e confirmações automáticas via WhatsApp para os clientes. Você configura os horários de envio — por exemplo, 24 horas antes do atendimento — e o sistema cuida do restante. Isso reduz faltas e elimina o tempo gasto enviando mensagens manuais de confirmação.",
     },
     {
       question: "O Kira é só uma agenda ou tem mais funcionalidades?",
-      answer: "A agenda é uma parte do sistema. O Kira também organiza clientes, prontuários com fotos de evolução, controle financeiro, estoque e pacotes de sessões. O diferencial é que tudo está conectado: da agenda você acessa o histórico da cliente, o pacote em andamento e registra o atendimento no financeiro.",
+      answer: "A agenda é uma parte do sistema. O Kira também organiza clientes, prontuários com fotos de evolução, controle financeiro, estoque e pacotes de sessões. O diferencial é que tudo está conectado: da agenda você acessa o histórico do cliente, o pacote em andamento e registra o atendimento no financeiro.",
     },
     {
       question: "Consigo usar a agenda do Kira pelo celular durante os atendimentos?",
@@ -88,15 +88,15 @@ const content: SeoPageContent = {
     },
     {
       question: "Posso controlar retornos e reagendamentos pela agenda?",
-      answer: "Sim. O Kira permite visualizar clientes que precisam de retorno, registrar reagendamentos e manter o histórico atualizado. Se uma cliente faltou ou precisa remarcar, isso fica registrado no sistema — não apenas como uma mensagem de WhatsApp sem rastreamento.",
+      answer: "Sim. O Kira permite visualizar clientes que precisam de retorno, registrar reagendamentos e manter o histórico atualizado. Se um cliente faltou ou precisa remarcar, isso fica registrado no sistema — não apenas como uma mensagem de WhatsApp sem rastreamento.",
     },
     {
-      question: "A agenda do Kira funciona para profissionais autônomas e para clínicas com equipe?",
-      answer: "Sim. Para profissionais autônomas, a agenda organiza a rotina individual com todas as clientes. Para clínicas com equipe, é possível gerenciar múltiplos profissionais com agendas separadas e controle por atendente. O sistema escala conforme a operação cresce.",
+      question: "A agenda do Kira funciona para profissionais autônomos e para clínicas com equipe?",
+      answer: "Sim. Para profissionais autônomos, a agenda organiza a rotina individual com todos os clientes. Para clínicas com equipe, é possível gerenciar múltiplos profissionais com agendas separadas e controle por atendente. O sistema escala conforme a operação cresce.",
     },
     {
       question: "Consigo vincular pacotes de sessões ao agendamento?",
-      answer: "Sim. Quando você agenda um atendimento para uma cliente que tem pacote em aberto, o Kira mostra o saldo disponível. Ao registrar o atendimento, uma sessão é descontada automaticamente do pacote — sem precisar fazer esse controle em planilha separada.",
+      answer: "Sim. Quando você agenda um atendimento para um cliente que tem pacote em aberto, o Kira mostra o saldo disponível. Ao registrar o atendimento, uma sessão é descontada automaticamente do pacote — sem precisar fazer esse controle em planilha separada.",
     },
     {
       question: "Preciso de cartão para testar?",
