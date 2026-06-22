@@ -118,6 +118,13 @@ const testimonials = [
     credential: "CRBM-RJ 07488",
     initials: "NF",
   },
+  {
+    quote: "De forma geral, o Kira tem sido uma ferramenta importante para auxiliar na organização da clínica, principalmente no agendamento, controle de pacientes e gestão dos atendimentos. A interface facilita bastante a rotina do dia a dia, otimizando processos que antes eram feitos manualmente.",
+    name: "Studio Colleto",
+    role: "Clínica de estética",
+    credential: "@studio_colleto",
+    initials: "SC",
+  },
 ]
 
 const faqs = [
@@ -189,7 +196,7 @@ export default function LandingPage() {
           <h1 className="font-heading text-4xl font-bold leading-tight tracking-tight sm:text-5xl lg:text-6xl">
             Sistema de gestão para
             <br />
-            <span className="text-primary">clínicas de estética</span>
+            <span className="text-primary">profissionais e clínicas de estética</span>
           </h1>
 
           <p className="mx-auto max-w-xl text-base text-muted-foreground sm:text-lg leading-relaxed">
@@ -461,9 +468,9 @@ export default function LandingPage() {
             </p>
           </div>
 
-          <div className="mx-auto grid max-w-3xl gap-4">
+          <div className="mx-auto grid max-w-5xl gap-4 lg:grid-cols-2">
             {testimonials.map((testimonial) => (
-              <figure key={testimonial.name} className="rounded-3xl border border-primary/20 bg-card p-8 text-center shadow-xl shadow-primary/10">
+              <figure key={testimonial.name} className="flex h-full flex-col justify-between rounded-3xl border border-primary/20 bg-card p-8 text-center shadow-xl shadow-primary/10">
                 <blockquote className="text-lg leading-relaxed text-foreground sm:text-xl">
                   “{testimonial.quote}”
                 </blockquote>
@@ -474,7 +481,8 @@ export default function LandingPage() {
                   <div className="min-w-0">
                     <p className="font-semibold">{testimonial.name}</p>
                     <p className="text-sm text-muted-foreground">
-                      {testimonial.role} · {testimonial.credential}
+                      {testimonial.role}
+                      {testimonial.credential ? ` · ${testimonial.credential}` : ""}
                     </p>
                   </div>
                 </figcaption>
