@@ -10,9 +10,12 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  const twoDaysFromNow = new Date()
-  twoDaysFromNow.setDate(twoDaysFromNow.getDate() + 2)
-  const targetDate = twoDaysFromNow.toISOString().split("T")[0]
+  const addDays = (n: number) => {
+    const d = new Date()
+    d.setDate(d.getDate() + n)
+    return d.toISOString().split("T")[0]
+  }
+  const targetDates = [addDays(2), addDays(1)]
 
   const rows = await db
     .select({
@@ -26,13 +29,14 @@ export async function GET(req: NextRequest) {
       clientWhatsapp: clients.whatsapp,
       orgName: organizations.name,
       orgAddress: organizations.address,
+      date: appointments.date,
     })
     .from(appointments)
     .innerJoin(clients, eq(clients.id, appointments.clientId))
     .innerJoin(organizations, eq(organizations.id, appointments.organizationId))
     .where(
       and(
-        eq(appointments.date, targetDate),
+        or(...targetDates.map(d => eq(appointments.date, d))),
         or(eq(appointments.status, "waiting"), eq(appointments.status, "confirmed")),
         or(isNotNull(clients.whatsapp), isNotNull(clients.phone)),
         isNull(appointments.reminderSentAt)
@@ -49,7 +53,7 @@ export async function GET(req: NextRequest) {
         await sendReminderWithConfirmation({
           clientPhone,
           clientName: row.clientName,
-          date: targetDate,
+          date: row.date,
           startTime: row.startTime,
           procedure: row.procedure ?? undefined,
           orgName: row.orgName,
@@ -69,5 +73,5 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({ ok: true, sent, date: targetDate })
+  return NextResponse.json({ ok: true, sent, dates: targetDates })
 }
