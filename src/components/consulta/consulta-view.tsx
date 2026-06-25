@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { cn } from "@/lib/utils"
 import { mediaUrl } from "@/lib/media-url"
+import { useSidebar } from "@/components/layout/sidebar-context"
 import Link from "next/link"
 import type { ClientPhoto } from "@/db/schema"
 
@@ -42,6 +43,7 @@ function formatDate(d: string) {
 
 export function ConsultaView({ appointment, allClientPhotos: initialPhotos }: Props) {
   const router = useRouter()
+  const { collapsed } = useSidebar()
   const [notes, setNotes] = useState(appointment.notes ?? "")
   const [notesSaved, setNotesSaved] = useState(false)
   const [isSavingNotes, setIsSavingNotes] = useState(false)
@@ -237,10 +239,11 @@ export function ConsultaView({ appointment, allClientPhotos: initialPhotos }: Pr
           router.push("/agenda")
         }}
         appointmentId={appointment.id}
+        clientId={appointment.clientId}
         date={appointment.date}
         clientName={appointment.clientName}
         procedure={appointment.procedure ?? undefined}
-        procedurePrice={appointment.procedurePrice ?? undefined}
+        appointmentDate={appointment.date}
       />
 
       <div className={cn("container-page max-w-xl py-6 space-y-6", canComplete && "pb-32")}>
@@ -419,7 +422,10 @@ export function ConsultaView({ appointment, allClientPhotos: initialPhotos }: Pr
 
       {/* Footer fixo */}
       {canComplete && (
-        <div className="fixed bottom-16 sm:bottom-0 left-0 right-0 border-t border-border bg-background/95 backdrop-blur px-4 py-3 lg:left-60">
+        <div className={cn(
+          "fixed bottom-16 sm:bottom-0 left-0 right-0 border-t border-border bg-background/95 backdrop-blur px-4 py-3",
+          collapsed ? "lg:left-16" : "lg:left-60"
+        )}>
           <Button
             onClick={() => setCompleteModal(true)}
             className="w-full bg-green-600 hover:bg-green-700 text-white"

@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { updateAppointmentAction } from "@/actions/schedule"
+import { useState, useEffect } from "react"
+import { updateAppointmentAction, getAppointmentProceduresAction } from "@/actions/schedule"
 import { X, Check } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -11,24 +11,36 @@ type Props = {
   open: boolean
   onClose: () => void
   appointmentId: string
-  currentProcedureId?: string | null
   currentNotes?: string | null
   procedures: Procedure[]
 }
 
-export function EditAppointmentModal({ open, onClose, appointmentId, currentProcedureId, currentNotes, procedures }: Props) {
-  const [procedureId, setProcedureId] = useState(currentProcedureId ?? "")
+export function EditAppointmentModal({ open, onClose, appointmentId, currentNotes, procedures }: Props) {
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [notes, setNotes] = useState(currentNotes ?? "")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  useEffect(() => {
+    if (!open) return
+    setNotes(currentNotes ?? "")
+    setError(null)
+    getAppointmentProceduresAction(appointmentId).then((rows) => {
+      setSelectedIds(rows.map((r) => r.procedureId).filter((id): id is string => Boolean(id)))
+    })
+  }, [open, appointmentId, currentNotes])
+
   if (!open) return null
+
+  function toggle(id: string) {
+    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
+  }
 
   async function handleSave() {
     setLoading(true)
     setError(null)
     const result = await updateAppointmentAction(appointmentId, {
-      procedureId: procedureId || null,
+      procedureIds: selectedIds,
       notes: notes || null,
     })
     setLoading(false)
@@ -53,41 +65,33 @@ export function EditAppointmentModal({ open, onClose, appointmentId, currentProc
         <div className="flex-1 min-h-0 overflow-y-auto px-5 space-y-5">
           {error && <p className="text-sm text-destructive">{error}</p>}
 
-          {/* Procedimento */}
+          {/* Procedimentos (múltiplos) */}
           <div className="space-y-2">
-            <p className="text-sm font-medium">Procedimento</p>
+            <p className="text-sm font-medium">Procedimentos</p>
             <div className="space-y-1.5">
-              <button
-                type="button"
-                onClick={() => setProcedureId("")}
-                className={cn(
-                  "flex w-full items-center justify-between rounded-xl border px-4 py-3 text-sm transition-colors",
-                  procedureId === ""
-                    ? "border-primary bg-primary/5 text-primary font-medium"
-                    : "border-border text-muted-foreground hover:border-primary/40 hover:bg-accent"
-                )}
-              >
-                <span>Sem procedimento</span>
-                {procedureId === "" && <Check size={15} />}
-              </button>
-
-              {procedures.map((p) => (
-                <button
-                  key={p.id}
-                  type="button"
-                  onClick={() => setProcedureId(p.id)}
-                  className={cn(
-                    "flex w-full items-center justify-between rounded-xl border px-4 py-3 text-sm transition-colors",
-                    procedureId === p.id
-                      ? "border-primary bg-primary/5 text-primary font-medium"
-                      : "border-border text-foreground hover:border-primary/40 hover:bg-accent"
-                  )}
-                >
-                  <span>{p.name}</span>
-                  {procedureId === p.id && <Check size={15} />}
-                </button>
-              ))}
+              {procedures.map((p) => {
+                const checked = selectedIds.includes(p.id)
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => toggle(p.id)}
+                    className={cn(
+                      "flex w-full items-center justify-between rounded-xl border px-4 py-3 text-sm transition-colors",
+                      checked
+                        ? "border-primary bg-primary/5 text-primary font-medium"
+                        : "border-border text-foreground hover:border-primary/40 hover:bg-accent"
+                    )}
+                  >
+                    <span>{p.name}</span>
+                    {checked && <Check size={15} />}
+                  </button>
+                )
+              })}
             </div>
+            {selectedIds.length === 0 && (
+              <p className="text-xs text-muted-foreground">Nenhum procedimento selecionado.</p>
+            )}
           </div>
 
           {/* Observações */}

@@ -3,6 +3,7 @@
 import { db } from "@/db"
 import {
   appointments,
+  appointmentProcedures,
   scheduleConfig,
   scheduleBlocks,
   clients,
@@ -163,16 +164,44 @@ export async function getProceduresForBookingAction() {
   )(organizationId)
 }
 
+// Resolve os snapshots (nome/preço/comissão) dos procedimentos selecionados,
+// preservando a ordem informada. O primeiro é o procedimento "principal".
+type ProcedureSnapshot = { procedureId: string; name: string; price: number; commissionPct: number }
+
+async function resolveProcedureSnapshots(
+  organizationId: string,
+  procedureIds: string[]
+): Promise<ProcedureSnapshot[]> {
+  if (procedureIds.length === 0) return []
+  const rows = await db
+    .select({
+      id: procedures.id,
+      name: procedures.name,
+      price: procedures.price,
+      commissionPct: procedures.commissionPct,
+    })
+    .from(procedures)
+    .where(and(eq(procedures.organizationId, organizationId), inArray(procedures.id, procedureIds)))
+
+  // preserva a ordem de seleção e remove ids inválidos
+  return procedureIds
+    .map((id) => rows.find((r) => r.id === id))
+    .filter((r): r is NonNullable<typeof r> => Boolean(r))
+    .map((r) => ({ procedureId: r.id, name: r.name, price: r.price, commissionPct: r.commissionPct }))
+}
+
 export async function createAppointmentAction(data: {
   clientId: string
   date: string
   startTime: string
-  procedureId?: string
-  procedure?: string
+  procedureIds?: string[]   // múltiplos procedimentos (preferencial)
+  procedureId?: string      // legado: procedimento único
+  procedure?: string        // legado: nome livre (ex.: retorno)
   clientPackageId?: string
   notes?: string
   professionalId?: string  // owner/receptionist podem especificar outro profissional
   recurrence?: { frequency: "weekly" | "biweekly" | "monthly"; count: number }
+  suppressBookingSummary?: boolean  // pula o resumo WhatsApp (usado pelo fluxo de pacote)
 }): Promise<ActionResult & { skipped?: number; appointmentIds?: string[]; scheduledSessions?: { date: string; startTime: string }[] }> {
   const { userId, organizationId, role } = await requireSession()
 
@@ -200,6 +229,19 @@ export async function createAppointmentAction(data: {
   if (!config) {
     return { success: false, error: "Configure sua agenda antes de agendar." }
   }
+
+  // Resolve os procedimentos selecionados (preferindo a lista; cai para o id único legado)
+  const requestedIds = data.procedureIds && data.procedureIds.length > 0
+    ? data.procedureIds
+    : (data.procedureId ? [data.procedureId] : [])
+  const snapshots = await resolveProcedureSnapshots(organizationId, requestedIds)
+
+  // Campos denormalizados em appointments: string concatenada + procedimento principal.
+  // Mantêm agenda, histórico, consulta, WhatsApp e cron funcionando sem alteração.
+  const procedureString = snapshots.length > 0
+    ? snapshots.map((s) => s.name).join(", ")
+    : (data.procedure?.trim() || null)
+  const primaryProcedureId = snapshots[0]?.procedureId ?? null
 
   const startMins = data.startTime.split(":").reduce((acc, v, i) => acc + Number(v) * (i === 0 ? 60 : 1), 0)
   const endMins = startMins + config.slotDuration
@@ -260,8 +302,8 @@ export async function createAppointmentAction(data: {
       date,
       startTime: data.startTime,
       endTime,
-      procedureId: data.procedureId || null,
-      procedure: data.procedure || null,
+      procedureId: primaryProcedureId,
+      procedure: procedureString,
       clientPackageId: data.clientPackageId || null,
       notes: data.notes || null,
       status: "waiting" as const,
@@ -269,13 +311,44 @@ export async function createAppointmentAction(data: {
     }))
   ).returning({ id: appointments.id, date: appointments.date, startTime: appointments.startTime })
 
+  // Linhas da junction (procedimentos estruturados) para cada agendamento criado
+  if (snapshots.length > 0) {
+    await db.insert(appointmentProcedures).values(
+      inserted.flatMap((appt) =>
+        snapshots.map((s, i) => ({
+          organizationId,
+          appointmentId: appt.id,
+          procedureId: s.procedureId,
+          name: s.name,
+          price: s.price,
+          commissionPct: s.commissionPct,
+          position: i,
+        }))
+      )
+    )
+  } else if (procedureString) {
+    // Procedimento por texto livre (ex.: retorno): registra como linha sem procedureId
+    await db.insert(appointmentProcedures).values(
+      inserted.map((appt) => ({
+        organizationId,
+        appointmentId: appt.id,
+        procedureId: null,
+        name: procedureString,
+        price: 0,
+        commissionPct: 0,
+        position: 0,
+      }))
+    )
+  }
+
   revalidateTag(`dashboard-${userId}-${organizationId}`, {})
   revalidateTag(`clients-${organizationId}`, {})
   revalidateTag(`client-${data.clientId}`, {})
   revalidatePath("/agenda")
 
-  // Envia confirmação WhatsApp para o primeiro agendamento (somente agendamento avulso).
-  if (process.env.WHATSAPP_ENABLED === "true" && !data.clientPackageId) {
+  // Envia confirmação WhatsApp para o primeiro agendamento.
+  // O fluxo de pacote envia seu próprio resumo, então pede para suprimir este.
+  if (process.env.WHATSAPP_ENABLED === "true" && !data.suppressBookingSummary) {
     try {
       const [clientData] = await db
         .select({ name: clients.name, phone: clients.phone })
@@ -325,7 +398,7 @@ export async function createAppointmentAction(data: {
           clientName: clientData.name,
           date: freeDates[0],
           startTime: data.startTime,
-          procedure: data.procedure,
+          procedure: procedureString,
           orgName: org?.name ?? "Clínica",
           orgAddress: org?.address,
           templateId: bookingTemplateId,
@@ -342,7 +415,7 @@ export async function createAppointmentAction(data: {
             payload: {
               date: freeDates[0],
               startTime: data.startTime,
-              procedure: data.procedure ?? null,
+              procedure: procedureString,
             },
           })
         }
@@ -439,7 +512,7 @@ export async function updateAppointmentStatusAction(
 
 export async function updateAppointmentAction(
   appointmentId: string,
-  data: { procedureId?: string | null; procedure?: string | null; notes?: string | null }
+  data: { procedureIds?: string[]; notes?: string | null }
 ): Promise<ActionResult> {
   const { organizationId, role } = await requireSession()
 
@@ -455,28 +528,55 @@ export async function updateAppointmentAction(
 
   if (!appt) return { success: false, error: "Agendamento não encontrado." }
 
-  let procedureName = data.procedure ?? null
-  if (data.procedureId) {
-    const [proc] = await db
-      .select({ name: procedures.name, price: procedures.price })
-      .from(procedures)
-      .where(and(eq(procedures.id, data.procedureId), eq(procedures.organizationId, organizationId)))
-      .limit(1)
-    if (proc) procedureName = proc.name
-  }
+  const snapshots = await resolveProcedureSnapshots(organizationId, data.procedureIds ?? [])
+  const procedureString = snapshots.length > 0 ? snapshots.map((s) => s.name).join(", ") : null
+  const primaryProcedureId = snapshots[0]?.procedureId ?? null
 
-  await db
-    .update(appointments)
-    .set({
-      procedureId: data.procedureId ?? null,
-      procedure: procedureName,
-      notes: data.notes ?? null,
-      updatedAt: new Date(),
-    })
-    .where(eq(appointments.id, appointmentId))
+  await db.transaction(async (tx) => {
+    await tx
+      .update(appointments)
+      .set({
+        procedureId: primaryProcedureId,
+        procedure: procedureString,
+        notes: data.notes ?? null,
+        updatedAt: new Date(),
+      })
+      .where(eq(appointments.id, appointmentId))
+
+    // Recria a junction com os procedimentos atuais
+    await tx.delete(appointmentProcedures).where(eq(appointmentProcedures.appointmentId, appointmentId))
+    if (snapshots.length > 0) {
+      await tx.insert(appointmentProcedures).values(
+        snapshots.map((s, i) => ({
+          organizationId,
+          appointmentId,
+          procedureId: s.procedureId,
+          name: s.name,
+          price: s.price,
+          commissionPct: s.commissionPct,
+          position: i,
+        }))
+      )
+    }
+  })
 
   revalidatePath("/agenda")
   return { success: true }
+}
+
+// Procedimentos atuais de um agendamento (para o modal de edição)
+export async function getAppointmentProceduresAction(appointmentId: string) {
+  const { organizationId } = await requireSession()
+  return db
+    .select({ procedureId: appointmentProcedures.procedureId, name: appointmentProcedures.name })
+    .from(appointmentProcedures)
+    .where(
+      and(
+        eq(appointmentProcedures.appointmentId, appointmentId),
+        eq(appointmentProcedures.organizationId, organizationId)
+      )
+    )
+    .orderBy(appointmentProcedures.position)
 }
 
 // ── Cancelar agendamento ──────────────────────────────────────────────────────

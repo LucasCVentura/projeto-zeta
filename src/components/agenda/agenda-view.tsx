@@ -453,10 +453,6 @@ export function AgendaView({ initialDate, slots: initialSlots, hasConfig, slotDu
         date={date}
         clientName={completeModal.clientName}
         procedure={completeModal.procedure}
-        procedurePrice={completeModal.procedurePrice}
-        isPackageSession={completeModal.isPackageSession}
-        hasReturn={completeModal.hasReturn}
-        returnIntervalDays={completeModal.returnIntervalDays}
         appointmentDate={completeModal.appointmentDate}
       />
 
@@ -467,7 +463,6 @@ export function AgendaView({ initialDate, slots: initialSlots, hasConfig, slotDu
           startTransition(() => refreshSlots(date))
         }}
         appointmentId={editModal.appointmentId}
-        currentProcedureId={editModal.procedureId}
         currentNotes={editModal.notes}
         procedures={procedures}
       />

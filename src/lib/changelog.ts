@@ -6,6 +6,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "3.0.0",
+    date: "2026-06-24",
+    items: [
+      { type: "new",         text: "Vários procedimentos no mesmo agendamento: selecione mais de um procedimento de uma vez (ex.: Limpeza de Pele + Peeling) em um único horário" },
+      { type: "new",         text: "Use uma sessão de pacote junto com procedimentos avulsos no mesmo atendimento — a sessão do pacote é descontada e os demais são cobrados à parte" },
+      { type: "improvement", text: "Ao concluir o atendimento, a comissão é somada por procedimento e o total ganho aparece na tela de conclusão" },
+      { type: "improvement", text: "Financeiro: top procedimentos e receita projetada agora consideram todos os procedimentos de cada atendimento" },
+    ],
+  },
+  {
     version: "2.1.0",
     date: "2026-06-22",
     items: [

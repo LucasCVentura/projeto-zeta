@@ -16,12 +16,11 @@ import { Label } from "@/components/ui/label"
 import { createAppointmentAction, getClientsAction, getProceduresForBookingAction } from "@/actions/schedule"
 import { suggestRecurrenceAction } from "@/actions/ai"
 import { getActiveClientPackagesForProcedureAction } from "@/actions/packages"
-import { Search, User, ChevronDown, X, Sparkles, Loader2, Package } from "lucide-react"
+import { Search, User, ChevronDown, X, Sparkles, Loader2, Package, Check } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const schema = z.object({
   clientId: z.string().min(1, "Selecione um cliente"),
-  procedureId: z.string().optional(),
   notes: z.string().optional(),
   recurring: z.boolean(),
   frequency: z.enum(["weekly", "biweekly", "monthly"]),
@@ -32,6 +31,7 @@ type FormData = z.infer<typeof schema>
 type Client = { id: string; name: string; phone: string | null }
 type Procedure = { id: string; name: string; price: number }
 type ActivePackage = { id: string; packageName: string; sessionsUsed: number; totalSessions: number; sessionsRemaining: number }
+type ActivePackageWithProc = ActivePackage & { procedureId: string }
 
 const FREQUENCY_OPTIONS = [
   { value: "weekly", label: "Semanal" },
@@ -62,9 +62,9 @@ export function AppointmentModal({ open, onClose, date, time, professionals = []
   const [selectedClient, setSelectedClient] = useState<Client | null>(null)
 
   const [procedurePickerOpen, setProcedurePickerOpen] = useState(false)
-  const [selectedProcedure, setSelectedProcedure] = useState<Procedure | null>(null)
+  const [selectedProcedures, setSelectedProcedures] = useState<Procedure[]>([])
 
-  const [activePackages, setActivePackages] = useState<ActivePackage[]>([])
+  const [activePackages, setActivePackages] = useState<ActivePackageWithProc[]>([])
   const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null)
 
   const [selectedProfessionalId, setSelectedProfessionalId] = useState<string>("")
@@ -90,7 +90,7 @@ export function AppointmentModal({ open, onClose, date, time, professionals = []
       getProceduresForBookingAction().then((d) => setProcedures(d))
       reset({ recurring: false, frequency: "weekly", recurrenceCount: 4 })
       setSelectedClient(null)
-      setSelectedProcedure(null)
+      setSelectedProcedures([])
       setActivePackages([])
       setSelectedPackageId(null)
       setSelectedProfessionalId("")
@@ -105,23 +105,39 @@ export function AppointmentModal({ open, onClose, date, time, professionals = []
     (c.phone ?? "").includes(clientSearch)
   )
 
+  // Recarrega os pacotes ativos do cliente para todos os procedimentos selecionados
+  async function refreshPackages(procs: Procedure[], client: Client | null) {
+    if (!client || procs.length === 0) {
+      setActivePackages([])
+      setSelectedPackageId(null)
+      return
+    }
+    const results = await Promise.all(
+      procs.map(async (p) => {
+        const pkgs = await getActiveClientPackagesForProcedureAction(client.id, p.id)
+        return (pkgs as ActivePackage[]).map((pk) => ({ ...pk, procedureId: p.id }))
+      })
+    )
+    const flat = results.flat()
+    setActivePackages(flat)
+    setSelectedPackageId((prev) => (flat.some((pk) => pk.id === prev) ? prev : null))
+  }
+
   function selectClient(client: Client) {
     setSelectedClient(client)
     setValue("clientId", client.id)
     setClientPickerOpen(false)
     setClientSearch("")
+    refreshPackages(selectedProcedures, client)
   }
 
-  async function selectProcedure(proc: Procedure) {
-    setSelectedProcedure(proc)
-    setValue("procedureId", proc.id)
-    setProcedurePickerOpen(false)
-    setSelectedPackageId(null)
-    setActivePackages([])
-    if (selectedClient) {
-      const pkgs = await getActiveClientPackagesForProcedureAction(selectedClient.id, proc.id)
-      setActivePackages(pkgs as ActivePackage[])
-    }
+  async function toggleProcedure(proc: Procedure) {
+    const exists = selectedProcedures.some((p) => p.id === proc.id)
+    const next = exists
+      ? selectedProcedures.filter((p) => p.id !== proc.id)
+      : [...selectedProcedures, proc]
+    setSelectedProcedures(next)
+    await refreshPackages(next, selectedClient)
   }
 
   async function handleAiSuggest() {
@@ -139,11 +155,10 @@ export function AppointmentModal({ open, onClose, date, time, professionals = []
     setAiExplanation(result.explanation ?? null)
   }
 
-  function clearProcedure() {
-    setSelectedProcedure(null)
-    setValue("procedureId", "")
-    setActivePackages([])
-    setSelectedPackageId(null)
+  async function removeProcedure(procId: string) {
+    const next = selectedProcedures.filter((p) => p.id !== procId)
+    setSelectedProcedures(next)
+    await refreshPackages(next, selectedClient)
   }
 
   async function onSubmit(data: FormData) {
@@ -153,8 +168,7 @@ export function AppointmentModal({ open, onClose, date, time, professionals = []
       clientId: data.clientId,
       date,
       startTime: time,
-      procedureId: data.procedureId || undefined,
-      procedure: selectedProcedure?.name,
+      procedureIds: selectedProcedures.map((p) => p.id),
       clientPackageId: selectedPackageId || undefined,
       notes: data.notes,
       professionalId: selectedProfessionalId || undefined,
@@ -224,17 +238,37 @@ export function AppointmentModal({ open, onClose, date, time, professionals = []
             {errors.clientId && <p className="text-destructive text-xs">{errors.clientId.message}</p>}
           </div>
 
-          {/* Procedimento */}
+          {/* Procedimentos (múltiplos) */}
           <div className="space-y-2">
-            <Label>Procedimento <span className="text-muted-foreground">(opcional)</span></Label>
+            <Label>Procedimentos <span className="text-muted-foreground">(opcional)</span></Label>
+
+            {/* Chips dos procedimentos selecionados */}
+            {selectedProcedures.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {selectedProcedures.map((p) => (
+                  <span
+                    key={p.id}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 py-1 pl-3 pr-1.5 text-xs font-medium text-primary"
+                  >
+                    {p.name}
+                    <button
+                      type="button"
+                      onClick={() => removeProcedure(p.id)}
+                      className="flex h-4 w-4 items-center justify-center rounded-full hover:bg-primary/20"
+                    >
+                      <X size={11} />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+
             <PickerButton
-              selected={selectedProcedure
-                ? { label: selectedProcedure.name, sub: formatPrice(selectedProcedure.price) }
-                : null}
-              placeholder="Selecionar procedimento..."
+              selected={null}
+              placeholder={selectedProcedures.length > 0 ? "Adicionar outro procedimento..." : "Selecionar procedimento..."}
               isOpen={procedurePickerOpen}
               onToggle={() => setProcedurePickerOpen((v) => !v)}
-              onClear={clearProcedure}
+              onClear={() => {}}
             />
             {procedurePickerOpen && (
               <PickerDropdown
@@ -245,19 +279,37 @@ export function AppointmentModal({ open, onClose, date, time, professionals = []
                 empty="Nenhum procedimento cadastrado"
                 emptyLink={{ href: "/configuracoes/procedimentos", label: "Cadastrar procedimentos" }}
               >
-                {procedures.map((p) => (
-                  <PickerItem
-                    key={p.id}
-                    label={p.name}
-                    sub={formatPrice(p.price)}
-                    onClick={() => selectProcedure(p)}
-                  />
-                ))}
+                {procedures.map((p) => {
+                  const checked = selectedProcedures.some((sp) => sp.id === p.id)
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => toggleProcedure(p)}
+                      className="flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm hover:bg-accent transition-colors"
+                    >
+                      <span className={cn(
+                        "flex h-4 w-4 shrink-0 items-center justify-center rounded border",
+                        checked ? "border-primary bg-primary text-primary-foreground" : "border-border"
+                      )}>
+                        {checked && <Check size={11} />}
+                      </span>
+                      <span className="min-w-0 flex-1 truncate font-medium">{p.name}</span>
+                      <span className="text-xs text-muted-foreground">{formatPrice(p.price)}</span>
+                    </button>
+                  )
+                })}
               </PickerDropdown>
+            )}
+
+            {selectedProcedures.length > 1 && (
+              <p className="text-xs text-muted-foreground">
+                Total: {formatPrice(selectedProcedures.reduce((s, p) => s + p.price, 0))}
+              </p>
             )}
           </div>
 
-          {/* Pacotes ativos do cliente para este procedimento */}
+          {/* Pacotes ativos do cliente para os procedimentos selecionados */}
           {activePackages.length > 0 && (
             <div className="space-y-2">
               <Label className="flex items-center gap-1.5">
@@ -265,28 +317,34 @@ export function AppointmentModal({ open, onClose, date, time, professionals = []
                 Usar sessão de pacote
               </Label>
               <div className="space-y-1.5">
-                {activePackages.map((pkg) => (
-                  <button
-                    key={pkg.id}
-                    type="button"
-                    onClick={() => setSelectedPackageId(selectedPackageId === pkg.id ? null : pkg.id)}
-                    className={cn(
-                      "flex w-full items-center justify-between rounded-lg border px-3 py-2.5 text-sm transition-colors",
-                      selectedPackageId === pkg.id
-                        ? "border-primary bg-primary/5 text-primary"
-                        : "border-border hover:border-primary/40"
-                    )}
-                  >
-                    <span className="font-medium">{pkg.packageName}</span>
-                    <span className={cn("text-xs", selectedPackageId === pkg.id ? "text-primary" : "text-muted-foreground")}>
-                      {pkg.sessionsRemaining} {pkg.sessionsRemaining !== 1 ? "sessões" : "sessão"} restante{pkg.sessionsRemaining !== 1 ? "s" : ""}
-                    </span>
-                  </button>
-                ))}
+                {activePackages.map((pkg) => {
+                  const proc = selectedProcedures.find((p) => p.id === pkg.procedureId)
+                  return (
+                    <button
+                      key={pkg.id}
+                      type="button"
+                      onClick={() => setSelectedPackageId(selectedPackageId === pkg.id ? null : pkg.id)}
+                      className={cn(
+                        "flex w-full items-center justify-between rounded-lg border px-3 py-2.5 text-sm transition-colors",
+                        selectedPackageId === pkg.id
+                          ? "border-primary bg-primary/5 text-primary"
+                          : "border-border hover:border-primary/40"
+                      )}
+                    >
+                      <span className="min-w-0 truncate text-left">
+                        <span className="font-medium">{pkg.packageName}</span>
+                        {proc && <span className="text-muted-foreground"> · {proc.name}</span>}
+                      </span>
+                      <span className={cn("shrink-0 text-xs", selectedPackageId === pkg.id ? "text-primary" : "text-muted-foreground")}>
+                        {pkg.sessionsRemaining} {pkg.sessionsRemaining !== 1 ? "sessões" : "sessão"} restante{pkg.sessionsRemaining !== 1 ? "s" : ""}
+                      </span>
+                    </button>
+                  )
+                })}
               </div>
               {selectedPackageId && (
                 <p className="text-xs text-primary">
-                  Sessão será descontada do pacote ao concluir o atendimento.
+                  A sessão do procedimento do pacote será descontada ao concluir. Os demais procedimentos são cobrados à parte.
                 </p>
               )}
             </div>

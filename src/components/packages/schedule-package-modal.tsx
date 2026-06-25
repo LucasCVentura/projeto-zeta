@@ -106,6 +106,7 @@ export function SchedulePackageModal({
       clientPackageId,
       notes: notes.trim() || undefined,
       recurrence: count > 1 ? { frequency, count } : undefined,
+      suppressBookingSummary: true,
     })
     setLoading(false)
     if (!result.success) { setError(result.error ?? "Erro ao agendar."); return }

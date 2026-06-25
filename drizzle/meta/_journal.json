@@ -155,6 +155,13 @@
       "when": 1780699884736,
       "tag": "0021_messy_mastermind",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1782348827233,
+      "tag": "0022_windy_psynapse",
+      "breakpoints": true
     }
   ]
 }

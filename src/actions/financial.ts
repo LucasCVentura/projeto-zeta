@@ -1,7 +1,7 @@
 "use server"
 
 import { db } from "@/db"
-import { transactions, appointments, clientPackages, packages, supplies, procedureSupplies, procedures, users, organizationMembers, type PaymentMethod } from "@/db/schema"
+import { transactions, appointments, appointmentProcedures, clientPackages, packages, supplies, procedureSupplies, procedures, users, organizationMembers, type PaymentMethod } from "@/db/schema"
 import { eq, and, gte, lte, sum, sql, inArray } from "drizzle-orm"
 import { requireSession } from "@/lib/session"
 import { can } from "@/lib/permissions"
@@ -10,7 +10,7 @@ import type { ActionResult } from "./auth"
 
 export async function completeAppointmentWithRevenueAction(data: {
   appointmentId: string
-  amount: number // centavos
+  amount: number // centavos (total dos procedimentos avulsos)
   description?: string
   date: string
   paymentMethod?: PaymentMethod | null
@@ -21,41 +21,61 @@ export async function completeAppointmentWithRevenueAction(data: {
     return { success: false, error: "Sem permissão." }
   }
 
-  // Busca agendamento + commissionPct do procedimento
   const [appt] = await db
     .select({
-      procedureId: appointments.procedureId,
       clientPackageId: appointments.clientPackageId,
       clientId: appointments.clientId,
       professionalId: appointments.professionalId,
-      commissionPct: procedures.commissionPct,
     })
     .from(appointments)
-    .leftJoin(procedures, eq(procedures.id, appointments.procedureId))
     .where(and(eq(appointments.id, data.appointmentId), eq(appointments.organizationId, organizationId)))
 
+  if (!appt) return { success: false, error: "Agendamento não encontrado." }
+
+  // Procedimentos do atendimento (snapshots de preço/comissão na ordem de seleção)
+  const procs = await db
+    .select({
+      procedureId: appointmentProcedures.procedureId,
+      price: appointmentProcedures.price,
+      commissionPct: appointmentProcedures.commissionPct,
+    })
+    .from(appointmentProcedures)
+    .where(eq(appointmentProcedures.appointmentId, data.appointmentId))
+    .orderBy(appointmentProcedures.position)
+
   // Profissional que realiza o atendimento (pode ser diferente de quem está logado)
-  const performingProfessionalId = appt?.professionalId ?? userId
+  const performingProfessionalId = appt.professionalId ?? userId
 
-  // Calcula comissão para atendimentos avulsos
-  let commissionAmount: number | null = null
-  if (appt?.commissionPct && appt.commissionPct > 0 && !appt.clientPackageId) {
-    commissionAmount = Math.round(data.amount * appt.commissionPct / 100)
-  }
-
-  // Para sessões de pacote: calcula comissão sobre o valor por sessão do pacote
+  // Se há sessão de pacote, identifica qual procedimento ela cobre (procedimento do pacote)
+  let coveredIndex = -1
   let packageCommissionAmount: number | null = null
-  if (appt?.clientPackageId && appt.commissionPct && appt.commissionPct > 0) {
+  if (appt.clientPackageId) {
     const [pkg] = await db
-      .select({ price: packages.price, totalSessions: packages.totalSessions })
+      .select({ price: packages.price, totalSessions: packages.totalSessions, procedureId: packages.procedureId })
       .from(clientPackages)
       .innerJoin(packages, eq(packages.id, clientPackages.packageId))
       .where(and(eq(clientPackages.id, appt.clientPackageId), eq(clientPackages.organizationId, organizationId)))
     if (pkg) {
-      const perSession = Math.round(pkg.price / pkg.totalSessions)
-      packageCommissionAmount = Math.round(perSession * appt.commissionPct / 100)
+      coveredIndex = procs.findIndex((p) => p.procedureId === pkg.procedureId)
+      const coveredProc = coveredIndex >= 0 ? procs[coveredIndex] : null
+      if (coveredProc && coveredProc.commissionPct > 0 && pkg.totalSessions > 0) {
+        const perSession = Math.round(pkg.price / pkg.totalSessions)
+        packageCommissionAmount = Math.round(perSession * coveredProc.commissionPct / 100)
+      }
     }
   }
+
+  // Procedimentos avulsos = todos menos o coberto pelo pacote.
+  // Comissão somada por procedimento, sobre o preço de tabela (snapshot) de cada um.
+  const avulso = procs.filter((_, i) => i !== coveredIndex)
+  const avulsoCommissionSum = avulso.reduce(
+    (sum, p) => sum + Math.round(p.price * p.commissionPct / 100),
+    0
+  )
+  const standaloneCommission = avulsoCommissionSum > 0 ? avulsoCommissionSum : null
+
+  // Cria transação avulsa quando não é sessão de pacote, ou quando há procedimentos avulsos além do pacote.
+  const createStandalone = !appt.clientPackageId || avulso.length > 0
 
   await db.transaction(async (tx) => {
     await tx
@@ -68,20 +88,21 @@ export async function completeAppointmentWithRevenueAction(data: {
         )
       )
 
-    if (!appt?.clientPackageId) {
-      // Atendimento avulso: registra receita bruta + comissão
+    if (createStandalone) {
       await tx.insert(transactions).values({
         organizationId,
         professionalId: performingProfessionalId,
         appointmentId: data.appointmentId,
         amount: data.amount,
-        commissionAmount,
+        commissionAmount: standaloneCommission,
         description: data.description || null,
         date: data.date,
         paymentMethod: data.paymentMethod ?? null,
       })
-    } else {
-      // Sessão de pacote: receita já registrada na venda — cria transação zerada só para comissão
+    }
+
+    if (appt.clientPackageId) {
+      // Sessão de pacote: receita já registrada na venda — transação zerada só para comissão
       await tx.insert(transactions).values({
         organizationId,
         professionalId: performingProfessionalId,
@@ -106,8 +127,9 @@ export async function completeAppointmentWithRevenueAction(data: {
     }
   })
 
-  // Baixa de estoque (fora da transação principal para não falhar tudo se não tiver insumos)
-  if (appt?.procedureId) {
+  // Baixa de estoque para TODOS os procedimentos do atendimento (fora da transação principal)
+  const procedureIds = [...new Set(procs.map((p) => p.procedureId).filter((id): id is string => Boolean(id)))]
+  if (procedureIds.length > 0) {
     const links = await db
       .select({
         supplyId: procedureSupplies.supplyId,
@@ -117,28 +139,109 @@ export async function completeAppointmentWithRevenueAction(data: {
       .innerJoin(supplies, eq(supplies.id, procedureSupplies.supplyId))
       .where(
         and(
-          eq(procedureSupplies.procedureId, appt.procedureId),
+          inArray(procedureSupplies.procedureId, procedureIds),
           eq(supplies.organizationId, organizationId)
         )
       )
 
+    // Soma a quantidade por insumo (um insumo pode aparecer em vários procedimentos)
+    const perSupply = new Map<string, number>()
     for (const link of links) {
+      perSupply.set(link.supplyId, (perSupply.get(link.supplyId) ?? 0) + Number(link.quantityPerSession))
+    }
+
+    for (const [supplyId, qty] of perSupply) {
       await db
         .update(supplies)
         .set({
-          currentStock: sql`GREATEST(0, ${supplies.currentStock} - ${link.quantityPerSession})`,
+          currentStock: sql`GREATEST(0, ${supplies.currentStock} - ${qty})`,
           updatedAt: new Date(),
         })
-        .where(eq(supplies.id, link.supplyId))
+        .where(eq(supplies.id, supplyId))
     }
   }
 
   revalidatePath("/agenda")
   revalidatePath("/dashboard")
   revalidatePath("/estoque")
-  if (appt?.clientId) revalidateTag(`client-${appt.clientId}`)
+  if (appt.clientId) revalidateTag(`client-${appt.clientId}`, {})
 
   return { success: true }
+}
+
+// Dados estruturados para o modal de conclusão (procedimentos, pacote, comissão prevista, retorno)
+export async function getAppointmentCompletionDataAction(appointmentId: string) {
+  const { organizationId } = await requireSession()
+
+  const [appt] = await db
+    .select({ clientPackageId: appointments.clientPackageId })
+    .from(appointments)
+    .where(and(eq(appointments.id, appointmentId), eq(appointments.organizationId, organizationId)))
+    .limit(1)
+
+  if (!appt) return null
+
+  // Junção com procedures para metadados atuais (retorno)
+  const rows = await db
+    .select({
+      procedureId: appointmentProcedures.procedureId,
+      name: appointmentProcedures.name,
+      price: appointmentProcedures.price,
+      commissionPct: appointmentProcedures.commissionPct,
+      hasReturn: procedures.hasReturn,
+      returnIntervalDays: procedures.returnIntervalDays,
+    })
+    .from(appointmentProcedures)
+    .leftJoin(procedures, eq(procedures.id, appointmentProcedures.procedureId))
+    .where(eq(appointmentProcedures.appointmentId, appointmentId))
+    .orderBy(appointmentProcedures.position)
+
+  // Identifica o procedimento coberto pelo pacote (se houver)
+  let coveredProcedureId: string | null = null
+  let packageName: string | null = null
+  if (appt.clientPackageId) {
+    const [pkg] = await db
+      .select({ procedureId: packages.procedureId, name: packages.name })
+      .from(clientPackages)
+      .innerJoin(packages, eq(packages.id, clientPackages.packageId))
+      .where(and(eq(clientPackages.id, appt.clientPackageId), eq(clientPackages.organizationId, organizationId)))
+      .limit(1)
+    if (pkg) {
+      coveredProcedureId = pkg.procedureId
+      packageName = pkg.name
+    }
+  }
+
+  let coveredMatched = false
+  const procs = rows.map((r) => {
+    const coveredByPackage = !coveredMatched && coveredProcedureId != null && r.procedureId === coveredProcedureId
+    if (coveredByPackage) coveredMatched = true
+    return {
+      procedureId: r.procedureId,
+      name: r.name,
+      price: r.price,
+      commissionPct: r.commissionPct,
+      hasReturn: r.hasReturn ?? false,
+      returnIntervalDays: r.returnIntervalDays ?? null,
+      coveredByPackage,
+    }
+  })
+
+  const avulso = procs.filter((p) => !p.coveredByPackage)
+  const defaultAmount = avulso.reduce((sum, p) => sum + p.price, 0)
+  const estimatedCommission = avulso.reduce((sum, p) => sum + Math.round(p.price * p.commissionPct / 100), 0)
+  const firstReturn = procs.find((p) => p.hasReturn) ?? null
+
+  return {
+    procedures: procs,
+    clientPackageId: appt.clientPackageId,
+    packageName,
+    defaultAmount,
+    estimatedCommission,
+    returnIntervalDays: firstReturn?.returnIntervalDays ?? null,
+    returnProcedureName: firstReturn?.name ?? null,
+    returnProcedureId: firstReturn?.procedureId ?? null,
+  }
 }
 
 export async function getMonthlyRevenueAction(year: number, month: number): Promise<number> {
@@ -204,8 +307,10 @@ export async function getTransactionsAction(year: number, month: number) {
     .orderBy(transactions.date)
 
   // Custo de insumos (só relevante para owner/financial)
-  const packageCostMap = new Map<string, { cost: number; totalSessions: number }>()
+  const packageCostMap = new Map<string, { cost: number; totalSessions: number; procedureId: string }>()
   const supplyCostMap = new Map<string, number>()
+  // Procedimentos (estruturados) por agendamento, para somar custo de insumos de todos
+  const apptProcMap = new Map<string, string[]>()
 
   if (isOwnerOrFinancial) {
     const allClientPackageIds = [...new Set([
@@ -215,29 +320,51 @@ export async function getTransactionsAction(year: number, month: number) {
 
     if (allClientPackageIds.length > 0) {
       const pkgRows = await db
-        .select({ clientPackageId: clientPackages.id, cost: packages.cost, totalSessions: packages.totalSessions })
+        .select({ clientPackageId: clientPackages.id, cost: packages.cost, totalSessions: packages.totalSessions, procedureId: packages.procedureId })
         .from(clientPackages)
         .innerJoin(packages, eq(packages.id, clientPackages.packageId))
         .where(eq(clientPackages.organizationId, organizationId))
       for (const pr of pkgRows) {
-        packageCostMap.set(pr.clientPackageId, { cost: pr.cost, totalSessions: pr.totalSessions })
+        packageCostMap.set(pr.clientPackageId, { cost: pr.cost, totalSessions: pr.totalSessions, procedureId: pr.procedureId })
       }
     }
 
-    const standaloneProcedureIds = [...new Set(
-      rows.filter((r) => !r.txClientPackageId && !r.apptClientPackageId).map((r) => r.procedureId).filter(Boolean) as string[]
-    )]
-    if (standaloneProcedureIds.length > 0) {
-      const costRows = await db
-        .select({ procedureId: procedureSupplies.procedureId, quantityPerSession: procedureSupplies.quantityPerSession, costPerUnit: supplies.costPerUnit })
-        .from(procedureSupplies)
-        .innerJoin(supplies, eq(supplies.id, procedureSupplies.supplyId))
-        .where(eq(supplies.organizationId, organizationId))
-      for (const cr of costRows) {
-        const prev = supplyCostMap.get(cr.procedureId) ?? 0
-        supplyCostMap.set(cr.procedureId, prev + Math.round(Number(cr.quantityPerSession) * cr.costPerUnit))
+    // custo de insumos por procedimento (toda a org)
+    const costRows = await db
+      .select({ procedureId: procedureSupplies.procedureId, quantityPerSession: procedureSupplies.quantityPerSession, costPerUnit: supplies.costPerUnit })
+      .from(procedureSupplies)
+      .innerJoin(supplies, eq(supplies.id, procedureSupplies.supplyId))
+      .where(eq(supplies.organizationId, organizationId))
+    for (const cr of costRows) {
+      const prev = supplyCostMap.get(cr.procedureId) ?? 0
+      supplyCostMap.set(cr.procedureId, prev + Math.round(Number(cr.quantityPerSession) * cr.costPerUnit))
+    }
+
+    // procedimentos por agendamento (junction)
+    const apptIds = [...new Set(rows.map((r) => r.appointmentId).filter(Boolean) as string[])]
+    if (apptIds.length > 0) {
+      const apRows = await db
+        .select({ appointmentId: appointmentProcedures.appointmentId, procedureId: appointmentProcedures.procedureId })
+        .from(appointmentProcedures)
+        .where(inArray(appointmentProcedures.appointmentId, apptIds))
+      for (const ap of apRows) {
+        if (!ap.procedureId) continue
+        const list = apptProcMap.get(ap.appointmentId) ?? []
+        list.push(ap.procedureId)
+        apptProcMap.set(ap.appointmentId, list)
       }
     }
+  }
+
+  // Soma o custo de insumos dos procedimentos de um agendamento, podendo excluir um (o coberto por pacote)
+  function sumApptSupplyCost(appointmentId: string | null, excludeProcedureId?: string | null) {
+    if (!appointmentId) return 0
+    const procIds = apptProcMap.get(appointmentId) ?? []
+    let excluded = false
+    return procIds.reduce((sum, pid) => {
+      if (!excluded && excludeProcedureId && pid === excludeProcedureId) { excluded = true; return sum }
+      return sum + (supplyCostMap.get(pid) ?? 0)
+    }, 0)
   }
 
   const enriched = rows.map((r) => {
@@ -246,10 +373,13 @@ export async function getTransactionsAction(year: number, month: number) {
       if (r.txClientPackageId) {
         cost = packageCostMap.get(r.txClientPackageId)?.cost ?? 0
       } else if (r.apptClientPackageId) {
-        const pkg = packageCostMap.get(r.apptClientPackageId)
-        if (pkg?.cost && pkg.totalSessions > 0) cost = Math.round(pkg.cost / pkg.totalSessions)
-      } else if (r.procedureId) {
-        cost = supplyCostMap.get(r.procedureId) ?? 0
+        // Atendimento misto: transação avulsa soma o custo de insumos dos
+        // procedimentos avulsos (excluindo o coberto pelo pacote)
+        const excluded = packageCostMap.get(r.apptClientPackageId)?.procedureId ?? null
+        cost = sumApptSupplyCost(r.appointmentId, excluded)
+      } else {
+        // Atendimento avulso: soma o custo de insumos de todos os procedimentos
+        cost = sumApptSupplyCost(r.appointmentId)
       }
     }
     return {
@@ -321,16 +451,15 @@ export async function getFinanceiroSummaryAction(year: number, month: number) {
     `),
     db.execute(sql`
       SELECT
-        COALESCE(p.name, 'Sem procedimento') as name,
-        COALESCE(SUM(t.amount), 0)::bigint   as total,
-        COUNT(t.id)::int                      as count
+        ap.name                            as name,
+        COALESCE(SUM(ap.price), 0)::bigint as total,
+        COUNT(ap.id)::int                  as count
       FROM transactions t
-      LEFT JOIN appointments a  ON a.id  = t.appointment_id
-      LEFT JOIN procedures   p  ON p.id  = a.procedure_id
+      JOIN appointment_procedures ap ON ap.appointment_id = t.appointment_id
       WHERE t.organization_id = ${organizationId}
         AND t.date >= ${start} AND t.date <= ${end}
         AND t.amount > 0
-      GROUP BY p.name
+      GROUP BY ap.name
       ORDER BY total DESC
       LIMIT 6
     `),
@@ -350,9 +479,9 @@ export async function getFinanceiroSummaryAction(year: number, month: number) {
       LIMIT 5
     `),
     db.execute(sql`
-      SELECT COALESCE(SUM(p.price), 0)::bigint as projected
+      SELECT COALESCE(SUM(ap.price), 0)::bigint as projected
       FROM appointments a
-      JOIN procedures p ON p.id = a.procedure_id
+      JOIN appointment_procedures ap ON ap.appointment_id = a.id
       WHERE a.organization_id = ${organizationId}
         AND a.date >= ${start} AND a.date <= ${end}
         AND a.status IN ('waiting', 'confirmed')

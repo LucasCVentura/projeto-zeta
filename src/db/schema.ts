@@ -268,6 +268,30 @@ export const procedures = pgTable("procedures", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 })
 
+// ── appointment_procedures (N procedimentos por agendamento) ───────────────────
+
+export const appointmentProcedures = pgTable("appointment_procedures", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organizations.id, { onDelete: "cascade" }),
+  appointmentId: text("appointment_id")
+    .notNull()
+    .references(() => appointments.id, { onDelete: "cascade" }),
+  procedureId: text("procedure_id").references(() => procedures.id, { onDelete: "set null" }),
+
+  // snapshots no momento do agendamento (mesmo padrão de appointments.procedure)
+  name: text("name").notNull(),
+  price: integer("price").notNull().default(0),          // centavos
+  commissionPct: integer("commission_pct").notNull().default(0), // 0–100
+  position: integer("position").notNull().default(0),    // ordem de seleção; 0 = principal
+
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+})
+
 // ── client_photos ─────────────────────────────────────────────────────────────
 
 export const clientPhotos = pgTable("client_photos", {
@@ -606,7 +630,7 @@ export const proceduresRelations = relations(procedures, ({ one }) => ({
   }),
 }))
 
-export const appointmentsRelations = relations(appointments, ({ one }) => ({
+export const appointmentsRelations = relations(appointments, ({ one, many }) => ({
   organization: one(organizations, {
     fields: [appointments.organizationId],
     references: [organizations.id],
@@ -618,6 +642,18 @@ export const appointmentsRelations = relations(appointments, ({ one }) => ({
   client: one(clients, {
     fields: [appointments.clientId],
     references: [clients.id],
+  }),
+  procedures: many(appointmentProcedures),
+}))
+
+export const appointmentProceduresRelations = relations(appointmentProcedures, ({ one }) => ({
+  appointment: one(appointments, {
+    fields: [appointmentProcedures.appointmentId],
+    references: [appointments.id],
+  }),
+  procedure: one(procedures, {
+    fields: [appointmentProcedures.procedureId],
+    references: [procedures.id],
   }),
 }))
 
@@ -640,6 +676,8 @@ export type ClientAnamnesis = typeof clientAnamnesis.$inferSelect
 export type NewClientAnamnesis = typeof clientAnamnesis.$inferInsert
 export type Procedure = typeof procedures.$inferSelect
 export type NewProcedure = typeof procedures.$inferInsert
+export type AppointmentProcedure = typeof appointmentProcedures.$inferSelect
+export type NewAppointmentProcedure = typeof appointmentProcedures.$inferInsert
 export type Transaction = typeof transactions.$inferSelect
 export type PaymentMethod = (typeof paymentMethodEnum.enumValues)[number]
 export type NewTransaction = typeof transactions.$inferInsert
