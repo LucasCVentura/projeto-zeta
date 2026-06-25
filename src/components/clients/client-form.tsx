@@ -52,7 +52,7 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>
 
-const STEPS = ["Dados pessoais", "Contato", "Anamnese"]
+const STEPS = ["Dados pessoais", "Contato"]
 
 export function ClientForm({ defaultValues }: { defaultValues?: Partial<FormData> }) {
   const router = useRouter()
@@ -80,7 +80,6 @@ export function ClientForm({ defaultValues }: { defaultValues?: Partial<FormData
     const fieldsPerStep: (keyof FormData)[][] = [
       ["name", "cpf", "birthDate"],
       ["whatsapp", "email"],
-      [],
     ]
     const valid = await trigger(fieldsPerStep[step])
     if (valid) setStep((s) => Math.min(s + 1, STEPS.length - 1))
@@ -205,99 +204,6 @@ export function ClientForm({ defaultValues }: { defaultValues?: Partial<FormData
         </div>
       )}
 
-      {/* ── Step 2: Anamnese ── */}
-      {step === 2 && (
-        <div className="space-y-4">
-          {/* Tipo de pele */}
-          <div className="surface space-y-3">
-            <Label>Tipo de pele</Label>
-            <div className="flex flex-wrap gap-2">
-              {SKIN_TYPES.map((t) => (
-                <button
-                  key={t}
-                  type="button"
-                  onClick={() => setValue("skinType", skinType === t ? "" : t)}
-                  className={cn(
-                    "rounded-lg border px-3 py-1.5 text-sm transition-colors",
-                    skinType === t
-                      ? "border-primary bg-primary/5 text-primary font-medium"
-                      : "border-border text-muted-foreground hover:border-primary/40"
-                  )}
-                >
-                  {t}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Perguntas de saúde */}
-          <div className="surface space-y-4">
-            <p className="text-sm font-medium">Saúde</p>
-
-            <AnamnesisToggle
-              label="Possui alergias?"
-              checked={watchBool("hasAllergies")}
-              onChange={(v) => setValue("hasAllergies", v)}
-              detailLabel="Quais alergias?"
-              detailPlaceholder="Ex: látex, penicilina..."
-              register={register("allergiesDetail")}
-            />
-            <AnamnesisToggle
-              label="Possui contraindicações?"
-              checked={watchBool("hasContraindications")}
-              onChange={(v) => setValue("hasContraindications", v)}
-              detailLabel="Quais contraindicações?"
-              detailPlaceholder="Ex: marca-passo, gestante..."
-              register={register("contraindicationsDetail")}
-            />
-            <AnamnesisToggle
-              label="Faz uso de medicamentos?"
-              checked={watchBool("usesMedication")}
-              onChange={(v) => setValue("usesMedication", v)}
-              detailLabel="Quais medicamentos?"
-              detailPlaceholder="Ex: anticoagulante, isotretinoína..."
-              register={register("medicationDetail")}
-            />
-            <AnamnesisToggle
-              label="Possui doença crônica?"
-              checked={watchBool("hasChronicCondition")}
-              onChange={(v) => setValue("hasChronicCondition", v)}
-              detailLabel="Qual condição?"
-              detailPlaceholder="Ex: diabetes, hipertensão..."
-              register={register("chronicConditionDetail")}
-            />
-
-            <div className="flex items-center justify-between rounded-lg border border-border px-4 py-3">
-              <span className="text-sm">Gestante?</span>
-              <Toggle
-                checked={watchBool("isPregnant")}
-                onChange={(v) => setValue("isPregnant", v)}
-              />
-            </div>
-          </div>
-
-          {/* Histórico estético */}
-          <div className="surface space-y-4">
-            <p className="text-sm font-medium">Histórico estético</p>
-            <div className="space-y-2">
-              <Label>Objetivo estético</Label>
-              <Input placeholder="Ex: reduzir manchas, uniformizar o tom, tratar acne..." {...register("aestheticGoal")} />
-            </div>
-            <div className="space-y-2">
-              <Label>Queixas da pele</Label>
-              <Input placeholder="Ex: manchas, acne, oleosidade..." {...register("skinComplaints")} />
-            </div>
-            <div className="space-y-2">
-              <Label>Procedimentos anteriores</Label>
-              <Input placeholder="Ex: peeling, botox, microagulhamento..." {...register("previousProcedures")} />
-            </div>
-            <div className="space-y-2">
-              <Label>Observações extras</Label>
-              <Input placeholder="Informações adicionais da ficha..." {...register("extraNotes")} />
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Navegação */}
       <div className="flex gap-3">
