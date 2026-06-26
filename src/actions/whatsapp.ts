@@ -95,7 +95,7 @@ export async function sendBookingSummary(params: {
   const { clientPhone, clientName, orgName, orgAddress, date, startTime, procedure, templateId, anamnesisLink, hasAnamnesis } = params
   const templates = await getGlobalTemplateIds()
 
-  const anamnesisParam = anamnesisLink ?? ""
+  const anamnesisParam = anamnesisLink || " "
 
   return sendWhatsAppTemplate(clientPhone, templateId || templates.bookingSummaryTemplateId, [
     safeParam(clientName, "Cliente"),
