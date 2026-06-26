@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useId } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -227,26 +227,23 @@ export function ClientForm({ defaultValues }: { defaultValues?: Partial<FormData
 // ── Sub-componentes ──────────────────────────────────────────────────────────
 
 function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
-  function handleTap(e: React.TouchEvent | React.MouseEvent) {
-    e.preventDefault()
-    e.stopPropagation()
-    onChange(!checked)
-  }
+  const id = useId()
   return (
-    <button
-      type="button"
-      onTouchEnd={handleTap}
-      onClick={handleTap}
-      className={cn(
-        "relative h-7 w-12 shrink-0 cursor-pointer rounded-full outline-none transition-colors touch-manipulation select-none",
-        checked ? "bg-primary" : "bg-muted"
-      )}
-    >
-      <span className={cn(
-        "pointer-events-none absolute top-0.5 left-0 h-6 w-6 rounded-full bg-white shadow-sm transition-transform duration-200",
-        checked ? "translate-x-5.5" : "translate-x-0.5"
-      )} />
-    </button>
+    <label htmlFor={id} className="cursor-pointer shrink-0">
+      <input
+        id={id}
+        type="checkbox"
+        checked={checked}
+        onChange={e => onChange(e.target.checked)}
+        className="sr-only"
+      />
+      <div className={cn("relative h-7 w-12 rounded-full transition-colors select-none", checked ? "bg-primary" : "bg-muted")}>
+        <span className={cn(
+          "pointer-events-none absolute top-0.5 left-0 h-6 w-6 rounded-full bg-white shadow-sm transition-transform duration-200",
+          checked ? "translate-x-5.5" : "translate-x-0.5"
+        )} />
+      </div>
+    </label>
   )
 }
 
