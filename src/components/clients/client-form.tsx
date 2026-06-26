@@ -227,10 +227,16 @@ export function ClientForm({ defaultValues }: { defaultValues?: Partial<FormData
 // ── Sub-componentes ──────────────────────────────────────────────────────────
 
 function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
+  function handleTap(e: React.TouchEvent | React.MouseEvent) {
+    e.preventDefault()
+    e.stopPropagation()
+    onChange(!checked)
+  }
   return (
     <button
       type="button"
-      onClick={() => onChange(!checked)}
+      onTouchEnd={handleTap}
+      onClick={handleTap}
       className={cn(
         "relative h-7 w-12 shrink-0 cursor-pointer rounded-full outline-none transition-colors touch-manipulation select-none",
         checked ? "bg-primary" : "bg-muted"
