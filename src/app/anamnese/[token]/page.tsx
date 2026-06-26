@@ -265,8 +265,8 @@ function QuestionField({ question, value, onChange }: {
 function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
   return (
     <button type="button" onClick={() => onChange(!checked)}
-      className={cn("relative h-6 w-10 shrink-0 rounded-full outline-none transition-colors", checked ? "bg-primary" : "bg-muted")}>
-      <span className={cn("absolute top-0.5 left-0 h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200", checked ? "translate-x-4.5" : "translate-x-0.5")} />
+      className={cn("relative h-7 w-12 shrink-0 rounded-full outline-none transition-colors touch-manipulation select-none", checked ? "bg-primary" : "bg-muted")}>
+      <span className={cn("absolute top-0.5 left-0 h-6 w-6 rounded-full bg-white shadow-sm transition-transform duration-200", checked ? "translate-x-5.5" : "translate-x-0.5")} />
     </button>
   )
 }
