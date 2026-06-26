@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useId } from "react"
+import { useState, useRef } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -227,11 +227,12 @@ export function ClientForm({ defaultValues }: { defaultValues?: Partial<FormData
 // ── Sub-componentes ──────────────────────────────────────────────────────────
 
 function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
-  const id = useId()
+  const idRef = useRef(`toggle-${Math.random().toString(36).slice(2)}`)
+  const inputId = idRef.current
   return (
-    <label htmlFor={id} className="cursor-pointer shrink-0">
+    <label htmlFor={inputId} className="cursor-pointer shrink-0">
       <input
-        id={id}
+        id={inputId}
         type="checkbox"
         checked={checked}
         onChange={e => onChange(e.target.checked)}

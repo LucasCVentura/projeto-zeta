@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useId } from "react"
+import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { getClientAction } from "@/actions/clients"
 import { getAnamnesisAnswersAction, saveAnamnesisAnswersAction } from "@/actions/anamnesis"
@@ -103,6 +103,7 @@ function QuestionField({ question, value, onChange }: {
         <div className="flex items-center justify-between">
           <span className="text-sm">{question.label}</span>
           <Toggle
+            id={question.id}
             checked={checked}
             onChange={(v) => onChange(v ? { checked: true, detail } : false)}
           />
@@ -188,12 +189,12 @@ function QuestionField({ question, value, onChange }: {
   )
 }
 
-function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
-  const id = useId()
+function Toggle({ id, checked, onChange }: { id: string; checked: boolean; onChange: (v: boolean) => void }) {
+  const inputId = `toggle-${id}`
   return (
-    <label htmlFor={id} className="cursor-pointer shrink-0">
+    <label htmlFor={inputId} className="cursor-pointer shrink-0">
       <input
-        id={id}
+        id={inputId}
         type="checkbox"
         checked={checked}
         onChange={e => onChange(e.target.checked)}

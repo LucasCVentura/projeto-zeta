@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useId } from "react"
+import { useState, useEffect } from "react"
 import { useParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -193,7 +193,7 @@ function QuestionField({ question, value, onChange }: {
       <div className="rounded-xl border border-border bg-card p-4 space-y-2">
         <div className="flex items-center justify-between">
           <span className="text-sm">{question.label}</span>
-          <Toggle checked={checked} onChange={v => onChange(v ? { checked: true, detail } : false)} />
+          <Toggle id={question.id} checked={checked} onChange={v => onChange(v ? { checked: true, detail } : false)} />
         </div>
         {checked && question.placeholder && (
           <Input
@@ -262,12 +262,12 @@ function QuestionField({ question, value, onChange }: {
   )
 }
 
-function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
-  const id = useId()
+function Toggle({ id, checked, onChange }: { id: string; checked: boolean; onChange: (v: boolean) => void }) {
+  const inputId = `toggle-${id}`
   return (
-    <label htmlFor={id} className="cursor-pointer shrink-0">
+    <label htmlFor={inputId} className="cursor-pointer shrink-0">
       <input
-        id={id}
+        id={inputId}
         type="checkbox"
         checked={checked}
         onChange={e => onChange(e.target.checked)}
