@@ -6,6 +6,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "3.0.1",
+    date: "2026-06-26",
+    items: [
+      { type: "fix", text: "Corrigido o botão Sim/Não (toggle) da ficha de anamnese, que em alguns casos não alternava ao ser tocado" },
+      { type: "fix", text: "Envio de mensagens por WhatsApp: houve uma instabilidade temporária no envio, já normalizada" },
+    ],
+  },
+  {
     version: "3.0.0",
     date: "2026-06-24",
     items: [
