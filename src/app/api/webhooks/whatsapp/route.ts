@@ -3,7 +3,7 @@ import { handleWhatsAppButtonReply, handleWhatsAppReplyByPhone } from "@/actions
 import { logWhatsAppEvent } from "@/lib/whatsapp-logs"
 import { db } from "@/db"
 import { whatsappPendingConfirmations } from "@/db/schema"
-import { eq } from "drizzle-orm"
+import { eq, sql } from "drizzle-orm"
 import { handleInboundMessage } from "@/lib/chat-bot"
 
 export async function POST(req: NextRequest) {
@@ -66,7 +66,22 @@ export async function POST(req: NextRequest) {
       if (messageText) {
         const isAppointmentReply = /(confirmar|cancelar)/i.test(messageText)
         if (!isAppointmentReply) {
-          await handleInboundMessage(normalizedPhone, messageText, senderName)
+          // Não aciona o bot se o cliente respondeu a uma mensagem nossa (reply com contexto)
+          const isReplyToOurs = !!contextMessageId
+          if (!isReplyToOurs) {
+            // Sem contexto: verifica se enviamos algo a esse número nas últimas 2h
+            // (cliente digitou no chat sem usar o "responder") — também ignora o bot
+            const rows = await db.execute<{ cnt: number }>(sql`
+              SELECT COUNT(*)::int AS cnt FROM whatsapp_message_logs
+              WHERE destination = ${normalizedPhone}
+              AND created_at > NOW() - INTERVAL '2 hours'
+              LIMIT 1
+            `)
+            const recentlySent = (Array.isArray(rows) ? rows[0]?.cnt : rows.rows?.[0]?.cnt) ?? 0
+            if (!recentlySent) {
+              await handleInboundMessage(normalizedPhone, messageText, senderName)
+            }
+          }
         }
       }
     }
