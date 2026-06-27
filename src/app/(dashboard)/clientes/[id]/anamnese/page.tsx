@@ -93,7 +93,7 @@ function QuestionField({ question, value, onChange }: {
   onChange: (val: unknown) => void
 }) {
   if (question.type === "boolean") {
-    const checked = value === true
+    const checked = value === true || (typeof value === "object" && value !== null && (value as { checked?: boolean }).checked === true)
     const detail = typeof value === "object" && value !== null && "detail" in value
       ? (value as { detail: string }).detail
       : ""
