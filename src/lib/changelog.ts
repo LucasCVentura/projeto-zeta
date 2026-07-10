@@ -6,6 +6,13 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "3.1.0",
+    date: "2026-07-10",
+    items: [
+      { type: "new", text: "Agenda do dia no WhatsApp: ative em Perfil → Notificações e receba todo dia de manhã um resumo dos seus atendimentos direto no seu WhatsApp" },
+    ],
+  },
+  {
     version: "3.0.1",
     date: "2026-06-26",
     items: [

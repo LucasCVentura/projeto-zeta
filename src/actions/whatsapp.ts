@@ -15,6 +15,8 @@ const TEMPLATE_REMINDER_CONFIRMATION_ID =
   process.env.GUPSHUP_TEMPLATE_KIRA_LEMBRETE_CONFIRMACAO_ID || "kira_lembrete_confirmacao"
 const TEMPLATE_POST_VISIT_ID =
   process.env.GUPSHUP_TEMPLATE_KIRA_AGRADECIMENTO_ID || "kira_agradecimento"
+const TEMPLATE_DAILY_AGENDA_ID =
+  process.env.GUPSHUP_TEMPLATE_KIRA_AGENDA_DIA_ID || "kira_agenda_do_dia"
 
 async function getGlobalTemplateIds() {
   try {
@@ -23,12 +25,14 @@ async function getGlobalTemplateIds() {
       packageSummaryTemplateId: string | null
       reminderConfirmationTemplateId: string | null
       postVisitTemplateId: string | null
+      dailyAgendaTemplateId: string | null
     }>(sql`
       SELECT
         booking_summary_template_id as "bookingSummaryTemplateId",
         package_summary_template_id as "packageSummaryTemplateId",
         reminder_confirmation_template_id as "reminderConfirmationTemplateId",
-        post_visit_template_id as "postVisitTemplateId"
+        post_visit_template_id as "postVisitTemplateId",
+        daily_agenda_template_id as "dailyAgendaTemplateId"
       FROM whatsapp_system_template_settings
       WHERE singleton_key = 'default'
       LIMIT 1
@@ -39,6 +43,7 @@ async function getGlobalTemplateIds() {
       packageSummaryTemplateId: one?.packageSummaryTemplateId?.trim() || TEMPLATE_PACKAGE_SUMMARY_ID,
       reminderConfirmationTemplateId: one?.reminderConfirmationTemplateId?.trim() || TEMPLATE_REMINDER_CONFIRMATION_ID,
       postVisitTemplateId: one?.postVisitTemplateId?.trim() || TEMPLATE_POST_VISIT_ID,
+      dailyAgendaTemplateId: one?.dailyAgendaTemplateId?.trim() || TEMPLATE_DAILY_AGENDA_ID,
     }
   } catch {
     return {
@@ -46,6 +51,7 @@ async function getGlobalTemplateIds() {
       packageSummaryTemplateId: TEMPLATE_PACKAGE_SUMMARY_ID,
       reminderConfirmationTemplateId: TEMPLATE_REMINDER_CONFIRMATION_ID,
       postVisitTemplateId: TEMPLATE_POST_VISIT_ID,
+      dailyAgendaTemplateId: TEMPLATE_DAILY_AGENDA_ID,
     }
   }
 }
@@ -184,6 +190,42 @@ export async function sendPostVisitThanks(params: {
     safeParam(clientName, "Cliente"),
     safeParam(orgName, "Clinica"),
     safeParam(googleReviewUrl, ""),
+  ])
+}
+
+// ── Agenda do dia para o profissional (manhã) ────────────────────────────────
+
+const DAILY_AGENDA_MAX_ITEMS = 5
+
+export async function sendDailyAgendaSummary(params: {
+  professionalPhone: string
+  professionalName: string
+  orgName: string
+  items: { startTime: string; clientName: string; procedure?: string | null }[]
+}) {
+  const { professionalPhone, professionalName, orgName, items } = params
+  if (items.length === 0) return
+  const templates = await getGlobalTemplateIds()
+
+  const sorted = [...items].sort((a, b) => a.startTime.localeCompare(b.startTime))
+  const shown = sorted.slice(0, DAILY_AGENDA_MAX_ITEMS)
+  const rest = sorted.length - shown.length
+
+  // Variáveis de template não aceitam quebra de linha: lista em linha única
+  const list = shown
+    .map((i) => {
+      const proc = (i.procedure ?? "").replace(/\s+/g, " ").trim()
+      return `${i.startTime.slice(0, 5)} ${safeParam(i.clientName, "Cliente")}${proc ? ` (${proc})` : ""}`
+    })
+    .join(" · ")
+  const listWithRest = rest > 0 ? `${list} e mais ${rest}` : list
+
+  await sendWhatsAppTemplate(professionalPhone, templates.dailyAgendaTemplateId, [
+    safeParam(professionalName.split(" ")[0], "Profissional"),
+    safeParam(orgName, "Clinica"),
+    listWithRest,
+    String(sorted.length),
+    sorted[0].startTime.slice(0, 5),
   ])
 }
 

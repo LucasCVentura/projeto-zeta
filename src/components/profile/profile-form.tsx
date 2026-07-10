@@ -73,6 +73,7 @@ export function ProfileForm({ user }: { user: User }) {
   const [showCustomSegment, setShowCustomSegment] = useState(
     user.profession === "outro" && isCustomSegment(user.professionSegment)
   )
+  const [dailyAgendaWhatsapp, setDailyAgendaWhatsapp] = useState(user.dailyAgendaWhatsapp)
 
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -126,6 +127,7 @@ export function ProfileForm({ user }: { user: User }) {
         ...data,
         profession: selectedProfession,
         professionSegment: selectedProfession === "outro" ? data.professionSegment : undefined,
+        dailyAgendaWhatsapp,
       })
       if (!result.success) { setError(result.error ?? "Erro ao salvar."); return }
       await updateSession()
@@ -218,6 +220,41 @@ export function ProfileForm({ user }: { user: User }) {
             <Input id="instagram" className="pl-7" placeholder="seu.perfil" {...register("instagram")} />
           </div>
         </div>
+      </div>
+
+      {/* Notificações */}
+      <div className="surface space-y-4">
+        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Notificações</p>
+
+        <button
+          type="button"
+          onClick={() => setDailyAgendaWhatsapp((v) => !v)}
+          className={`flex w-full items-center justify-between rounded-xl border px-4 py-3 text-left transition-all
+            ${dailyAgendaWhatsapp
+              ? "border-primary bg-primary/5 shadow-sm"
+              : "border-border hover:border-primary/40 hover:bg-muted/50"}`}
+        >
+          <span>
+            <span className="block text-sm font-medium">Agenda do dia no WhatsApp</span>
+            <span className="block text-xs text-muted-foreground mt-0.5">
+              Receba todo dia de manhã um resumo dos seus atendimentos no seu WhatsApp.
+            </span>
+          </span>
+          <span
+            className={`ml-4 flex h-6 w-11 shrink-0 items-center rounded-full p-0.5 transition-colors
+              ${dailyAgendaWhatsapp ? "bg-primary" : "bg-muted-foreground/25"}`}
+          >
+            <span
+              className={`h-5 w-5 rounded-full bg-white shadow-sm transition-transform
+                ${dailyAgendaWhatsapp ? "translate-x-5" : "translate-x-0"}`}
+            />
+          </span>
+        </button>
+        {dailyAgendaWhatsapp && !watch("whatsapp") && (
+          <p className="text-xs text-destructive">
+            Preencha seu WhatsApp em Dados pessoais para receber a agenda do dia.
+          </p>
+        )}
       </div>
 
       {/* Dados profissionais */}

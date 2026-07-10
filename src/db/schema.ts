@@ -59,6 +59,8 @@ export const users = pgTable("users", {
   professionalDocumentType: text("professional_document_type"),
   instagram: text("instagram"),
 
+  dailyAgendaWhatsapp: boolean("daily_agenda_whatsapp").notNull().default(false),
+
   lastSeenChangelog: text("last_seen_changelog"),
 
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -848,6 +850,7 @@ export const whatsappSystemTemplateSettings = pgTable("whatsapp_system_template_
   trialOutreachTemplateId: text("trial_outreach_template_id"),
   testimonialOutreachTemplateId: text("testimonial_outreach_template_id"),
   winbackOutreachTemplateId: text("winback_outreach_template_id"),
+  dailyAgendaTemplateId: text("daily_agenda_template_id"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 })

@@ -24,6 +24,7 @@ export async function updateProfileAction(data: {
   professionalDocumentType?: string
   professionSegment?: string
   profession?: "esteticista" | "biomedico" | "outro"
+  dailyAgendaWhatsapp?: boolean
 }): Promise<ActionResult> {
   const { userId } = await requireSession()
 
@@ -39,6 +40,7 @@ export async function updateProfileAction(data: {
       professionalDocumentType: data.professionalDocumentType || null,
       professionSegment: data.professionSegment || null,
       ...(data.profession ? { profession: data.profession } : {}),
+      ...(data.dailyAgendaWhatsapp !== undefined ? { dailyAgendaWhatsapp: data.dailyAgendaWhatsapp } : {}),
       updatedAt: new Date(),
     })
     .where(eq(users.id, userId))

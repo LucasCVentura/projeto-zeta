@@ -47,6 +47,7 @@ type WhatsAppTemplateSetting = {
   reminderConfirmationTemplateId: string | null; postVisitTemplateId: string | null
   trialOutreachTemplateId: string | null; trialExpiredOutreachTemplateId: string | null
   testimonialOutreachTemplateId: string | null; winbackOutreachTemplateId: string | null
+  dailyAgendaTemplateId: string | null
 }
 
 // ── Constantes ────────────────────────────────────────────────────────────────
@@ -421,6 +422,7 @@ export function AdminDashboard() {
   const [trialExpiredOutreachTemplateId, setTrialExpiredOutreachTemplateId] = useState("")
   const [testimonialOutreachTemplateId, setTestimonialOutreachTemplateId] = useState("")
   const [winbackOutreachTemplateId, setWinbackOutreachTemplateId] = useState("")
+  const [dailyAgendaTemplateId, setDailyAgendaTemplateId] = useState("")
   const [pendingCancelOrg, setPendingCancelOrg] = useState<{ id: string; name: string } | null>(null)
   const [activeSection, setActiveSection] = useState("overview")
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -450,6 +452,7 @@ export function AdminDashboard() {
       setTrialExpiredOutreachTemplateId(t.trialExpiredOutreachTemplateId ?? "")
       setTestimonialOutreachTemplateId(t.testimonialOutreachTemplateId ?? "")
       setWinbackOutreachTemplateId(t.winbackOutreachTemplateId ?? "")
+      setDailyAgendaTemplateId(t.dailyAgendaTemplateId ?? "")
     }).catch(() => {})
   }, [])
 
@@ -562,6 +565,7 @@ export function AdminDashboard() {
         bookingSummaryTemplateId: bookingTemplateId, packageSummaryTemplateId: packageTemplateId,
         reminderConfirmationTemplateId: reminderTemplateId, postVisitTemplateId,
         trialOutreachTemplateId, trialExpiredOutreachTemplateId, testimonialOutreachTemplateId, winbackOutreachTemplateId,
+        dailyAgendaTemplateId,
       })
     } catch { setTemplateError("Não foi possível salvar. Tente novamente.") }
     finally { setTemplateSaving(false) }
@@ -1227,6 +1231,10 @@ export function AdminDashboard() {
             <div className="space-y-1.5">
               <p className="text-sm font-medium">Recuperação de inativos <code className="text-xs bg-muted px-1.5 py-0.5 rounded ml-1">kira_winback_outreach</code></p>
               <Input value={winbackOutreachTemplateId} onChange={e => setWinbackOutreachTemplateId(e.target.value)} placeholder="UUID do template winback" className="font-mono text-xs" />
+            </div>
+            <div className="space-y-1.5">
+              <p className="text-sm font-medium">Agenda do dia (profissional) <code className="text-xs bg-muted px-1.5 py-0.5 rounded ml-1">kira_agenda_do_dia</code></p>
+              <Input value={dailyAgendaTemplateId} onChange={e => setDailyAgendaTemplateId(e.target.value)} placeholder="UUID do template agenda do dia" className="font-mono text-xs" />
             </div>
             {templateError && <p className="text-xs text-destructive">{templateError}</p>}
             <Button onClick={handleSaveTemplate} disabled={templateSaving} className="w-full">
