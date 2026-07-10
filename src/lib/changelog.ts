@@ -6,6 +6,13 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "3.1.2",
+    date: "2026-07-10",
+    items: [
+      { type: "improvement", text: "Agenda no celular: cabeçalho reorganizado — a data aparece em uma linha só e os botões não ficam mais espremidos ou cortados" },
+    ],
+  },
+  {
     version: "3.1.1",
     date: "2026-07-10",
     items: [

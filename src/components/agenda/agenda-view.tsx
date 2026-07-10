@@ -301,10 +301,10 @@ export function AgendaView({ initialDate, slots: initialSlots, hasConfig, slotDu
           </div>
         )}
 
-        {/* Data selecionada + ações */}
-        <div className="flex items-center justify-between">
+        {/* Data selecionada + ações — empilha no mobile, lado a lado no desktop */}
+        <div className="flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-between">
           {view === "day" ? (
-            <p className="capitalize text-sm text-muted-foreground">{formatDate(date)}</p>
+            <p className="first-letter:uppercase text-sm text-muted-foreground">{formatDate(date)}</p>
           ) : view === "week" ? (
             <p className="text-sm text-muted-foreground">
               {weekDays.includes(today) ? "Semana atual" : ""}
@@ -314,7 +314,7 @@ export function AgendaView({ initialDate, slots: initialSlots, hasConfig, slotDu
               {date === today ? "Hoje" : `Selecionado: ${new Date(date + "T12:00:00").toLocaleDateString("pt-BR", { day: "numeric", month: "short" })}`}
             </p>
           )}
-          <div className="flex gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {view === "day" && (
               <Button
                 size="sm"
