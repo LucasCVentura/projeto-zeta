@@ -6,6 +6,13 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "3.1.1",
+    date: "2026-07-10",
+    items: [
+      { type: "fix", text: "Corrigido o modal \"O que há de novo\" no celular, que em alguns aparelhos abria cortado e não deixava fechar nem rolar o conteúdo" },
+    ],
+  },
+  {
     version: "3.1.0",
     date: "2026-07-10",
     items: [

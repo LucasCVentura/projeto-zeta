@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useTransition } from "react"
+import { createPortal } from "react-dom"
 import { Sparkles, X, Zap, Wrench, ArrowUp } from "lucide-react"
 import { markChangelogSeenAction } from "@/actions/changelog"
 import type { ChangelogEntry } from "@/lib/changelog"
@@ -29,6 +30,13 @@ export function WhatsNewModal({ hasNew: initialHasNew, entries, collapsed, onOpe
   useEffect(() => {
     if (open) requestAnimationFrame(() => setVisible(true))
     else setVisible(false)
+  }, [open])
+
+  useEffect(() => {
+    if (!open) return
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = "hidden"
+    return () => { document.body.style.overflow = previousOverflow }
   }, [open])
 
   function handleOpen() {
@@ -70,10 +78,11 @@ export function WhatsNewModal({ hasNew: initialHasNew, entries, collapsed, onOpe
         )}
       </button>
 
-      {/* Modal */}
-      {open && (
+      {/* Modal — via portal para escapar do contexto transformado do bottom sheet mobile,
+          onde position:fixed deixa de ser relativo à viewport */}
+      {open && createPortal(
         <div
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 pb-20 sm:pb-4"
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 pb-20 sm:pb-4 overscroll-contain"
           onClick={(e) => e.target === e.currentTarget && handleClose()}
         >
           <div
@@ -102,7 +111,7 @@ export function WhatsNewModal({ hasNew: initialHasNew, entries, collapsed, onOpe
             </div>
 
             {/* Conteúdo */}
-            <div className="overflow-y-auto flex-1 px-5 py-4 space-y-6">
+            <div className="overflow-y-auto overscroll-contain min-h-0 flex-1 px-5 py-4 space-y-6">
               {entries.map((entry, i) => (
                 <div key={entry.version} className="space-y-3">
                   <div className="flex items-center gap-3">
@@ -142,7 +151,8 @@ export function WhatsNewModal({ hasNew: initialHasNew, entries, collapsed, onOpe
               <p className="text-xs text-muted-foreground">kiraclinic.com.br</p>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   )
