@@ -5,10 +5,14 @@ import { getOnboardingStatusAction } from "@/actions/onboarding"
 import { StatusBadge } from "@/components/agenda/status-badge"
 import { RevenueChart, ProceduresChart, StatusChart } from "@/components/dashboard/dashboard-charts"
 import { OnboardingChecklist } from "@/components/dashboard/onboarding-checklist"
+import { GoogleReviewNudge } from "@/components/dashboard/google-review-nudge"
 import Link from "next/link"
 import { requireSession } from "@/lib/session"
 import { can } from "@/lib/permissions"
 import { cn } from "@/lib/utils"
+import { db } from "@/db"
+import { organizations } from "@/db/schema"
+import { eq } from "drizzle-orm"
 
 function formatCurrency(cents: number) {
   return (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
@@ -28,6 +32,16 @@ export default async function DashboardPage() {
   const dismissStorageKey = `kira:onboarding-dismissed:${session.organizationId}:${session.userId}`
   const canSeeFinancial = can(session.role, "financial:read")
 
+  let showGoogleReviewNudge = false
+  if (session.role === "owner") {
+    const [org] = await db
+      .select({ googleReviewUrl: organizations.googleReviewUrl })
+      .from(organizations)
+      .where(eq(organizations.id, session.organizationId))
+      .limit(1)
+    showGoogleReviewNudge = !org?.googleReviewUrl
+  }
+
   const stats = [
     { label: "Agendamentos hoje", value: String(data.todayCount), icon: CalendarDays },
     { label: "Clientes", value: String(data.totalClients), icon: Users },
@@ -46,6 +60,9 @@ export default async function DashboardPage() {
 
   return (
     <div className="container-page py-6 space-y-6">
+      {/* Aviso: configurar link de avaliação do Google */}
+      {showGoogleReviewNudge && <GoogleReviewNudge organizationId={session.organizationId} />}
+
       {/* Alerta de estoque baixo */}
       {lowStock.length > 0 && (
         <Link href="/estoque" className="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30 px-4 py-3 hover:bg-amber-100 dark:hover:bg-amber-950/50 transition-colors no-underline">

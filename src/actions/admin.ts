@@ -642,6 +642,7 @@ export type AdminWhatsAppTemplateSetting = {
   testimonialOutreachTemplateId: string | null
   winbackOutreachTemplateId: string | null
   dailyAgendaTemplateId: string | null
+  postVisitNoLinkTemplateId: string | null
 }
 
 export async function getWhatsAppTemplateSettingsAction(): Promise<AdminWhatsAppTemplateSetting> {
@@ -658,6 +659,7 @@ export async function getWhatsAppTemplateSettingsAction(): Promise<AdminWhatsApp
         ,s.testimonial_outreach_template_id as "testimonialOutreachTemplateId"
         ,s.winback_outreach_template_id as "winbackOutreachTemplateId"
         ,s.daily_agenda_template_id as "dailyAgendaTemplateId"
+        ,s.post_visit_no_link_template_id as "postVisitNoLinkTemplateId"
       FROM whatsapp_system_template_settings s
       WHERE s.singleton_key = 'default'
       LIMIT 1
@@ -673,6 +675,7 @@ export async function getWhatsAppTemplateSettingsAction(): Promise<AdminWhatsApp
       testimonialOutreachTemplateId: one?.testimonialOutreachTemplateId ?? null,
       winbackOutreachTemplateId: one?.winbackOutreachTemplateId ?? null,
       dailyAgendaTemplateId: one?.dailyAgendaTemplateId ?? null,
+      postVisitNoLinkTemplateId: one?.postVisitNoLinkTemplateId ?? null,
     }
   } catch (err) {
     console.error("[Admin] Falha ao carregar config global de template WhatsApp:", err)
@@ -686,6 +689,7 @@ export async function getWhatsAppTemplateSettingsAction(): Promise<AdminWhatsApp
       testimonialOutreachTemplateId: null,
       winbackOutreachTemplateId: null,
       dailyAgendaTemplateId: null,
+      postVisitNoLinkTemplateId: null,
     }
   }
 }
@@ -700,6 +704,7 @@ export async function saveWhatsAppTemplateSettingAction(input: {
   testimonialOutreachTemplateId: string
   winbackOutreachTemplateId: string
   dailyAgendaTemplateId: string
+  postVisitNoLinkTemplateId: string
 }) {
   await requireAdmin()
   const bookingTemplateId = input.bookingSummaryTemplateId.trim() || null
@@ -711,9 +716,10 @@ export async function saveWhatsAppTemplateSettingAction(input: {
   const testimonialOutreachTemplateId = input.testimonialOutreachTemplateId.trim() || null
   const winbackOutreachTemplateId = input.winbackOutreachTemplateId.trim() || null
   const dailyAgendaTemplateId = input.dailyAgendaTemplateId.trim() || null
+  const postVisitNoLinkTemplateId = input.postVisitNoLinkTemplateId.trim() || null
   await db.execute(sql`
     INSERT INTO whatsapp_system_template_settings (
-      id, singleton_key, booking_summary_template_id, package_summary_template_id, reminder_confirmation_template_id, post_visit_template_id, trial_outreach_template_id, trial_expired_outreach_template_id, testimonial_outreach_template_id, winback_outreach_template_id, daily_agenda_template_id, created_at, updated_at
+      id, singleton_key, booking_summary_template_id, package_summary_template_id, reminder_confirmation_template_id, post_visit_template_id, trial_outreach_template_id, trial_expired_outreach_template_id, testimonial_outreach_template_id, winback_outreach_template_id, daily_agenda_template_id, post_visit_no_link_template_id, created_at, updated_at
     )
     VALUES (
       ${crypto.randomUUID()},
@@ -727,6 +733,7 @@ export async function saveWhatsAppTemplateSettingAction(input: {
       ${testimonialOutreachTemplateId},
       ${winbackOutreachTemplateId},
       ${dailyAgendaTemplateId},
+      ${postVisitNoLinkTemplateId},
       now(),
       now()
     )
@@ -740,6 +747,7 @@ export async function saveWhatsAppTemplateSettingAction(input: {
       testimonial_outreach_template_id = EXCLUDED.testimonial_outreach_template_id,
       winback_outreach_template_id = EXCLUDED.winback_outreach_template_id,
       daily_agenda_template_id = EXCLUDED.daily_agenda_template_id,
+      post_visit_no_link_template_id = EXCLUDED.post_visit_no_link_template_id,
       updated_at = now()
   `)
   revalidatePath("/admin")

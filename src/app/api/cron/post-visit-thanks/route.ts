@@ -34,11 +34,17 @@ export async function GET(req: NextRequest) {
     )
 
   let sent = 0
+  let skipped = 0
+  let failed = 0
 
   if (process.env.WHATSAPP_ENABLED === "true") {
     for (const row of rows) {
       const clientPhone = row.clientWhatsapp ?? row.clientPhone
-      if (!clientPhone || !row.googleReviewUrl) continue
+      if (!clientPhone) {
+        skipped++
+        console.warn("[Cron][PostVisit] pulado: cliente sem telefone", { client: row.clientName, org: row.orgName })
+        continue
+      }
       try {
         await sendPostVisitThanks({
           clientPhone,
@@ -47,11 +53,12 @@ export async function GET(req: NextRequest) {
           googleReviewUrl: row.googleReviewUrl,
         })
         sent++
-      } catch {
-        // log silencioso por cliente
+      } catch (err) {
+        failed++
+        console.error("[Cron][PostVisit] erro ao enviar agradecimento", { client: row.clientName, org: row.orgName, error: err })
       }
     }
   }
 
-  return NextResponse.json({ ok: true, sent, date: yesterdayStr })
+  return NextResponse.json({ ok: true, sent, skipped, failed, date: yesterdayStr })
 }

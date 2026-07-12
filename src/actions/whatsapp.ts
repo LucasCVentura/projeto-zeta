@@ -17,6 +17,8 @@ const TEMPLATE_POST_VISIT_ID =
   process.env.GUPSHUP_TEMPLATE_KIRA_AGRADECIMENTO_ID || "kira_agradecimento"
 const TEMPLATE_DAILY_AGENDA_ID =
   process.env.GUPSHUP_TEMPLATE_KIRA_AGENDA_DIA_ID || "kira_agenda_do_dia"
+const TEMPLATE_POST_VISIT_NO_LINK_ID =
+  process.env.GUPSHUP_TEMPLATE_KIRA_AGRADECIMENTO_SEM_LINK_ID || "kira_agradecimento_sem_link"
 
 async function getGlobalTemplateIds() {
   try {
@@ -26,13 +28,15 @@ async function getGlobalTemplateIds() {
       reminderConfirmationTemplateId: string | null
       postVisitTemplateId: string | null
       dailyAgendaTemplateId: string | null
+      postVisitNoLinkTemplateId: string | null
     }>(sql`
       SELECT
         booking_summary_template_id as "bookingSummaryTemplateId",
         package_summary_template_id as "packageSummaryTemplateId",
         reminder_confirmation_template_id as "reminderConfirmationTemplateId",
         post_visit_template_id as "postVisitTemplateId",
-        daily_agenda_template_id as "dailyAgendaTemplateId"
+        daily_agenda_template_id as "dailyAgendaTemplateId",
+        post_visit_no_link_template_id as "postVisitNoLinkTemplateId"
       FROM whatsapp_system_template_settings
       WHERE singleton_key = 'default'
       LIMIT 1
@@ -44,6 +48,7 @@ async function getGlobalTemplateIds() {
       reminderConfirmationTemplateId: one?.reminderConfirmationTemplateId?.trim() || TEMPLATE_REMINDER_CONFIRMATION_ID,
       postVisitTemplateId: one?.postVisitTemplateId?.trim() || TEMPLATE_POST_VISIT_ID,
       dailyAgendaTemplateId: one?.dailyAgendaTemplateId?.trim() || TEMPLATE_DAILY_AGENDA_ID,
+      postVisitNoLinkTemplateId: one?.postVisitNoLinkTemplateId?.trim() || TEMPLATE_POST_VISIT_NO_LINK_ID,
     }
   } catch {
     return {
@@ -52,6 +57,7 @@ async function getGlobalTemplateIds() {
       reminderConfirmationTemplateId: TEMPLATE_REMINDER_CONFIRMATION_ID,
       postVisitTemplateId: TEMPLATE_POST_VISIT_ID,
       dailyAgendaTemplateId: TEMPLATE_DAILY_AGENDA_ID,
+      postVisitNoLinkTemplateId: TEMPLATE_POST_VISIT_NO_LINK_ID,
     }
   }
 }
@@ -186,11 +192,22 @@ export async function sendPostVisitThanks(params: {
   const { clientPhone, clientName, orgName, googleReviewUrl } = params
   const templates = await getGlobalTemplateIds()
 
-  await sendWhatsAppTemplate(clientPhone, templates.postVisitTemplateId, [
-    safeParam(clientName, "Cliente"),
-    safeParam(orgName, "Clinica"),
-    safeParam(googleReviewUrl, ""),
-  ])
+  const hasReviewLink = !!googleReviewUrl?.trim()
+
+  // Com link do Google → template com a frase de avaliação; sem link → variante sem a frase
+  // (variável vazia em template é rejeitada pelo WhatsApp, por isso são dois templates)
+  if (hasReviewLink) {
+    await sendWhatsAppTemplate(clientPhone, templates.postVisitTemplateId, [
+      safeParam(clientName, "Cliente"),
+      safeParam(orgName, "Clinica"),
+      googleReviewUrl!.trim(),
+    ])
+  } else {
+    await sendWhatsAppTemplate(clientPhone, templates.postVisitNoLinkTemplateId, [
+      safeParam(clientName, "Cliente"),
+      safeParam(orgName, "Clinica"),
+    ])
+  }
 }
 
 // ── Agenda do dia para o profissional (manhã) ────────────────────────────────

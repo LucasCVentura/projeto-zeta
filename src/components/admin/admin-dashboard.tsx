@@ -48,6 +48,7 @@ type WhatsAppTemplateSetting = {
   trialOutreachTemplateId: string | null; trialExpiredOutreachTemplateId: string | null
   testimonialOutreachTemplateId: string | null; winbackOutreachTemplateId: string | null
   dailyAgendaTemplateId: string | null
+  postVisitNoLinkTemplateId: string | null
 }
 
 // ── Constantes ────────────────────────────────────────────────────────────────
@@ -423,6 +424,7 @@ export function AdminDashboard() {
   const [testimonialOutreachTemplateId, setTestimonialOutreachTemplateId] = useState("")
   const [winbackOutreachTemplateId, setWinbackOutreachTemplateId] = useState("")
   const [dailyAgendaTemplateId, setDailyAgendaTemplateId] = useState("")
+  const [postVisitNoLinkTemplateId, setPostVisitNoLinkTemplateId] = useState("")
   const [pendingCancelOrg, setPendingCancelOrg] = useState<{ id: string; name: string } | null>(null)
   const [activeSection, setActiveSection] = useState("overview")
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -453,6 +455,7 @@ export function AdminDashboard() {
       setTestimonialOutreachTemplateId(t.testimonialOutreachTemplateId ?? "")
       setWinbackOutreachTemplateId(t.winbackOutreachTemplateId ?? "")
       setDailyAgendaTemplateId(t.dailyAgendaTemplateId ?? "")
+      setPostVisitNoLinkTemplateId(t.postVisitNoLinkTemplateId ?? "")
     }).catch(() => {})
   }, [])
 
@@ -566,6 +569,7 @@ export function AdminDashboard() {
         reminderConfirmationTemplateId: reminderTemplateId, postVisitTemplateId,
         trialOutreachTemplateId, trialExpiredOutreachTemplateId, testimonialOutreachTemplateId, winbackOutreachTemplateId,
         dailyAgendaTemplateId,
+        postVisitNoLinkTemplateId,
       })
     } catch { setTemplateError("Não foi possível salvar. Tente novamente.") }
     finally { setTemplateSaving(false) }
@@ -1235,6 +1239,10 @@ export function AdminDashboard() {
             <div className="space-y-1.5">
               <p className="text-sm font-medium">Agenda do dia (profissional) <code className="text-xs bg-muted px-1.5 py-0.5 rounded ml-1">kira_agenda_do_dia</code></p>
               <Input value={dailyAgendaTemplateId} onChange={e => setDailyAgendaTemplateId(e.target.value)} placeholder="UUID do template agenda do dia" className="font-mono text-xs" />
+            </div>
+            <div className="space-y-1.5">
+              <p className="text-sm font-medium">Agradecimento sem link de avaliação <code className="text-xs bg-muted px-1.5 py-0.5 rounded ml-1">kira_agradecimento_sem_link</code></p>
+              <Input value={postVisitNoLinkTemplateId} onChange={e => setPostVisitNoLinkTemplateId(e.target.value)} placeholder="UUID do template de agradecimento sem link" className="font-mono text-xs" />
             </div>
             {templateError && <p className="text-xs text-destructive">{templateError}</p>}
             <Button onClick={handleSaveTemplate} disabled={templateSaving} className="w-full">

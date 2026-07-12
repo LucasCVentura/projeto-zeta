@@ -851,6 +851,7 @@ export const whatsappSystemTemplateSettings = pgTable("whatsapp_system_template_
   testimonialOutreachTemplateId: text("testimonial_outreach_template_id"),
   winbackOutreachTemplateId: text("winback_outreach_template_id"),
   dailyAgendaTemplateId: text("daily_agenda_template_id"),
+  postVisitNoLinkTemplateId: text("post_visit_no_link_template_id"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 })

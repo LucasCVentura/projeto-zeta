@@ -6,6 +6,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "3.4.0",
+    date: "2026-07-13",
+    items: [
+      { type: "improvement", text: "A mensagem de agradecimento após o atendimento agora é enviada mesmo sem o link de avaliação do Google configurado" },
+      { type: "new",         text: "Aviso no painel para configurar o link do Google Negócios — com ele, o agradecimento já pede a avaliação da sua cliente automaticamente" },
+    ],
+  },
+  {
     version: "3.3.0",
     date: "2026-07-13",
     items: [
