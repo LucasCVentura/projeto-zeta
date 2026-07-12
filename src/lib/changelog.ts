@@ -6,6 +6,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "3.3.0",
+    date: "2026-07-13",
+    items: [
+      { type: "new",         text: "Novos temas: além de Claro e Escuro, agora tem Claro Neutro e Escuro Neutro (visual mais neutro, com destaque em azul em vez de rosa) — escolha em Perfil ou pelo menu de tema" },
+      { type: "improvement", text: "Perfil mostra um aviso quando falta preencher CPF, telefone, data de nascimento ou documento profissional" },
+    ],
+  },
+  {
     version: "3.2.0",
     date: "2026-07-13",
     items: [

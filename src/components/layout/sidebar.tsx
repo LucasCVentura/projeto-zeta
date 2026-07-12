@@ -4,7 +4,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useSession, signOut } from "next-auth/react"
 import { cn } from "@/lib/utils"
-import { useTheme } from "@/hooks/use-theme"
+import { ThemeMenu } from "./theme-menu"
 import { mediaUrl } from "@/lib/media-url"
 import { KiraMark } from "@/components/ui/kira-mark"
 import { useSidebar } from "./sidebar-context"
@@ -100,9 +100,8 @@ const allNavItems = [
   },
 ]
 
-export function Sidebar({ role, changelogHasNew, changelogEntries }: { role: OrgRole; changelogHasNew: boolean; changelogEntries: ChangelogEntry[] }) {
+export function Sidebar({ role, changelogHasNew, changelogEntries, profileIncomplete }: { role: OrgRole; changelogHasNew: boolean; changelogEntries: ChangelogEntry[]; profileIncomplete?: boolean }) {
   const pathname = usePathname()
-  const { isDark, toggle, mounted } = useTheme()
   const { collapsed, toggle: toggleSidebar } = useSidebar()
 
   const navItems = allNavItems.filter((item) =>
@@ -164,44 +163,17 @@ export function Sidebar({ role, changelogHasNew, changelogEntries }: { role: Org
         })}
       </nav>
 
-      {/* Theme toggle + User */}
+      {/* Theme menu + User */}
       <div className="border-t border-border p-3 space-y-1">
-        <button
-          onClick={toggle}
-          suppressHydrationWarning
-          title={collapsed ? (mounted ? (isDark ? "Modo claro" : "Modo escuro") : "Modo escuro") : undefined}
-          className={cn(
-            "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors",
-            collapsed && "justify-center px-0"
-          )}
-        >
-          {!mounted ? (
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
-              <circle cx="12" cy="12" r="5" />
-            </svg>
-          ) : isDark ? (
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
-              <circle cx="12" cy="12" r="5" />
-              <line x1="12" y1="1" x2="12" y2="3" /><line x1="12" y1="21" x2="12" y2="23" />
-              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" /><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
-              <line x1="1" y1="12" x2="3" y2="12" /><line x1="21" y1="12" x2="23" y2="12" />
-              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" /><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
-            </svg>
-          ) : (
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
-              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-            </svg>
-          )}
-          {!collapsed && (mounted ? (isDark ? "Modo claro" : "Modo escuro") : "Modo escuro")}
-        </button>
+        <ThemeMenu collapsed={collapsed} />
         <WhatsNewModal hasNew={changelogHasNew} entries={changelogEntries} collapsed={collapsed} />
-        <UserMenu collapsed={collapsed} />
+        <UserMenu collapsed={collapsed} profileIncomplete={profileIncomplete} />
       </div>
     </aside>
   )
 }
 
-function UserMenu({ collapsed }: { collapsed: boolean }) {
+function UserMenu({ collapsed, profileIncomplete }: { collapsed: boolean; profileIncomplete?: boolean }) {
   const { data: session } = useSession()
   const name = session?.user?.name ?? "Minha conta"
   const image = session?.user?.image
@@ -241,10 +213,18 @@ function UserMenu({ collapsed }: { collapsed: boolean }) {
           collapsed && "justify-center px-0"
         )}
       >
-        <div className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/15 text-sm font-semibold text-primary overflow-hidden">
-          {image ? (
-            <Image src={mediaUrl(image) + (avatarTs ? `?t=${avatarTs}` : "")} alt={name} fill className="object-cover" sizes="32px" unoptimized />
-          ) : initials}
+        <div className="relative shrink-0">
+          <div className="relative flex h-8 w-8 items-center justify-center rounded-full bg-primary/15 text-sm font-semibold text-primary overflow-hidden">
+            {image ? (
+              <Image src={mediaUrl(image) + (avatarTs ? `?t=${avatarTs}` : "")} alt={name} fill className="object-cover" sizes="32px" unoptimized />
+            ) : initials}
+          </div>
+          {profileIncomplete && (
+            <span className="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
+              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-primary ring-1 ring-background" />
+            </span>
+          )}
         </div>
         {!collapsed && (
           <>
@@ -266,6 +246,9 @@ function UserMenu({ collapsed }: { collapsed: boolean }) {
               <circle cx="12" cy="8" r="4" /><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
             </svg>
             Ver perfil
+            {profileIncomplete && (
+              <span className="ml-auto flex h-1.5 w-1.5 rounded-full bg-primary" />
+            )}
           </Link>
           <Link href="/configuracoes" onClick={() => setOpen(false)} className="flex items-center gap-2.5 px-3 py-2.5 text-sm hover:bg-accent transition-colors">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">

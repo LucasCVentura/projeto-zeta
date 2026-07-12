@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation"
 import { useSession, signOut } from "next-auth/react"
 import { useState, useEffect, useRef } from "react"
 import { cn } from "@/lib/utils"
-import { useTheme } from "@/hooks/use-theme"
+import { ThemeMenu } from "./theme-menu"
 import { mediaUrl } from "@/lib/media-url"
 import Image from "next/image"
 import { can } from "@/lib/permissions"
@@ -75,11 +75,10 @@ const allNavItems = [
   },
 ]
 
-export function MobileNav({ role, changelogHasNew, changelogEntries }: { role: OrgRole; changelogHasNew: boolean; changelogEntries: ChangelogEntry[] }) {
+export function MobileNav({ role, changelogHasNew, changelogEntries, profileIncomplete }: { role: OrgRole; changelogHasNew: boolean; changelogEntries: ChangelogEntry[]; profileIncomplete?: boolean }) {
   const pathname = usePathname()
   const [menuOpen, setMenuOpen] = useState(false)
   const { data: session } = useSession()
-  const { isDark, toggle, mounted } = useTheme()
   const sheetRef = useRef<HTMLDivElement>(null)
 
   const navItems = allNavItems.filter((item) =>
@@ -134,10 +133,18 @@ export function MobileNav({ role, changelogHasNew, changelogEntries }: { role: O
 
         {/* User info */}
         <div className="flex items-center gap-3 px-5 py-4 border-b border-border">
-          <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/15 text-sm font-semibold text-primary overflow-hidden">
-            {image ? (
-              <Image src={mediaUrl(image)} alt={name} fill className="object-cover" sizes="40px" unoptimized />
-            ) : initials}
+          <div className="relative shrink-0">
+            <div className="relative flex h-10 w-10 items-center justify-center rounded-full bg-primary/15 text-sm font-semibold text-primary overflow-hidden">
+              {image ? (
+                <Image src={mediaUrl(image)} alt={name} fill className="object-cover" sizes="40px" unoptimized />
+              ) : initials}
+            </div>
+            {profileIncomplete && (
+              <span className="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
+                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-primary ring-1 ring-background" />
+              </span>
+            )}
           </div>
           <div className="min-w-0">
             <p className="truncate text-sm font-medium">{name}</p>
@@ -155,6 +162,9 @@ export function MobileNav({ role, changelogHasNew, changelogEntries }: { role: O
               <circle cx="12" cy="8" r="4" /><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
             </svg>
             Ver perfil
+            {profileIncomplete && (
+              <span className="ml-auto flex h-1.5 w-1.5 rounded-full bg-primary" />
+            )}
           </Link>
 
           <Link
@@ -180,30 +190,7 @@ export function MobileNav({ role, changelogHasNew, changelogEntries }: { role: O
             Configurações
           </Link>
 
-          <button
-            onClick={toggle}
-            suppressHydrationWarning
-            className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm hover:bg-accent transition-colors"
-          >
-            {!mounted ? (
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
-                <circle cx="12" cy="12" r="5" />
-              </svg>
-            ) : isDark ? (
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
-                <circle cx="12" cy="12" r="5" />
-                <line x1="12" y1="1" x2="12" y2="3" /><line x1="12" y1="21" x2="12" y2="23" />
-                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" /><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
-                <line x1="1" y1="12" x2="3" y2="12" /><line x1="21" y1="12" x2="23" y2="12" />
-                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" /><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
-              </svg>
-            ) : (
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
-                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-              </svg>
-            )}
-            {mounted ? (isDark ? "Modo claro" : "Modo escuro") : "Modo escuro"}
-          </button>
+          <ThemeMenu triggerClassName="rounded-xl px-4 py-3 font-normal" />
 
           <WhatsNewModal
             hasNew={changelogHasNew}
@@ -259,9 +246,17 @@ export function MobileNav({ role, changelogHasNew, changelogEntries }: { role: O
             menuOpen || maisActive ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-accent"
           )}
         >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
-            <circle cx="12" cy="12" r="1" /><circle cx="19" cy="12" r="1" /><circle cx="5" cy="12" r="1" />
-          </svg>
+          <span className="relative">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+              <circle cx="12" cy="12" r="1" /><circle cx="19" cy="12" r="1" /><circle cx="5" cy="12" r="1" />
+            </svg>
+            {profileIncomplete && (
+              <span className="absolute -top-0.5 -right-0.5 flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-primary ring-1 ring-background" />
+              </span>
+            )}
+          </span>
           <span className="text-[10px] font-medium">Mais</span>
         </button>
       </nav>

@@ -10,12 +10,13 @@ import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import { headers } from "next/headers"
 import { db } from "@/db"
-import { organizationMembers, organizations } from "@/db/schema"
+import { organizationMembers, organizations, users } from "@/db/schema"
 import { eq, and } from "drizzle-orm"
 import type { OrgRole } from "@/db/schema"
 import { getChangelogStateAction } from "@/actions/changelog"
 import { NoticesBanner } from "@/components/layout/notices-banner"
 import { getActiveNotices } from "@/lib/notices"
+import { getMissingProfileFields } from "@/lib/profile-completion"
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const session = await auth()
@@ -72,6 +73,13 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   const { hasNew, entries } = await getChangelogStateAction()
 
+  const [currentUser] = await db
+    .select({ cpf: users.cpf, phone: users.phone, birthDate: users.birthDate, professionalDocument: users.professionalDocument, profession: users.profession })
+    .from(users)
+    .where(eq(users.id, session.user.id))
+    .limit(1)
+  const profileIncomplete = currentUser ? getMissingProfileFields(currentUser).length > 0 : false
+
   return (
     <AuthSessionProvider>
       <SidebarProvider>
@@ -79,7 +87,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <NavProgress />
       <div className="flex h-dvh overflow-hidden bg-background">
         <div className="hidden lg:flex lg:shrink-0">
-          <Sidebar role={userRole} changelogHasNew={hasNew} changelogEntries={entries} />
+          <Sidebar role={userRole} changelogHasNew={hasNew} changelogEntries={entries} profileIncomplete={profileIncomplete} />
         </div>
         <div className="flex flex-1 flex-col overflow-hidden">
           <NoticesBanner notices={getActiveNotices()} />
@@ -89,7 +97,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
             {children}
           </main>
         </div>
-        <MobileNav role={userRole} changelogHasNew={hasNew} changelogEntries={entries} />
+        <MobileNav role={userRole} changelogHasNew={hasNew} changelogEntries={entries} profileIncomplete={profileIncomplete} />
       </div>
       </SidebarProvider>
     </AuthSessionProvider>

@@ -129,6 +129,64 @@
   --sidebar-ring: oklch(0.72 0.1 350);
 }
 
+/* ── Paleta light — "Claro Neutro" (off-white + azul, sem rosa) ───────────── */
+.theme-slate {
+  --background: oklch(0.99 0.002 255);
+  --foreground: oklch(0.18 0.006 255);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.18 0.006 255);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.18 0.006 255);
+  --primary: oklch(0.55 0.16 255);
+  --primary-foreground: oklch(0.99 0 0);
+  --secondary: oklch(0.96 0.004 255);
+  --secondary-foreground: oklch(0.35 0.03 255);
+  --muted: oklch(0.96 0.003 255);
+  --muted-foreground: oklch(0.52 0.012 255);
+  --accent: oklch(0.94 0.008 255);
+  --accent-foreground: oklch(0.35 0.03 255);
+  --border: oklch(0.91 0.005 255);
+  --input: oklch(0.91 0.005 255);
+  --ring: oklch(0.55 0.16 255);
+  --sidebar: oklch(0.98 0.003 255);
+  --sidebar-foreground: oklch(0.18 0.006 255);
+  --sidebar-primary: oklch(0.55 0.16 255);
+  --sidebar-primary-foreground: oklch(0.99 0 0);
+  --sidebar-accent: oklch(0.94 0.008 255);
+  --sidebar-accent-foreground: oklch(0.35 0.03 255);
+  --sidebar-border: oklch(0.91 0.005 255);
+  --sidebar-ring: oklch(0.55 0.16 255);
+}
+
+/* ── Paleta dark — "Escuro Neutro" (cinza-chumbo + azul, sem rosa) ────────── */
+.dark.theme-slate {
+  --background: oklch(0.19 0.004 255);
+  --foreground: oklch(0.96 0.002 255);
+  --card: oklch(0.25 0.005 255);
+  --card-foreground: oklch(0.96 0.002 255);
+  --popover: oklch(0.25 0.005 255);
+  --popover-foreground: oklch(0.96 0.002 255);
+  --primary: oklch(0.72 0.14 255);
+  --primary-foreground: oklch(0.16 0.003 255);
+  --secondary: oklch(0.29 0.006 255);
+  --secondary-foreground: oklch(0.96 0.002 255);
+  --muted: oklch(0.29 0.005 255);
+  --muted-foreground: oklch(0.68 0.01 255);
+  --accent: oklch(0.32 0.008 255);
+  --accent-foreground: oklch(0.96 0.002 255);
+  --border: oklch(1 0 0 / 12%);
+  --input: oklch(1 0 0 / 16%);
+  --ring: oklch(0.72 0.14 255);
+  --sidebar: oklch(0.16 0.004 255);
+  --sidebar-foreground: oklch(0.96 0.002 255);
+  --sidebar-primary: oklch(0.72 0.14 255);
+  --sidebar-primary-foreground: oklch(0.16 0.003 255);
+  --sidebar-accent: oklch(0.32 0.008 255);
+  --sidebar-accent-foreground: oklch(0.96 0.002 255);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.72 0.14 255);
+}
+
 /* ── Scrollbar personalizada ───────────────────────────────────────────────── */
 ::-webkit-scrollbar {
   width: 6px;

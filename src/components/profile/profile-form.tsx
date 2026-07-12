@@ -10,8 +10,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { updateProfileAction, uploadAvatarAction } from "@/actions/user"
 import { mediaUrl } from "@/lib/media-url"
-import { Camera, Check } from "lucide-react"
+import { Camera, Check, Info } from "lucide-react"
 import type { User } from "@/db/schema"
+import { getMissingProfileFields, missingProfileFieldLabels } from "@/lib/profile-completion"
 
 function validateCPF(cpf: string) {
   const d = cpf.replace(/\D/g, "")
@@ -169,11 +170,22 @@ export function ProfileForm({ user }: { user: User }) {
             ? (professionSegmentLabels[user.professionSegment] ?? user.professionSegment)
             : "Outro segmento")
 
+  const missingFields = missingProfileFieldLabels(getMissingProfileFields(user))
+
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
       {error && (
         <div className="rounded-lg bg-destructive/10 border border-destructive/20 px-4 py-3 text-sm text-destructive">
           {error}
+        </div>
+      )}
+
+      {missingFields.length > 0 && (
+        <div className="flex items-start gap-3 rounded-lg bg-primary/5 border border-primary/20 px-4 py-3 text-sm">
+          <Info size={16} className="mt-0.5 shrink-0 text-primary" />
+          <p className="text-foreground/90">
+            <span className="font-medium">Complete seu perfil:</span> falta preencher {missingFields.join(", ")}.
+          </p>
         </div>
       )}
 
