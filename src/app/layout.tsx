@@ -89,7 +89,7 @@ export default function RootLayout({
     >
       <head>
         <meta name="theme-color" content="#201318" />
-        <script dangerouslySetInnerHTML={{ __html: `(function(){var t=localStorage.getItem('theme');var dark=!t||t==='dark';if(dark)document.documentElement.classList.add('dark');})();` }} />
+        <script dangerouslySetInnerHTML={{ __html: `(function(){var t=localStorage.getItem('theme');var dark=!t||t==='dark'||t==='dark-slate';var slate=t==='light-slate'||t==='dark-slate';var r=document.documentElement;if(dark)r.classList.add('dark');if(slate)r.classList.add('theme-slate');})();` }} />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
