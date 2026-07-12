@@ -16,6 +16,7 @@ export async function getCurrentUserAction() {
 
 export async function updateProfileAction(data: {
   name: string
+  cpf?: string
   phone?: string
   whatsapp?: string
   birthDate?: string
@@ -28,10 +29,23 @@ export async function updateProfileAction(data: {
 }): Promise<ActionResult> {
   const { userId } = await requireSession()
 
+  if (data.cpf) {
+    const [cpfExists] = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.cpf, data.cpf))
+      .limit(1)
+
+    if (cpfExists && cpfExists.id !== userId) {
+      return { success: false, error: "Este CPF já está cadastrado em outra conta." }
+    }
+  }
+
   await db
     .update(users)
     .set({
       name: data.name,
+      cpf: data.cpf || null,
       phone: data.phone || null,
       whatsapp: data.whatsapp || null,
       birthDate: data.birthDate || null,

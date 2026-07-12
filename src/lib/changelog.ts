@@ -6,6 +6,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "3.2.0",
+    date: "2026-07-13",
+    items: [
+      { type: "new",         text: "Entre ou crie sua conta com um clique usando o Google — sem precisar de senha" },
+      { type: "improvement", text: "Cadastro mais rápido: agora só pede nome, e-mail, profissão e senha. CPF, telefone e outros dados ficam para completar depois em Perfil, se quiser" },
+    ],
+  },
+  {
     version: "3.1.2",
     date: "2026-07-10",
     items: [

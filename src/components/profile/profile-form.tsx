@@ -13,8 +13,31 @@ import { mediaUrl } from "@/lib/media-url"
 import { Camera, Check } from "lucide-react"
 import type { User } from "@/db/schema"
 
+function validateCPF(cpf: string) {
+  const d = cpf.replace(/\D/g, "")
+  if (d.length !== 11 || /^(\d)\1+$/.test(d)) return false
+  let sum = 0
+  for (let i = 0; i < 9; i++) sum += parseInt(d[i]) * (10 - i)
+  let r = (sum * 10) % 11
+  if (r === 10 || r === 11) r = 0
+  if (r !== parseInt(d[9])) return false
+  sum = 0
+  for (let i = 0; i < 10; i++) sum += parseInt(d[i]) * (11 - i)
+  r = (sum * 10) % 11
+  if (r === 10 || r === 11) r = 0
+  return r === parseInt(d[10])
+}
+
+function maskCPF(v: string) {
+  return v.replace(/\D/g, "").slice(0, 11)
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d{1,2})$/, "$1-$2")
+}
+
 const schema = z.object({
   name: z.string().min(1, "Nome obrigatório"),
+  cpf: z.string().optional().refine((v) => !v || validateCPF(v), "CPF inválido"),
   phone: z.string().optional(),
   whatsapp: z.string().optional(),
   birthDate: z.string().optional(),
@@ -79,6 +102,7 @@ export function ProfileForm({ user }: { user: User }) {
     resolver: zodResolver(schema),
     defaultValues: {
       name: user.name,
+      cpf: user.cpf ?? "",
       phone: user.phone ?? "",
       whatsapp: user.whatsapp ?? "",
       birthDate: user.birthDate ?? "",
@@ -195,6 +219,18 @@ export function ProfileForm({ user }: { user: User }) {
           <Label htmlFor="name">Nome completo</Label>
           <Input id="name" {...register("name")} />
           {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="cpf">CPF <span className="text-muted-foreground">(opcional)</span></Label>
+          <Input
+            id="cpf"
+            placeholder="000.000.000-00"
+            inputMode="numeric"
+            {...register("cpf")}
+            onChange={(e) => setValue("cpf", maskCPF(e.target.value))}
+          />
+          {errors.cpf && <p className="text-xs text-destructive">{errors.cpf.message}</p>}
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

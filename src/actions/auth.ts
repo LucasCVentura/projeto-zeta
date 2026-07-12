@@ -17,12 +17,12 @@ export async function registerAction(data: {
   email: string
   profession: "esteticista" | "biomedico" | "outro"
   professionSegment?: string
-  cpf: string
-  phone: string
+  cpf?: string
+  phone?: string
   whatsapp?: string
-  birthDate: string
+  birthDate?: string
   professionalDocument?: string
-  professionalDocumentType: string
+  professionalDocumentType?: string
   clinicName?: string
   instagram?: string
   password: string
@@ -37,14 +37,16 @@ export async function registerAction(data: {
     return { success: false, error: "Este e-mail já está em uso." }
   }
 
-  const [cpfExists] = await db
-    .select({ id: users.id })
-    .from(users)
-    .where(eq(users.cpf, data.cpf))
-    .limit(1)
+  if (data.cpf) {
+    const [cpfExists] = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.cpf, data.cpf))
+      .limit(1)
 
-  if (cpfExists) {
-    return { success: false, error: "Este CPF já está cadastrado." }
+    if (cpfExists) {
+      return { success: false, error: "Este CPF já está cadastrado." }
+    }
   }
 
   const hashedPassword = await hash(data.password, 12)
@@ -67,12 +69,12 @@ export async function registerAction(data: {
       email: data.email,
       profession: data.profession,
       professionSegment: data.professionSegment || null,
-      cpf: data.cpf,
-      phone: data.phone,
+      cpf: data.cpf || null,
+      phone: data.phone || null,
       whatsapp: data.whatsapp || null,
-      birthDate: data.birthDate,
+      birthDate: data.birthDate || null,
       professionalDocument: data.professionalDocument || null,
-      professionalDocumentType: data.professionalDocumentType,
+      professionalDocumentType: data.professionalDocumentType || null,
       instagram: data.instagram ? data.instagram.replace(/^@/, "") : null,
       password: hashedPassword,
     })

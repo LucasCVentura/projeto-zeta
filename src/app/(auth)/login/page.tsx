@@ -10,6 +10,9 @@ import { signIn } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { GoogleButton } from "@/components/auth/google-button"
+// FacebookButton fica pronto mas oculto até a verificação de empresa da Meta ser concluída
+// import { FacebookButton } from "@/components/auth/facebook-button"
 
 const schema = z.object({
   email: z.string().trim().email("E-mail inválido"),
@@ -78,6 +81,14 @@ function LoginForm() {
       <div className="space-y-2">
         <h2 className="font-heading text-2xl font-bold tracking-tight">Bem-vindo(a) de volta</h2>
         <p className="text-muted-foreground text-sm">Entre na sua conta para continuar</p>
+      </div>
+
+      <GoogleButton label="Entrar com Google" />
+
+      <div className="flex items-center gap-3">
+        <div className="h-px flex-1 bg-border" />
+        <span className="text-xs text-muted-foreground">ou com e-mail</span>
+        <div className="h-px flex-1 bg-border" />
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
