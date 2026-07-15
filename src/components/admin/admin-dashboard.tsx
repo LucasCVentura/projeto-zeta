@@ -49,6 +49,8 @@ type WhatsAppTemplateSetting = {
   testimonialOutreachTemplateId: string | null; winbackOutreachTemplateId: string | null
   dailyAgendaTemplateId: string | null
   postVisitNoLinkTemplateId: string | null
+  publicBookingRejectedTemplateId: string | null
+  publicBookingManualRejectedTemplateId: string | null
 }
 
 // ── Constantes ────────────────────────────────────────────────────────────────
@@ -425,6 +427,8 @@ export function AdminDashboard() {
   const [winbackOutreachTemplateId, setWinbackOutreachTemplateId] = useState("")
   const [dailyAgendaTemplateId, setDailyAgendaTemplateId] = useState("")
   const [postVisitNoLinkTemplateId, setPostVisitNoLinkTemplateId] = useState("")
+  const [publicBookingRejectedTemplateId, setPublicBookingRejectedTemplateId] = useState("")
+  const [publicBookingManualRejectedTemplateId, setPublicBookingManualRejectedTemplateId] = useState("")
   const [pendingCancelOrg, setPendingCancelOrg] = useState<{ id: string; name: string } | null>(null)
   const [activeSection, setActiveSection] = useState("overview")
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -456,6 +460,8 @@ export function AdminDashboard() {
       setWinbackOutreachTemplateId(t.winbackOutreachTemplateId ?? "")
       setDailyAgendaTemplateId(t.dailyAgendaTemplateId ?? "")
       setPostVisitNoLinkTemplateId(t.postVisitNoLinkTemplateId ?? "")
+      setPublicBookingRejectedTemplateId(t.publicBookingRejectedTemplateId ?? "")
+      setPublicBookingManualRejectedTemplateId(t.publicBookingManualRejectedTemplateId ?? "")
     }).catch(() => {})
   }, [])
 
@@ -570,6 +576,8 @@ export function AdminDashboard() {
         trialOutreachTemplateId, trialExpiredOutreachTemplateId, testimonialOutreachTemplateId, winbackOutreachTemplateId,
         dailyAgendaTemplateId,
         postVisitNoLinkTemplateId,
+        publicBookingRejectedTemplateId,
+        publicBookingManualRejectedTemplateId,
       })
     } catch { setTemplateError("Não foi possível salvar. Tente novamente.") }
     finally { setTemplateSaving(false) }
@@ -1243,6 +1251,14 @@ export function AdminDashboard() {
             <div className="space-y-1.5">
               <p className="text-sm font-medium">Agradecimento sem link de avaliação <code className="text-xs bg-muted px-1.5 py-0.5 rounded ml-1">kira_agradecimento_sem_link</code></p>
               <Input value={postVisitNoLinkTemplateId} onChange={e => setPostVisitNoLinkTemplateId(e.target.value)} placeholder="UUID do template de agradecimento sem link" className="font-mono text-xs" />
+            </div>
+            <div className="space-y-1.5">
+              <p className="text-sm font-medium">Agendamento público recusado (24h sem aprovação) <code className="text-xs bg-muted px-1.5 py-0.5 rounded ml-1">kira_agendamento_recusado</code></p>
+              <Input value={publicBookingRejectedTemplateId} onChange={e => setPublicBookingRejectedTemplateId(e.target.value)} placeholder="UUID do template de recusa automática" className="font-mono text-xs" />
+            </div>
+            <div className="space-y-1.5">
+              <p className="text-sm font-medium">Agendamento público recusado manualmente <code className="text-xs bg-muted px-1.5 py-0.5 rounded ml-1">kira_agendamento_recusado_manual</code></p>
+              <Input value={publicBookingManualRejectedTemplateId} onChange={e => setPublicBookingManualRejectedTemplateId(e.target.value)} placeholder="UUID do template de recusa manual" className="font-mono text-xs" />
             </div>
             {templateError && <p className="text-xs text-destructive">{templateError}</p>}
             <Button onClick={handleSaveTemplate} disabled={templateSaving} className="w-full">

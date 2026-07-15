@@ -4,6 +4,12 @@ import { appointments, clients, organizations } from "@/db/schema"
 import { eq, and, isNotNull, isNull, or } from "drizzle-orm"
 import { sendReminderWithConfirmation } from "@/actions/whatsapp"
 
+// Agendamentos "waiting" só entram no lembrete se foram criados pela própria profissional
+// (createdById preenchido). Um agendamento "waiting" vindo do link público (createdById nulo)
+// ainda não foi aprovado — mandar lembrete de confirmação pra ele confundiria a cliente e
+// abriria brecha pro botão "Confirmar" mudar o status sem passar pela aprovação da profissional
+// (ver updateAppointmentStatusAction, que dispara o resumo + anamnese só na aprovação manual).
+
 export async function GET(req: NextRequest) {
   const authHeader = req.headers.get("authorization")
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -37,7 +43,10 @@ export async function GET(req: NextRequest) {
     .where(
       and(
         or(...targetDates.map(d => eq(appointments.date, d))),
-        or(eq(appointments.status, "waiting"), eq(appointments.status, "confirmed")),
+        or(
+          eq(appointments.status, "confirmed"),
+          and(eq(appointments.status, "waiting"), isNotNull(appointments.createdById))
+        ),
         or(isNotNull(clients.whatsapp), isNotNull(clients.phone)),
         isNull(appointments.reminderSentAt)
       )

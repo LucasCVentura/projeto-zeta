@@ -19,7 +19,7 @@ import type { TimeSlot } from "@/lib/schedule"
 import { revalidatePath, revalidateTag, unstable_cache } from "next/cache"
 import type { AppointmentStatus } from "@/db/schema"
 import type { ActionResult } from "./auth"
-import { sendBookingSummary } from "./whatsapp"
+import { sendBookingSummary, sendPublicBookingManuallyRejected } from "./whatsapp"
 import { organizations, anamnesisAnswers } from "@/db/schema"
 import { logWhatsAppSubmission } from "@/lib/whatsapp-logs"
 import { generateAnamnesisToken } from "@/lib/anamnesis-token"
@@ -166,9 +166,9 @@ export async function getProceduresForBookingAction() {
 
 // Resolve os snapshots (nome/preço/comissão) dos procedimentos selecionados,
 // preservando a ordem informada. O primeiro é o procedimento "principal".
-type ProcedureSnapshot = { procedureId: string; name: string; price: number; commissionPct: number }
+export type ProcedureSnapshot = { procedureId: string; name: string; price: number; commissionPct: number }
 
-async function resolveProcedureSnapshots(
+export async function resolveProcedureSnapshots(
   organizationId: string,
   procedureIds: string[]
 ): Promise<ProcedureSnapshot[]> {
@@ -493,6 +493,19 @@ export async function updateAppointmentStatusAction(
     return { success: false, error: "Sem permissão." }
   }
 
+  const [before] = await db
+    .select({
+      status: appointments.status,
+      createdById: appointments.createdById,
+      clientId: appointments.clientId,
+      date: appointments.date,
+      startTime: appointments.startTime,
+      procedure: appointments.procedure,
+    })
+    .from(appointments)
+    .where(and(eq(appointments.id, appointmentId), eq(appointments.organizationId, organizationId)))
+    .limit(1)
+
   await db
     .update(appointments)
     .set({ status, updatedAt: new Date() })
@@ -505,6 +518,114 @@ export async function updateAppointmentStatusAction(
 
   revalidateTag(`dashboard-${userId}-${organizationId}`, {})
   revalidatePath("/agenda")
+
+  // Agendamento veio do link público (ninguém logado o criou) e acabou de ser aprovado:
+  // só agora a cliente recebe o resumo completo + link de anamnese (nada foi enviado na solicitação).
+  const isPublicBookingApproval =
+    before && before.createdById === null && before.status === "waiting" && status === "confirmed"
+
+  if (isPublicBookingApproval && process.env.WHATSAPP_ENABLED === "true") {
+    try {
+      const [clientData] = await db
+        .select({ name: clients.name, phone: clients.phone })
+        .from(clients)
+        .where(eq(clients.id, before.clientId))
+        .limit(1)
+
+      if (clientData?.phone) {
+        const [org] = await db
+          .select({ name: organizations.name, address: organizations.address })
+          .from(organizations)
+          .where(eq(organizations.id, organizationId))
+          .limit(1)
+
+        const templateRows = await db.execute<{ bookingSummaryTemplateId: string | null }>(sql`
+          SELECT booking_summary_template_id as "bookingSummaryTemplateId"
+          FROM whatsapp_system_template_settings
+          WHERE singleton_key = 'default'
+          LIMIT 1
+        `)
+        const templateFromDb = Array.isArray(templateRows)
+          ? templateRows[0]?.bookingSummaryTemplateId
+          : templateRows.rows?.[0]?.bookingSummaryTemplateId
+        const bookingTemplateId = (templateFromDb && templateFromDb.trim().length > 0)
+          ? templateFromDb.trim()
+          : TEMPLATE_BOOKING_SUMMARY_ID
+
+        const hasAnamnesis = await db
+          .select({ id: anamnesisAnswers.id })
+          .from(anamnesisAnswers)
+          .where(eq(anamnesisAnswers.clientId, before.clientId))
+          .limit(1)
+          .then((r) => r.length > 0)
+
+        const token = generateAnamnesisToken(before.clientId, organizationId)
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://kiraclinic.com.br"
+        const anamnesisLink = `${baseUrl}/anamnese/${token}`
+
+        const submission = await sendBookingSummary({
+          clientPhone: clientData.phone,
+          clientName: clientData.name,
+          date: before.date,
+          startTime: before.startTime,
+          procedure: before.procedure,
+          orgName: org?.name ?? "Clínica",
+          orgAddress: org?.address,
+          templateId: bookingTemplateId,
+          anamnesisLink,
+          hasAnamnesis,
+        })
+        if (submission?.messageId) {
+          await logWhatsAppSubmission({
+            messageId: submission.messageId,
+            organizationId,
+            clientId: before.clientId,
+            destination: clientData.phone,
+            templateId: bookingTemplateId,
+            payload: { date: before.date, startTime: before.startTime, procedure: before.procedure },
+          })
+        }
+      }
+    } catch (err) {
+      console.error("[Schedule] erro ao enviar WhatsApp de aprovação (link público):", err)
+    }
+  }
+
+  // Agendamento veio do link público e a profissional recusou manualmente (não pelo
+  // auto-reject de 24h) — avisa a cliente com um texto que não fala em "prazo estourado".
+  const isPublicBookingManualRejection =
+    before && before.createdById === null && before.status === "waiting" && status === "cancelled"
+
+  if (isPublicBookingManualRejection && process.env.WHATSAPP_ENABLED === "true") {
+    try {
+      const [clientData] = await db
+        .select({ name: clients.name, phone: clients.phone })
+        .from(clients)
+        .where(eq(clients.id, before.clientId))
+        .limit(1)
+
+      if (clientData?.phone) {
+        const [org] = await db
+          .select({ name: organizations.name, slug: organizations.slug })
+          .from(organizations)
+          .where(eq(organizations.id, organizationId))
+          .limit(1)
+
+        if (org?.slug) {
+          const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://kiraclinic.com.br"
+          await sendPublicBookingManuallyRejected({
+            clientPhone: clientData.phone,
+            clientName: clientData.name,
+            orgName: org.name,
+            bookingLink: `${baseUrl}/agendar/${org.slug}`,
+          })
+        }
+      }
+    } catch (err) {
+      console.error("[Schedule] erro ao enviar WhatsApp de recusa manual (link público):", err)
+    }
+  }
+
   return { success: true }
 }
 

@@ -643,6 +643,8 @@ export type AdminWhatsAppTemplateSetting = {
   winbackOutreachTemplateId: string | null
   dailyAgendaTemplateId: string | null
   postVisitNoLinkTemplateId: string | null
+  publicBookingRejectedTemplateId: string | null
+  publicBookingManualRejectedTemplateId: string | null
 }
 
 export async function getWhatsAppTemplateSettingsAction(): Promise<AdminWhatsAppTemplateSetting> {
@@ -660,6 +662,8 @@ export async function getWhatsAppTemplateSettingsAction(): Promise<AdminWhatsApp
         ,s.winback_outreach_template_id as "winbackOutreachTemplateId"
         ,s.daily_agenda_template_id as "dailyAgendaTemplateId"
         ,s.post_visit_no_link_template_id as "postVisitNoLinkTemplateId"
+        ,s.public_booking_rejected_template_id as "publicBookingRejectedTemplateId"
+        ,s.public_booking_manual_rejected_template_id as "publicBookingManualRejectedTemplateId"
       FROM whatsapp_system_template_settings s
       WHERE s.singleton_key = 'default'
       LIMIT 1
@@ -676,6 +680,8 @@ export async function getWhatsAppTemplateSettingsAction(): Promise<AdminWhatsApp
       winbackOutreachTemplateId: one?.winbackOutreachTemplateId ?? null,
       dailyAgendaTemplateId: one?.dailyAgendaTemplateId ?? null,
       postVisitNoLinkTemplateId: one?.postVisitNoLinkTemplateId ?? null,
+      publicBookingRejectedTemplateId: one?.publicBookingRejectedTemplateId ?? null,
+      publicBookingManualRejectedTemplateId: one?.publicBookingManualRejectedTemplateId ?? null,
     }
   } catch (err) {
     console.error("[Admin] Falha ao carregar config global de template WhatsApp:", err)
@@ -690,6 +696,8 @@ export async function getWhatsAppTemplateSettingsAction(): Promise<AdminWhatsApp
       winbackOutreachTemplateId: null,
       dailyAgendaTemplateId: null,
       postVisitNoLinkTemplateId: null,
+      publicBookingRejectedTemplateId: null,
+      publicBookingManualRejectedTemplateId: null,
     }
   }
 }
@@ -705,6 +713,8 @@ export async function saveWhatsAppTemplateSettingAction(input: {
   winbackOutreachTemplateId: string
   dailyAgendaTemplateId: string
   postVisitNoLinkTemplateId: string
+  publicBookingRejectedTemplateId: string
+  publicBookingManualRejectedTemplateId: string
 }) {
   await requireAdmin()
   const bookingTemplateId = input.bookingSummaryTemplateId.trim() || null
@@ -717,9 +727,11 @@ export async function saveWhatsAppTemplateSettingAction(input: {
   const winbackOutreachTemplateId = input.winbackOutreachTemplateId.trim() || null
   const dailyAgendaTemplateId = input.dailyAgendaTemplateId.trim() || null
   const postVisitNoLinkTemplateId = input.postVisitNoLinkTemplateId.trim() || null
+  const publicBookingRejectedTemplateId = input.publicBookingRejectedTemplateId.trim() || null
+  const publicBookingManualRejectedTemplateId = input.publicBookingManualRejectedTemplateId.trim() || null
   await db.execute(sql`
     INSERT INTO whatsapp_system_template_settings (
-      id, singleton_key, booking_summary_template_id, package_summary_template_id, reminder_confirmation_template_id, post_visit_template_id, trial_outreach_template_id, trial_expired_outreach_template_id, testimonial_outreach_template_id, winback_outreach_template_id, daily_agenda_template_id, post_visit_no_link_template_id, created_at, updated_at
+      id, singleton_key, booking_summary_template_id, package_summary_template_id, reminder_confirmation_template_id, post_visit_template_id, trial_outreach_template_id, trial_expired_outreach_template_id, testimonial_outreach_template_id, winback_outreach_template_id, daily_agenda_template_id, post_visit_no_link_template_id, public_booking_rejected_template_id, public_booking_manual_rejected_template_id, created_at, updated_at
     )
     VALUES (
       ${crypto.randomUUID()},
@@ -734,6 +746,8 @@ export async function saveWhatsAppTemplateSettingAction(input: {
       ${winbackOutreachTemplateId},
       ${dailyAgendaTemplateId},
       ${postVisitNoLinkTemplateId},
+      ${publicBookingRejectedTemplateId},
+      ${publicBookingManualRejectedTemplateId},
       now(),
       now()
     )
@@ -748,6 +762,8 @@ export async function saveWhatsAppTemplateSettingAction(input: {
       winback_outreach_template_id = EXCLUDED.winback_outreach_template_id,
       daily_agenda_template_id = EXCLUDED.daily_agenda_template_id,
       post_visit_no_link_template_id = EXCLUDED.post_visit_no_link_template_id,
+      public_booking_rejected_template_id = EXCLUDED.public_booking_rejected_template_id,
+      public_booking_manual_rejected_template_id = EXCLUDED.public_booking_manual_rejected_template_id,
       updated_at = now()
   `)
   revalidatePath("/admin")

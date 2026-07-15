@@ -38,6 +38,10 @@
     {
       "path": "/api/cron/auto-mark-missed",
       "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/cron/auto-reject-public-bookings",
+      "schedule": "0 7 * * *"
     }
   ]
 }

@@ -1,7 +1,14 @@
 import { auth } from "@/lib/auth"
 import { NextResponse } from "next/server"
 
-const publicRoutes = ["/", "/login", "/register", "/forgot-password", "/reset-password", "/assinar", "/termos", "/privacidade", "/api/webhooks", "/confirmar", "/recusar", "/confirmar-sessoes"]
+const publicRoutes = [
+  "/", "/login", "/register", "/forgot-password", "/reset-password", "/assinar",
+  "/termos", "/privacidade", "/api/webhooks",
+  "/agendar",
+  "/anamnese", "/convite", "/reativar", "/og",
+  "/agenda-para-estetica", "/prontuario-estetico-digital",
+  "/sistema-para-biomedica-esteta", "/sistema-para-clinica-de-estetica",
+]
 const authRoutes = ["/login", "/register"]
 
 function matchesRoute(pathname: string, route: string) {

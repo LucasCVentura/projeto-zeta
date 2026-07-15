@@ -19,6 +19,10 @@ const TEMPLATE_DAILY_AGENDA_ID =
   process.env.GUPSHUP_TEMPLATE_KIRA_AGENDA_DIA_ID || "kira_agenda_do_dia"
 const TEMPLATE_POST_VISIT_NO_LINK_ID =
   process.env.GUPSHUP_TEMPLATE_KIRA_AGRADECIMENTO_SEM_LINK_ID || "kira_agradecimento_sem_link"
+const TEMPLATE_PUBLIC_BOOKING_REJECTED_ID =
+  process.env.GUPSHUP_TEMPLATE_KIRA_AGENDAMENTO_RECUSADO_ID || "kira_agendamento_recusado"
+const TEMPLATE_PUBLIC_BOOKING_MANUAL_REJECTED_ID =
+  process.env.GUPSHUP_TEMPLATE_KIRA_AGENDAMENTO_RECUSADO_MANUAL_ID || "kira_agendamento_recusado_manual"
 
 async function getGlobalTemplateIds() {
   try {
@@ -29,6 +33,8 @@ async function getGlobalTemplateIds() {
       postVisitTemplateId: string | null
       dailyAgendaTemplateId: string | null
       postVisitNoLinkTemplateId: string | null
+      publicBookingRejectedTemplateId: string | null
+      publicBookingManualRejectedTemplateId: string | null
     }>(sql`
       SELECT
         booking_summary_template_id as "bookingSummaryTemplateId",
@@ -36,7 +42,9 @@ async function getGlobalTemplateIds() {
         reminder_confirmation_template_id as "reminderConfirmationTemplateId",
         post_visit_template_id as "postVisitTemplateId",
         daily_agenda_template_id as "dailyAgendaTemplateId",
-        post_visit_no_link_template_id as "postVisitNoLinkTemplateId"
+        post_visit_no_link_template_id as "postVisitNoLinkTemplateId",
+        public_booking_rejected_template_id as "publicBookingRejectedTemplateId",
+        public_booking_manual_rejected_template_id as "publicBookingManualRejectedTemplateId"
       FROM whatsapp_system_template_settings
       WHERE singleton_key = 'default'
       LIMIT 1
@@ -49,6 +57,8 @@ async function getGlobalTemplateIds() {
       postVisitTemplateId: one?.postVisitTemplateId?.trim() || TEMPLATE_POST_VISIT_ID,
       dailyAgendaTemplateId: one?.dailyAgendaTemplateId?.trim() || TEMPLATE_DAILY_AGENDA_ID,
       postVisitNoLinkTemplateId: one?.postVisitNoLinkTemplateId?.trim() || TEMPLATE_POST_VISIT_NO_LINK_ID,
+      publicBookingRejectedTemplateId: one?.publicBookingRejectedTemplateId?.trim() || TEMPLATE_PUBLIC_BOOKING_REJECTED_ID,
+      publicBookingManualRejectedTemplateId: one?.publicBookingManualRejectedTemplateId?.trim() || TEMPLATE_PUBLIC_BOOKING_MANUAL_REJECTED_ID,
     }
   } catch {
     return {
@@ -58,6 +68,8 @@ async function getGlobalTemplateIds() {
       postVisitTemplateId: TEMPLATE_POST_VISIT_ID,
       dailyAgendaTemplateId: TEMPLATE_DAILY_AGENDA_ID,
       postVisitNoLinkTemplateId: TEMPLATE_POST_VISIT_NO_LINK_ID,
+      publicBookingRejectedTemplateId: TEMPLATE_PUBLIC_BOOKING_REJECTED_ID,
+      publicBookingManualRejectedTemplateId: TEMPLATE_PUBLIC_BOOKING_MANUAL_REJECTED_ID,
     }
   }
 }
@@ -208,6 +220,42 @@ export async function sendPostVisitThanks(params: {
       safeParam(orgName, "Clinica"),
     ])
   }
+}
+
+// ── Recusa automática de agendamento público não aprovado a tempo ───────────
+
+export async function sendPublicBookingAutoRejected(params: {
+  clientPhone: string
+  clientName: string
+  orgName: string
+  bookingLink: string
+}) {
+  const { clientPhone, clientName, orgName, bookingLink } = params
+  const templates = await getGlobalTemplateIds()
+
+  await sendWhatsAppTemplate(clientPhone, templates.publicBookingRejectedTemplateId, [
+    safeParam(clientName, "Cliente"),
+    safeParam(orgName, "Clinica"),
+    bookingLink,
+  ])
+}
+
+// ── Recusa manual de agendamento público (profissional clicou "Recusar") ────
+
+export async function sendPublicBookingManuallyRejected(params: {
+  clientPhone: string
+  clientName: string
+  orgName: string
+  bookingLink: string
+}) {
+  const { clientPhone, clientName, orgName, bookingLink } = params
+  const templates = await getGlobalTemplateIds()
+
+  await sendWhatsAppTemplate(clientPhone, templates.publicBookingManualRejectedTemplateId, [
+    safeParam(clientName, "Cliente"),
+    safeParam(orgName, "Clinica"),
+    bookingLink,
+  ])
 }
 
 // ── Agenda do dia para o profissional (manhã) ────────────────────────────────

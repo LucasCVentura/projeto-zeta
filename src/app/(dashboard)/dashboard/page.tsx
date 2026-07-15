@@ -6,6 +6,7 @@ import { StatusBadge } from "@/components/agenda/status-badge"
 import { RevenueChart, ProceduresChart, StatusChart } from "@/components/dashboard/dashboard-charts"
 import { OnboardingChecklist } from "@/components/dashboard/onboarding-checklist"
 import { GoogleReviewNudge } from "@/components/dashboard/google-review-nudge"
+import { PendingBookingsQueue } from "@/components/dashboard/pending-bookings-queue"
 import Link from "next/link"
 import { requireSession } from "@/lib/session"
 import { can } from "@/lib/permissions"
@@ -76,6 +77,9 @@ export default async function DashboardPage() {
 
       {/* Onboarding */}
       <OnboardingChecklist dismissStorageKey={dismissStorageKey} role={session.role} {...onboarding} />
+
+      {/* Pedidos de agendamento pelo link público aguardando aprovação */}
+      <PendingBookingsQueue bookings={data.pendingPublicBookings ?? []} />
 
       {/* KPIs */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">

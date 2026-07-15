@@ -6,6 +6,13 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "3.5.0",
+    date: "2026-07-13",
+    items: [
+      { type: "new", text: "Link de agendamento online: suas clientes agora podem escolher procedimento e horário e agendar sozinhas, sem precisar de conta — veja seu link em Configurações → Agenda" },
+    ],
+  },
+  {
     version: "3.4.0",
     date: "2026-07-13",
     items: [

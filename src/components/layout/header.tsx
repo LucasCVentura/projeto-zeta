@@ -59,6 +59,12 @@ export function Header() {
 
   useEffect(() => { loadAll() }, [pathname, loadAll])
 
+  // Notificações podem chegar sem navegação (ex.: cliente agendando pelo link público)
+  useEffect(() => {
+    const interval = setInterval(loadAll, 30_000)
+    return () => clearInterval(interval)
+  }, [loadAll])
+
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)

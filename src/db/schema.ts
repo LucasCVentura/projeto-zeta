@@ -248,6 +248,22 @@ export const appointments = pgTable("appointments", {
   reminderSentAt: timestamp("reminder_sent_at"),
 })
 
+// ── public_booking_attempts ──────────────────────────────────────────────────
+// Rate limiting do link público de agendamento (uma linha por tentativa de POST)
+
+export const publicBookingAttempts = pgTable("public_booking_attempts", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organizations.id, { onDelete: "cascade" }),
+  ip: text("ip").notNull(),
+  phone: text("phone"),
+  success: boolean("success").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+})
+
 // ── procedures ────────────────────────────────────────────────────────────────
 
 export const procedures = pgTable("procedures", {
@@ -852,6 +868,8 @@ export const whatsappSystemTemplateSettings = pgTable("whatsapp_system_template_
   winbackOutreachTemplateId: text("winback_outreach_template_id"),
   dailyAgendaTemplateId: text("daily_agenda_template_id"),
   postVisitNoLinkTemplateId: text("post_visit_no_link_template_id"),
+  publicBookingRejectedTemplateId: text("public_booking_rejected_template_id"),
+  publicBookingManualRejectedTemplateId: text("public_booking_manual_rejected_template_id"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 })

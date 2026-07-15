@@ -44,6 +44,7 @@ async function _fetchDashboard(userId: string, organizationId: string) {
     weekAppointments,
     lostClients,
     birthdays,
+    pendingPublicBookings,
   ] = await Promise.all([
     // Agendamentos de hoje (não cancelados)
     db
@@ -152,6 +153,29 @@ async function _fetchDashboard(userId: string, organizationId: string) {
       ORDER BY to_char(birth_date::date, 'MM-DD')
       LIMIT 5
     `).then(r => Array.isArray(r) ? r : (r as any).rows ?? []),
+
+    // Agendamentos criados pelo link público, ainda aguardando aprovação
+    db
+      .select({
+        id: appointments.id,
+        date: appointments.date,
+        startTime: appointments.startTime,
+        procedure: appointments.procedure,
+        clientName: clients.name,
+      })
+      .from(appointments)
+      .innerJoin(clients, eq(clients.id, appointments.clientId))
+      .where(
+        and(
+          eq(appointments.organizationId, organizationId),
+          eq(appointments.professionalId, userId),
+          eq(appointments.status, "waiting"),
+          isNull(appointments.createdById),
+          gte(appointments.date, today)
+        )
+      )
+      .orderBy(appointments.date, appointments.startTime)
+      .limit(15),
   ])
 
   const confirmedToday = upcomingToday.filter((a) => a.status === "confirmed").length
@@ -242,6 +266,7 @@ async function _fetchDashboard(userId: string, organizationId: string) {
     weekAppointments: weekAppointments as Array<{ id: string; date: string; startTime: string; procedure: string | null; status: string; clientName: string }>,
     lostClients: lostClients as Array<{ id: string; name: string; lastDate: string | null }>,
     birthdays: birthdays as Array<{ id: string; name: string; birthDate: string }>,
+    pendingPublicBookings: pendingPublicBookings as Array<{ id: string; date: string; startTime: string; procedure: string | null; clientName: string }>,
     today,
     revenueChart,
     topProcedures,
