@@ -4,7 +4,7 @@ import { db } from "@/db"
 import { anamnesisQuestions, anamnesisAnswers, organizations } from "@/db/schema"
 import { eq, asc } from "drizzle-orm"
 import { requireSession } from "@/lib/session"
-import { revalidatePath } from "next/cache"
+import { revalidatePath, revalidateTag } from "next/cache"
 
 // ── Perguntas padrão ──────────────────────────────────────────────────────────
 
@@ -193,6 +193,7 @@ export async function saveAnamnesisAnswersAction(
     })
   }
 
+  revalidateTag(`client-${clientId}`, {})
   revalidatePath(`/clientes/${clientId}`)
 }
 

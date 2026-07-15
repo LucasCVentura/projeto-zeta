@@ -5,6 +5,7 @@ import { anamnesisQuestions, anamnesisAnswers, clientAnamnesis, clients, organiz
 import { eq, asc, and } from "drizzle-orm"
 import { notifyOrganizationProfessionals } from "@/actions/notifications"
 import { seedDefaultQuestionsForOrg } from "@/actions/anamnesis"
+import { revalidateTag, revalidatePath } from "next/cache"
 
 export async function GET(_: NextRequest, { params }: { params: Promise<{ token: string }> }) {
   const { token } = await params
@@ -97,6 +98,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
       await db.insert(clientAnamnesis).values({ clientId, imageConsent, imageConsentAt: new Date() })
     }
   }
+
+  revalidateTag(`client-${clientId}`, {})
+  revalidatePath(`/clientes/${clientId}`)
+  revalidatePath(`/clientes/${clientId}/anamnese`)
 
   const [client] = await db.select({ name: clients.name }).from(clients).where(eq(clients.id, clientId)).limit(1)
   const clientName = client?.name ?? "Cliente"

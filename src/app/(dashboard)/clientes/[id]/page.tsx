@@ -60,7 +60,8 @@ export default async function ClientePerfilPage({ params }: Props) {
     }),
   ])
 
-  const { client, anamnesis, history } = data
+  const { client, anamnesis, anamnesisQuestions, anamnesisAnswers, history } = data
+  const hasAnamnesisAnswers = Object.keys(anamnesisAnswers).length > 0
 
   return (
     <div className="container-page max-w-2xl py-6 space-y-6">
@@ -141,34 +142,27 @@ export default async function ClientePerfilPage({ params }: Props) {
           </Link>
         </div>
 
-        {!anamnesis ? (
+        {!hasAnamnesisAnswers ? (
           <p className="text-sm text-muted-foreground">Ficha ainda não preenchida.</p>
         ) : (
           <div className="space-y-3">
-            {anamnesis.aestheticGoal && (
-              <InfoRow label="Objetivo estético" value={anamnesis.aestheticGoal} />
-            )}
-            {anamnesis.skinType && (
-              <InfoRow label="Tipo de pele" value={anamnesis.skinType} />
-            )}
-            <BoolRow label="Alergias" active={anamnesis.hasAllergies} detail={anamnesis.allergiesDetail} />
-            <BoolRow label="Contraindicações" active={anamnesis.hasContraindications} detail={anamnesis.contraindicationsDetail} />
-            <BoolRow label="Medicamentos" active={anamnesis.usesMedication} detail={anamnesis.medicationDetail} />
-            <BoolRow label="Doença crônica" active={anamnesis.hasChronicCondition} detail={anamnesis.chronicConditionDetail} />
-            {anamnesis.isPregnant && (
-              <div className="flex items-center gap-2 rounded-lg bg-yellow-50 border border-yellow-200 px-3 py-2">
-                <span className="text-xs font-medium text-yellow-700">Gestante</span>
-              </div>
-            )}
-            {anamnesis.skinComplaints && (
-              <InfoRow label="Queixas da pele" value={anamnesis.skinComplaints} />
-            )}
-            {anamnesis.previousProcedures && (
-              <InfoRow label="Procedimentos anteriores" value={anamnesis.previousProcedures} />
-            )}
-            {anamnesis.extraNotes && (
-              <InfoRow label="Obs. extras" value={anamnesis.extraNotes} />
-            )}
+            {anamnesisQuestions.map((question) => {
+              const value = anamnesisAnswers[question.id]
+              if (value === undefined || value === null || value === "") return null
+
+              if (question.type === "boolean") {
+                const checked = value === true || (typeof value === "object" && (value as { checked?: boolean }).checked === true)
+                const detail = typeof value === "object" ? (value as { detail?: string }).detail : null
+                return <BoolRow key={question.id} label={question.label} active={checked} detail={detail ?? null} />
+              }
+
+              if (Array.isArray(value)) {
+                if (value.length === 0) return null
+                return <InfoRow key={question.id} label={question.label} value={value.join(", ")} />
+              }
+
+              return <InfoRow key={question.id} label={question.label} value={String(value)} />
+            })}
           </div>
         )}
       </div>

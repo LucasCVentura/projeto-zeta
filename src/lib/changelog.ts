@@ -6,6 +6,13 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "3.5.1",
+    date: "2026-07-15",
+    items: [
+      { type: "fix", text: "A ficha de anamnese às vezes mostrava informações desatualizadas ao abrir a cliente, mesmo depois dela responder pelo link ou você editar a ficha — agora a tela sempre reflete a versão mais recente" },
+    ],
+  },
+  {
     version: "3.5.0",
     date: "2026-07-13",
     items: [

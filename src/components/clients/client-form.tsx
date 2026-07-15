@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -24,8 +24,6 @@ function maskPhone(v: string) {
   return d.replace(/(\d{2})(\d{5})(\d{0,4})/, "($1) $2-$3").trim()
 }
 
-const SKIN_TYPES = ["Normal", "Oleosa", "Seca", "Mista", "Sensível"]
-
 const schema = z.object({
   name: z.string().min(2, "Nome deve ter ao menos 2 caracteres"),
   whatsapp: z.string().optional(),
@@ -33,21 +31,6 @@ const schema = z.object({
   cpf: z.string().optional(),
   birthDate: z.string().optional(),
   notes: z.string().optional(),
-  // anamnese
-  hasAllergies: z.boolean(),
-  allergiesDetail: z.string().optional(),
-  hasContraindications: z.boolean(),
-  contraindicationsDetail: z.string().optional(),
-  usesMedication: z.boolean(),
-  medicationDetail: z.string().optional(),
-  hasChronicCondition: z.boolean(),
-  chronicConditionDetail: z.string().optional(),
-  isPregnant: z.boolean(),
-  skinType: z.string().optional(),
-  skinComplaints: z.string().optional(),
-  previousProcedures: z.string().optional(),
-  aestheticGoal: z.string().optional(),
-  extraNotes: z.string().optional(),
 })
 
 type FormData = z.infer<typeof schema>
@@ -60,21 +43,11 @@ export function ClientForm({ defaultValues }: { defaultValues?: Partial<FormData
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const { register, handleSubmit, watch, setValue, trigger, formState: { errors } } =
+  const { register, handleSubmit, setValue, trigger, formState: { errors } } =
     useForm<FormData>({
       resolver: zodResolver(schema),
-      defaultValues: {
-        hasAllergies: false,
-        hasContraindications: false,
-        usesMedication: false,
-        hasChronicCondition: false,
-        isPregnant: false,
-        ...defaultValues,
-      },
+      defaultValues,
     })
-
-  const watchBool = (field: keyof FormData) => watch(field) as boolean
-  const skinType = watch("skinType")
 
   async function nextStep() {
     const fieldsPerStep: (keyof FormData)[][] = [
@@ -96,22 +69,6 @@ export function ClientForm({ defaultValues }: { defaultValues?: Partial<FormData
       cpf: data.cpf || undefined,
       birthDate: data.birthDate || undefined,
       notes: data.notes || undefined,
-      anamnesis: {
-        hasAllergies: data.hasAllergies,
-        allergiesDetail: data.allergiesDetail,
-        hasContraindications: data.hasContraindications,
-        contraindicationsDetail: data.contraindicationsDetail,
-        usesMedication: data.usesMedication,
-        medicationDetail: data.medicationDetail,
-        hasChronicCondition: data.hasChronicCondition,
-        chronicConditionDetail: data.chronicConditionDetail,
-        isPregnant: data.isPregnant,
-        skinType: data.skinType,
-        aestheticGoal: data.aestheticGoal,
-        skinComplaints: data.skinComplaints,
-        previousProcedures: data.previousProcedures,
-        extraNotes: data.extraNotes,
-      },
     })
     setIsLoading(false)
     if (!result.success) { setError(result.error); return }
@@ -224,52 +181,3 @@ export function ClientForm({ defaultValues }: { defaultValues?: Partial<FormData
   )
 }
 
-// ── Sub-componentes ──────────────────────────────────────────────────────────
-
-function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
-  const idRef = useRef(`toggle-${Math.random().toString(36).slice(2)}`)
-  const inputId = idRef.current
-  return (
-    <label htmlFor={inputId} className="cursor-pointer shrink-0">
-      <input
-        id={inputId}
-        type="checkbox"
-        checked={checked}
-        onChange={e => onChange(e.target.checked)}
-        className="sr-only"
-      />
-      <div className={cn("relative h-7 w-12 rounded-full transition-colors select-none", checked ? "bg-primary" : "bg-muted")}>
-        <span className={cn(
-          "pointer-events-none absolute top-0.5 left-0 h-6 w-6 rounded-full bg-white shadow-sm transition-transform duration-200",
-          checked ? "translate-x-5.5" : "translate-x-0.5"
-        )} />
-      </div>
-    </label>
-  )
-}
-
-function AnamnesisToggle({
-  label, checked, onChange, detailLabel, detailPlaceholder, register,
-}: {
-  label: string
-  checked: boolean
-  onChange: (v: boolean) => void
-  detailLabel: string
-  detailPlaceholder: string
-  register: object
-}) {
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between rounded-lg border border-border px-4 py-3">
-        <span className="text-sm">{label}</span>
-        <Toggle checked={checked} onChange={onChange} />
-      </div>
-      {checked && (
-        <Input
-          placeholder={detailPlaceholder}
-          {...(register as React.InputHTMLAttributes<HTMLInputElement>)}
-        />
-      )}
-    </div>
-  )
-}
