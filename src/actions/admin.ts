@@ -11,6 +11,7 @@ import { eq, count, sum, max, gte, lt, sql, or, and, desc, asc, isNull } from "d
 import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import { revalidatePath } from "next/cache"
+import { nowBRT, todayBRT } from "@/lib/date"
 
 const ADMIN_EMAIL = "lucascv8525@gmail.com"
 
@@ -27,9 +28,9 @@ async function assertAdmin() {
 export async function getAdminMetricsAction() {
   await assertAdmin()
 
-  const now = new Date()
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
-  const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString()
+  const nowBrt = nowBRT()
+  const startOfMonth = new Date(nowBrt.getFullYear(), nowBrt.getMonth(), 1).toISOString()
+  const startOfLastMonth = new Date(nowBrt.getFullYear(), nowBrt.getMonth() - 1, 1).toISOString()
 
   // 2 queries no total — evita saturar o pool de conexões do Supabase pgBouncer
   const [countsResult, orgsResult] = await Promise.all([
@@ -119,9 +120,9 @@ export async function getAdminMetricsAction() {
 export async function getClinicDetailAction(orgId: string) {
   await assertAdmin()
 
-  const now = new Date()
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
-  const today = now.toISOString().slice(0, 10)
+  const nowBrt = nowBRT()
+  const startOfMonth = new Date(nowBrt.getFullYear(), nowBrt.getMonth(), 1)
+  const today = todayBRT()
 
   const [
     orgRow, ownerRow, teamRows,

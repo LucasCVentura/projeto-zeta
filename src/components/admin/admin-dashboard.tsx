@@ -76,6 +76,12 @@ const GOALS = [
 function formatBRL(cents: number) {
   return (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
 }
+function formatDateBR(d: Date | string) {
+  return new Date(d).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })
+}
+function formatDateTimeBR(d: Date | string, opts: Intl.DateTimeFormatOptions = {}) {
+  return new Date(d).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", ...opts })
+}
 function statusColor(status: string) {
   if (status === "active" || status === "lifetime") return "text-green-700 bg-green-100 dark:text-green-400 dark:bg-green-900/30"
   if (status === "trialing") return "text-blue-700 bg-blue-100 dark:text-blue-400 dark:bg-blue-900/30"
@@ -251,8 +257,8 @@ function ClinicDetailPanel({
               {org.phone && <p className="flex items-center gap-1.5 text-muted-foreground"><Phone size={13} /> {org.phone}</p>}
               {org.instagram && <p className="flex items-center gap-1.5 text-muted-foreground"><AtSign size={13} /> {org.instagram}</p>}
               {org.address && <p className="flex items-center gap-1.5 text-muted-foreground truncate"><MapPin size={13} /> {org.address}</p>}
-              <p className="flex items-center gap-1.5 text-muted-foreground"><CalendarDays size={13} /> Cadastro: {new Date(org.createdAt).toLocaleDateString("pt-BR")}</p>
-              {trialEnd && <p className="flex items-center gap-1.5 text-muted-foreground"><Clock size={13} /> Trial até {trialEnd.toLocaleDateString("pt-BR")}</p>}
+              <p className="flex items-center gap-1.5 text-muted-foreground"><CalendarDays size={13} /> Cadastro: {formatDateBR(org.createdAt)}</p>
+              {trialEnd && <p className="flex items-center gap-1.5 text-muted-foreground"><Clock size={13} /> Trial até {formatDateBR(trialEnd)}</p>}
             </div>
           </div>
         </div>
@@ -365,7 +371,7 @@ function ClinicDetailPanel({
               {clients.recent.map((c, i) => (
                 <div key={i} className="flex items-center justify-between py-1.5">
                   <span className="text-sm truncate">{c.name}</span>
-                  <span className="text-[11px] text-muted-foreground tabular-nums">{new Date(c.createdAt).toLocaleDateString("pt-BR")}</span>
+                  <span className="text-[11px] text-muted-foreground tabular-nums">{formatDateBR(c.createdAt)}</span>
                 </div>
               ))}
             </div>
@@ -982,7 +988,7 @@ export function AdminDashboard() {
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10"><Activity size={14} className="text-primary" /></div>
                 <p className="text-sm font-semibold">Resumo da IA</p>
               </div>
-              {feedbackSummary && <span className="text-xs text-muted-foreground">{new Date(feedbackSummary.generatedAt).toLocaleDateString("pt-BR")} · {feedbackSummary.feedbackCount} feedbacks</span>}
+              {feedbackSummary && <span className="text-xs text-muted-foreground">{formatDateBR(feedbackSummary.generatedAt)} · {feedbackSummary.feedbackCount} feedbacks</span>}
             </div>
             {feedbackSummary
               ? <p className="text-sm leading-relaxed whitespace-pre-wrap">{feedbackSummary.summary}</p>
@@ -998,7 +1004,7 @@ export function AdminDashboard() {
                   <div key={fb.id} className="px-5 py-4 space-y-1.5">
                     <p className="text-sm leading-relaxed">{fb.content}</p>
                     <p className="text-[11px] text-muted-foreground">
-                      <span className="font-medium text-foreground/70">{fb.orgName ?? "—"}</span>{" · "}{fb.userName ?? "—"}{" · "}{new Date(fb.createdAt).toLocaleDateString("pt-BR")}
+                      <span className="font-medium text-foreground/70">{fb.orgName ?? "—"}</span>{" · "}{fb.userName ?? "—"}{" · "}{formatDateBR(fb.createdAt)}
                     </p>
                   </div>
                 ))}
@@ -1083,9 +1089,8 @@ export function AdminDashboard() {
           delivered: "Entregue", read: "Lido", failed: "Falhou",
         }
 
-        const formatBR = (d: Date) => new Date(d).toLocaleString("pt-BR", {
-          timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit",
-          year: "numeric", hour: "2-digit", minute: "2-digit",
+        const formatBR = (d: Date) => formatDateTimeBR(d, {
+          day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit",
         })
 
         const PERIODS: { value: WhatsAppLogsParams["period"]; label: string }[] = [
@@ -1302,7 +1307,7 @@ export function AdminDashboard() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-1 mb-0.5">
                         <span className={cn("text-xs truncate", !email.read ? "font-semibold text-foreground" : "text-muted-foreground")}>{email.from.split("<")[0].trim() || email.from}</span>
-                        <span className="text-[10px] text-muted-foreground shrink-0">{new Date(email.receivedAt).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}</span>
+                        <span className="text-[10px] text-muted-foreground shrink-0">{formatDateTimeBR(email.receivedAt, { day: "2-digit", month: "short" })}</span>
                       </div>
                       <p className={cn("text-sm truncate", !email.read ? "font-medium" : "")}>{email.subject}</p>
                       <p className="text-xs text-muted-foreground truncate mt-0.5">{(email.body ?? "").slice(0, 60)}</p>
@@ -1321,7 +1326,7 @@ export function AdminDashboard() {
                     <p className="text-xs text-muted-foreground">
                       De: <span className="text-foreground">{selectedEmail.from}</span>
                       {" · "}
-                      {new Date(selectedEmail.receivedAt).toLocaleString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+                      {formatDateTimeBR(selectedEmail.receivedAt, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
                     </p>
                   </div>
                   <div className="flex-1 overflow-y-auto px-6 py-5">
