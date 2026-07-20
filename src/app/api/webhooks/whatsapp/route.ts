@@ -66,22 +66,26 @@ export async function POST(req: NextRequest) {
       if (messageText) {
         const isAppointmentReply = /(confirmar|cancelar)/i.test(messageText)
         if (!isAppointmentReply) {
-          // Não aciona o bot se o cliente respondeu a uma mensagem nossa (reply com contexto)
+          // Cliente respondeu a uma mensagem nossa (reply com contexto) → conversa já em andamento,
+          // não aciona o menu do bot (mas a mensagem é salva e o admin é avisado por push).
           const isReplyToOurs = !!contextMessageId
+
+          let recentlySent = false
           if (!isReplyToOurs) {
             // Sem contexto: verifica se enviamos algo a esse número nas últimas 2h
-            // (cliente digitou no chat sem usar o "responder") — também ignora o bot
+            // (cliente digitou no chat sem usar o "responder") — mesma lógica: sem menu do bot
             const rows = await db.execute<{ cnt: number }>(sql`
               SELECT COUNT(*)::int AS cnt FROM whatsapp_message_logs
               WHERE destination = ${normalizedPhone}
               AND created_at > NOW() - INTERVAL '2 hours'
               LIMIT 1
             `)
-            const recentlySent = (Array.isArray(rows) ? rows[0]?.cnt : rows.rows?.[0]?.cnt) ?? 0
-            if (!recentlySent) {
-              await handleInboundMessage(normalizedPhone, messageText, senderName)
-            }
+            recentlySent = ((Array.isArray(rows) ? rows[0]?.cnt : rows.rows?.[0]?.cnt) ?? 0) > 0
           }
+
+          await handleInboundMessage(normalizedPhone, messageText, senderName, {
+            skipBot: isReplyToOurs || recentlySent,
+          })
         }
       }
     }

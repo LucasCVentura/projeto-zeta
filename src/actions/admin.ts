@@ -262,6 +262,18 @@ function normalizePhone(phone: string) {
   return digits.startsWith("55") ? digits : `55${digits}`
 }
 
+// Total de mensagens não lidas — pra badge no menu, sem carregar o histórico inteiro
+export async function getAdminChatUnreadCountAction(): Promise<number> {
+  await assertAdmin()
+
+  const [row] = await db
+    .select({ count: count() })
+    .from(adminChatMessages)
+    .where(and(eq(adminChatMessages.direction, "inbound"), isNull(adminChatMessages.readAt)))
+
+  return row?.count ?? 0
+}
+
 export async function getAdminChatConversationsAction(showArchived = false) {
   await assertAdmin()
 
@@ -300,6 +312,20 @@ export async function getAdminChatConversationsAction(showArchived = false) {
     unreadMap[key] = (unreadMap[key] ?? 0) + r.count
   }
 
+  // Última mensagem INBOUND por número — define a janela de 24h de resposta livre do WhatsApp
+  const lastInboundRows = await db
+    .select({ phone: adminChatMessages.phone, lastInboundAt: max(adminChatMessages.createdAt) })
+    .from(adminChatMessages)
+    .where(eq(adminChatMessages.direction, "inbound"))
+    .groupBy(adminChatMessages.phone)
+
+  const lastInboundMap: Record<string, Date> = {}
+  for (const r of lastInboundRows) {
+    if (!r.lastInboundAt) continue
+    const key = normalizePhone(r.phone)
+    if (!lastInboundMap[key] || r.lastInboundAt > lastInboundMap[key]) lastInboundMap[key] = r.lastInboundAt
+  }
+
   const sessions = await db.select().from(chatSessions)
   // Sessão lookup por número normalizado — garante match independente do formato salvo
   const sessionMap: Record<string, typeof sessions[0]> = {}
@@ -319,6 +345,7 @@ export async function getAdminChatConversationsAction(showArchived = false) {
         lastMessage: c.lastMessage,
         lastDirection: c.lastDirection,
         lastAt: c.lastAt,
+        lastInboundAt: lastInboundMap[c.normalizedPhone] ?? null,
         unread: unreadMap[c.normalizedPhone] ?? 0,
         queue: session?.queue ?? null,
         userName: session?.userName ?? c.senderName ?? null,
@@ -379,12 +406,28 @@ export async function getAdminChatMessagesAction(phone: string) {
   }))
 }
 
-export async function sendAdminChatMessageAction(phone: string, content: string) {
+export async function sendAdminChatMessageAction(
+  phone: string,
+  content: string
+): Promise<{ success: boolean; error?: string }> {
   await requireAdmin()
 
   const normalizedPhone = normalizePhone(phone)
   const { sendWhatsApp } = await import("@/lib/whatsapp-client")
-  await sendWhatsApp(normalizedPhone, content)
+
+  try {
+    await sendWhatsApp(normalizedPhone, content)
+  } catch (err) {
+    console.error("[AdminChat] erro ao enviar mensagem", err)
+    const message = err instanceof Error ? err.message : String(err)
+    const windowClosed = /24|session|window/i.test(message)
+    return {
+      success: false,
+      error: windowClosed
+        ? "A janela de 24h do WhatsApp fechou — use um template pra reabrir a conversa."
+        : "Não foi possível enviar. Tente de novo em instantes.",
+    }
+  }
 
   await db.insert(adminChatMessages).values({
     phone: normalizedPhone,
@@ -400,6 +443,8 @@ export async function sendAdminChatMessageAction(phone: string, content: string)
       target: chatSessions.phone,
       set: { state: "routed", queue: null, lastActivityAt: new Date() },
     })
+
+  return { success: true }
 }
 
 export async function sendAdminChatTemplateAction(

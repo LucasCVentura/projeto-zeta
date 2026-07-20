@@ -2,11 +2,21 @@ import { db } from "@/db"
 import { chatSessions, adminChatMessages, users, organizationMembers, organizations } from "@/db/schema"
 import { eq, and } from "drizzle-orm"
 import { sendWhatsApp, sendWhatsAppQuickReply } from "@/lib/whatsapp-client"
+import { sendAdminPush } from "@/actions/push"
 
 const SESSION_TTL_MS = 2 * 60 * 60 * 1000  // 2 horas
 
 const BTN_SUPPORT    = "🛠 Suporte"
 const BTN_COMMERCIAL = "💬 Comercial"
+
+function formatPhoneForPush(phone: string): string {
+  const digits = phone.replace(/\D/g, "")
+  const local = digits.startsWith("55") ? digits.slice(2) : digits
+  if (local.length < 10) return phone
+  const ddd = local.slice(0, 2)
+  const rest = local.slice(2)
+  return `(${ddd}) ${rest}`
+}
 
 function isOutOfHours(): boolean {
   const now = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }))
@@ -119,8 +129,28 @@ async function routeToSupport(phone: string, userName: string, orgName: string) 
   await upsertSession(phone, { state: "routed", queue: "support", userName, orgName })
 }
 
-export async function handleInboundMessage(phone: string, text: string, senderName?: string | null) {
+export async function handleInboundMessage(
+  phone: string,
+  text: string,
+  senderName?: string | null,
+  opts?: { skipBot?: boolean }
+) {
   await saveMessage(phone, "inbound", text)
+
+  // Avisa o admin por push sempre que chega mensagem — independe do bot ter algo a fazer
+  sendAdminPush({
+    title: `💬 ${senderName ?? formatPhoneForPush(phone)}`,
+    body: text.length > 120 ? `${text.slice(0, 117)}...` : text,
+    url: `/admin?section=chat&phone=${encodeURIComponent(phone)}`,
+  }).catch((err) => console.error("[ChatBot] erro ao enviar push", err))
+
+  // Conversa já "quente" (admin respondeu recentemente, ou cliente usou "responder") —
+  // não aciona o menu do bot, só registra a mensagem (já feito acima) e marca atividade.
+  if (opts?.skipBot) {
+    const [existing] = await db.select({ id: chatSessions.id }).from(chatSessions).where(eq(chatSessions.phone, phone)).limit(1)
+    if (existing) await db.update(chatSessions).set({ lastActivityAt: new Date() }).where(eq(chatSessions.phone, phone))
+    return
+  }
 
   const session = await getOrCreateSession(phone)
 

@@ -1,7 +1,8 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { extendTrialAction, cancelOrgAction, setLifetimeAction, markInboundEmailReadAction, saveWhatsAppTemplateSettingAction, getInboundEmailsAction, getWhatsAppMessageLogsAction, getAdminMetricsAction, getWhatsAppTemplateSettingsAction, getClinicDetailAction } from "@/actions/admin"
+import { extendTrialAction, cancelOrgAction, setLifetimeAction, markInboundEmailReadAction, saveWhatsAppTemplateSettingAction, getInboundEmailsAction, getWhatsAppMessageLogsAction, getAdminMetricsAction, getWhatsAppTemplateSettingsAction, getClinicDetailAction, getAdminChatUnreadCountAction } from "@/actions/admin"
+import { useSearchParams } from "next/navigation"
 import type { WhatsAppLogsParams, ClinicDetail } from "@/actions/admin"
 import { getAllFeedbackAction, getLatestFeedbackSummaryAction } from "@/actions/feedback"
 import { AdminChat } from "@/components/admin/admin-chat"
@@ -435,6 +436,8 @@ export function AdminDashboard() {
   const [postVisitNoLinkTemplateId, setPostVisitNoLinkTemplateId] = useState("")
   const [publicBookingRejectedTemplateId, setPublicBookingRejectedTemplateId] = useState("")
   const [publicBookingManualRejectedTemplateId, setPublicBookingManualRejectedTemplateId] = useState("")
+  const [chatUnreadCount, setChatUnreadCount] = useState(0)
+  const [chatInitialPhone, setChatInitialPhone] = useState<string | null>(null)
   const [pendingCancelOrg, setPendingCancelOrg] = useState<{ id: string; name: string } | null>(null)
   const [activeSection, setActiveSection] = useState("overview")
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -442,6 +445,24 @@ export function AdminDashboard() {
   const [logFilterEvent, setLogFilterEvent] = useState("")
   const [logFilterError, setLogFilterError] = useState(false)
   const unreadCount = inboundEmails.filter(e => !e.read).length
+  const searchParams = useSearchParams()
+
+  // Deep-link vindo de uma notificação push (?section=chat&phone=...)
+  useEffect(() => {
+    const section = searchParams.get("section")
+    const phone = searchParams.get("phone")
+    if (section) setActiveSection(section)
+    if (phone) setChatInitialPhone(phone)
+  }, [searchParams])
+
+  // Contador de não lidas do chat — independe da aba estar aberta, pra alimentar o badge do menu
+  useEffect(() => {
+    getAdminChatUnreadCountAction().then(setChatUnreadCount).catch(() => {})
+    const interval = setInterval(() => {
+      getAdminChatUnreadCountAction().then(setChatUnreadCount).catch(() => {})
+    }, 15000)
+    return () => clearInterval(interval)
+  }, [])
 
   // Busca tudo no client — página abre instantaneamente
   useEffect(() => {
@@ -510,7 +531,7 @@ export function AdminDashboard() {
     { id: "financeiro",     label: "Financeiro",      icon: Wallet },
     { id: "whatsapp",       label: `WhatsApp (${whatsappLogs.length})`, icon: Phone },
     { id: "conteudo",       label: "Conteúdo",        icon: CalendarDays },
-    { id: "chat",           label: "Chat",            icon: MessageCircle },
+    { id: "chat",           label: "Chat",            icon: MessageCircle, badge: chatUnreadCount },
     { id: "suporte",        label: "Suporte",         icon: Mail, badge: unreadCount },
     { id: "whatsapp-config",label: "Config WhatsApp", icon: Settings },
   ]
@@ -1273,7 +1294,7 @@ export function AdminDashboard() {
         </div>
       )
 
-      case "chat": return <AdminChat trialOutreachTemplateId={trialOutreachTemplateId || null} trialExpiredOutreachTemplateId={trialExpiredOutreachTemplateId || null} testimonialOutreachTemplateId={testimonialOutreachTemplateId || null} winbackOutreachTemplateId={winbackOutreachTemplateId || null} />
+      case "chat": return <AdminChat trialOutreachTemplateId={trialOutreachTemplateId || null} trialExpiredOutreachTemplateId={trialExpiredOutreachTemplateId || null} testimonialOutreachTemplateId={testimonialOutreachTemplateId || null} winbackOutreachTemplateId={winbackOutreachTemplateId || null} initialPhone={chatInitialPhone} onInitialPhoneConsumed={() => setChatInitialPhone(null)} />
 
       case "suporte": {
         const selectedEmail = inboundEmails.find(e => e.id === expandedEmail) ?? null

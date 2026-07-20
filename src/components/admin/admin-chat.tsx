@@ -27,6 +27,7 @@ type Conversation = {
   lastMessage: string
   lastDirection: string
   lastAt: Date
+  lastInboundAt: Date | null
   unread: number
   queue: string | null
   userName: string | null
@@ -65,6 +66,43 @@ function QueueBadge({ queue }: { queue: string | null }) {
   if (queue === "support")    return <span className="rounded-full bg-blue-100 text-blue-700 px-1.5 py-0.5 text-[10px] font-semibold">Suporte</span>
   if (queue === "commercial") return <span className="rounded-full bg-amber-100 text-amber-700 px-1.5 py-0.5 text-[10px] font-semibold">Comercial</span>
   return null
+}
+
+const WHATSAPP_WINDOW_MS = 24 * 60 * 60 * 1000
+
+function windowStatus(lastInboundAt: Date | string | null): { open: boolean; label: string } {
+  if (!lastInboundAt) return { open: false, label: "Sem janela aberta" }
+  const elapsed = Date.now() - new Date(lastInboundAt).getTime()
+  const remaining = WHATSAPP_WINDOW_MS - elapsed
+  if (remaining <= 0) return { open: false, label: "Janela de 24h fechada" }
+  const hours = Math.floor(remaining / (60 * 60 * 1000))
+  const minutes = Math.floor((remaining % (60 * 60 * 1000)) / (60 * 1000))
+  return { open: true, label: hours > 0 ? `Janela fecha em ${hours}h${minutes}m` : `Janela fecha em ${minutes}m` }
+}
+
+function WindowDot({ lastInboundAt }: { lastInboundAt: Date | string | null }) {
+  const { open, label } = windowStatus(lastInboundAt)
+  return (
+    <span
+      className={cn("inline-block h-1.5 w-1.5 rounded-full shrink-0", open ? "bg-green-500" : "bg-red-400")}
+      title={label}
+    />
+  )
+}
+
+function WindowBadge({ lastInboundAt }: { lastInboundAt: Date | string | null }) {
+  const { open, label } = windowStatus(lastInboundAt)
+  return (
+    <span
+      className={cn(
+        "rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
+        open ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+      )}
+      title={open ? "Você pode mandar mensagem de texto livre" : "Só é possível reabrir com um template aprovado"}
+    >
+      {label}
+    </span>
+  )
 }
 
 function Avatar({ name, size = "md" }: { name: string; size?: "sm" | "md" }) {
@@ -363,20 +401,23 @@ function NewConversationPanel({
 
 // ── Área de mensagens ─────────────────────────────────────────────────────────
 
-function MessageArea({ phone, displayName, queue, orgName }: {
+function MessageArea({ phone, displayName, queue, orgName, lastInboundAt }: {
   phone: string
   displayName: string
   queue: string | null
   orgName: string | null
+  lastInboundAt: Date | null
 }) {
   const [messages, setMessages] = useState<AdminChatMessage[]>([])
   const [text, setText] = useState("")
   const [sending, setSending] = useState(false)
+  const [sendError, setSendError] = useState<string | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const isAtBottomRef = useRef(true)
 
   useEffect(() => {
     setMessages([])
+    setSendError(null)
     getAdminChatMessagesAction(phone).then(setMessages)
 
     const interval = setInterval(async () => {
@@ -397,12 +438,25 @@ function MessageArea({ phone, displayName, queue, orgName }: {
     e.preventDefault()
     if (!text.trim() || sending) return
     setSending(true)
+    setSendError(null)
     const content = text.trim()
-    setText("")
-    await sendAdminChatMessageAction(phone, content)
-    const updated = await getAdminChatMessagesAction(phone)
-    setMessages(updated)
-    setSending(false)
+    try {
+      const result = await sendAdminChatMessageAction(phone, content)
+      if (!result.success) {
+        setSendError(result.error ?? "Não foi possível enviar.")
+        setText(content)
+        return
+      }
+      setText("")
+      const updated = await getAdminChatMessagesAction(phone)
+      setMessages(updated)
+    } catch (err) {
+      console.error("[AdminChat] erro inesperado ao enviar", err)
+      setSendError("Não foi possível enviar. Tente de novo.")
+      setText(content)
+    } finally {
+      setSending(false)
+    }
   }
 
   return (
@@ -414,6 +468,7 @@ function MessageArea({ phone, displayName, queue, orgName }: {
           <div className="flex items-center gap-2">
             <p className="font-semibold text-sm truncate">{displayName}</p>
             <QueueBadge queue={queue} />
+            <WindowBadge lastInboundAt={lastInboundAt} />
           </div>
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <Phone size={11} />
@@ -450,6 +505,13 @@ function MessageArea({ phone, displayName, queue, orgName }: {
       </div>
 
       {/* Input */}
+      {sendError && (
+        <div className="px-3 pt-2 shrink-0">
+          <p className="rounded-lg bg-destructive/10 border border-destructive/20 px-3 py-1.5 text-xs text-destructive">
+            {sendError}
+          </p>
+        </div>
+      )}
       <form onSubmit={handleSend} className="flex items-center gap-2 px-3 py-2.5 border-t border-border bg-background shrink-0">
         <Input
           value={text}
@@ -574,7 +636,10 @@ function ConversationList({
                     </p>
                     <QueueBadge queue={conv.queue} />
                   </div>
-                  <span className="text-[11px] text-muted-foreground shrink-0">{formatTime(conv.lastAt)}</span>
+                  <span className="flex items-center gap-1 shrink-0">
+                    <WindowDot lastInboundAt={conv.lastInboundAt} />
+                    <span className="text-[11px] text-muted-foreground">{formatTime(conv.lastAt)}</span>
+                  </span>
                 </div>
                 <div className="flex items-center justify-between gap-1 mt-0.5">
                   <p className="text-xs text-muted-foreground truncate">
@@ -609,11 +674,15 @@ export function AdminChat({
   trialExpiredOutreachTemplateId,
   testimonialOutreachTemplateId,
   winbackOutreachTemplateId,
+  initialPhone,
+  onInitialPhoneConsumed,
 }: {
   trialOutreachTemplateId: string | null
   trialExpiredOutreachTemplateId: string | null
   testimonialOutreachTemplateId: string | null
   winbackOutreachTemplateId: string | null
+  initialPhone?: string | null
+  onInitialPhoneConsumed?: () => void
 }) {
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [trialOrgs, setTrialOrgs] = useState<TrialOrg[]>([])
@@ -633,6 +702,12 @@ export function AdminChat({
       getWinbackOrgsForChatAction(),
     ]).then(([convs, orgs, expired, subscribers, winback]) => {
       setConversations(convs as Conversation[])
+      if (initialPhone) {
+        const digits = initialPhone.replace(/\D/g, "")
+        const match = (convs as Conversation[]).find(c => c.phone.replace(/\D/g, "").endsWith(digits.slice(-11)))
+        if (match) setActiveConv({ ...match, unread: 0 })
+        onInitialPhoneConsumed?.()
+      }
       setTrialOrgs(orgs as TrialOrg[])
       setExpiredOrgs(expired as TrialOrg[])
       setActiveSubscribers(subscribers as TrialOrg[])
@@ -670,7 +745,7 @@ export function AdminChat({
     const convs = await getAdminChatConversationsAction() as Conversation[]
     const conv = convs.find(c => c.phone === phone) ?? {
       phone, senderName: name, userName: name, orgName: null,
-      lastMessage: "", lastDirection: "outbound", lastAt: new Date(), unread: 0, queue: null, archived: false,
+      lastMessage: "", lastDirection: "outbound", lastAt: new Date(), lastInboundAt: null, unread: 0, queue: null, archived: false,
     }
     setConversations(convs)
     setActiveConv(conv as Conversation)
@@ -727,6 +802,7 @@ export function AdminChat({
               displayName={activeConv.userName ?? activeConv.senderName ?? formatPhone(activeConv.phone)}
               queue={activeConv.queue}
               orgName={activeConv.orgName}
+              lastInboundAt={activeConv.lastInboundAt}
             />
           </>
         ) : (
