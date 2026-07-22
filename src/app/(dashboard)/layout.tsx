@@ -17,6 +17,7 @@ import { getChangelogStateAction } from "@/actions/changelog"
 import { NoticesBanner } from "@/components/layout/notices-banner"
 import { getActiveNotices } from "@/lib/notices"
 import { getMissingProfileFields } from "@/lib/profile-completion"
+import { isFeatureEnabled } from "@/lib/feature-flags"
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const session = await auth()
@@ -29,6 +30,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
     .limit(1)
 
   const userRole: OrgRole = membership?.role ?? "professional"
+
+  // Feature de cupons/vale-presentes em rollout gradual por organização.
+  const couponsEnabled = membership ? await isFeatureEnabled(membership.organizationId, "coupons") : false
 
   let trialDaysLeft: number | null = null
 
@@ -87,7 +91,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <NavProgress />
       <div className="flex h-dvh overflow-hidden bg-background">
         <div className="hidden lg:flex lg:shrink-0">
-          <Sidebar role={userRole} changelogHasNew={hasNew} changelogEntries={entries} profileIncomplete={profileIncomplete} />
+          <Sidebar role={userRole} changelogHasNew={hasNew} changelogEntries={entries} profileIncomplete={profileIncomplete} couponsEnabled={couponsEnabled} />
         </div>
         <div className="flex flex-1 flex-col overflow-hidden">
           <NoticesBanner notices={getActiveNotices()} />
@@ -97,7 +101,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
             {children}
           </main>
         </div>
-        <MobileNav role={userRole} changelogHasNew={hasNew} changelogEntries={entries} profileIncomplete={profileIncomplete} />
+        <MobileNav role={userRole} changelogHasNew={hasNew} changelogEntries={entries} profileIncomplete={profileIncomplete} couponsEnabled={couponsEnabled} />
       </div>
       </SidebarProvider>
     </AuthSessionProvider>

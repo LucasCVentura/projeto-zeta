@@ -7,6 +7,7 @@ import {
   boolean,
   unique,
   uniqueIndex,
+  primaryKey,
   integer,
   time,
   numeric,
@@ -97,6 +98,63 @@ export const organizations = pgTable("organizations", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 })
+
+// ── feature_flags / feature_flag_orgs ────────────────────────────────────────
+// Mecanismo genérico de "launch control": toda feature grande nova entra aqui em vez
+// de ganhar uma coluna dedicada em organizations. Registro de features fica no código
+// (ver src/lib/feature-flags.ts, FEATURE_REGISTRY) e é sincronizado nesta tabela; o
+// controle de QUEM tem acesso (org por org, ou liberado geral) mora no banco, editável
+// pelo painel /admin → "Novas Features".
+
+export const featureFlags = pgTable("feature_flags", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  key: text("key").notNull().unique(),
+  label: text("label").notNull(),
+  description: text("description"),
+  enabledForAll: boolean("enabled_for_all").notNull().default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+})
+
+export const featureFlagOrgs = pgTable(
+  "feature_flag_orgs",
+  {
+    featureFlagId: text("feature_flag_id")
+      .notNull()
+      .references(() => featureFlags.id, { onDelete: "cascade" }),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.featureFlagId, t.organizationId] })]
+)
+
+export type FeatureFlag = typeof featureFlags.$inferSelect
+
+// ── changelog_entries ─────────────────────────────────────────────────────────
+// "O que há de novo" pro usuário final — editável pelo admin sem precisar de
+// deploy. `featureFlagId` é opcional: preenchido quando a entrada nasceu do
+// fluxo "Ativar pra todas" de uma feature (Novas Features), null quando foi
+// criada manualmente (fix/melhoria avulsa sem feature flag associada).
+
+export type ChangelogItem = { type: "new" | "improvement" | "fix"; text: string }
+
+export const changelogEntries = pgTable("changelog_entries", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  version: text("version").notNull().unique(),
+  entryDate: date("entry_date").notNull(),
+  items: jsonb("items").notNull().$type<ChangelogItem[]>(),
+  featureFlagId: text("feature_flag_id").references(() => featureFlags.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+})
+
+export type ChangelogEntryRow = typeof changelogEntries.$inferSelect
 
 // ── organization_members ─────────────────────────────────────────────────────
 
@@ -357,6 +415,7 @@ export const transactions = pgTable("transactions", {
 
   appointmentId: text("appointment_id").references(() => appointments.id, { onDelete: "set null" }),
   clientPackageId: text("client_package_id"), // sem FK para evitar circularidade; preenchido na venda de pacote
+  couponRecipientId: text("coupon_recipient_id").references(() => couponRecipients.id, { onDelete: "set null" }),
 
   amount: integer("amount").notNull(), // centavos (receita bruta; 0 para sessões de pacote)
   commissionAmount: integer("commission_amount"), // centavos; null = sem comissão configurada
@@ -366,6 +425,75 @@ export const transactions = pgTable("transactions", {
 
   createdAt: timestamp("created_at").defaultNow().notNull(),
 })
+
+// ── coupons / coupon_recipients ───────────────────────────────────────────────
+// "quantity" limita quantas clientes RECEBEM o cupom, não quantas conseguem
+// resgatar depois — cada linha em coupon_recipients já é uma instância exclusiva
+// alocada no envio, então não existe corrida por um pool compartilhado no checkout.
+
+export const couponKindEnum = pgEnum("coupon_kind", ["discount", "gift"])
+export const couponRecipientStatusEnum = pgEnum("coupon_recipient_status", [
+  "pending",
+  "sent",
+  "failed",
+  "redeemed",
+  "expired",
+])
+
+export const coupons = pgTable("coupons", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organizations.id, { onDelete: "cascade" }),
+  kind: couponKindEnum("kind").notNull().default("discount"),
+  procedureId: text("procedure_id")
+    .notNull()
+    .references(() => procedures.id, { onDelete: "cascade" }),
+
+  discountPct: integer("discount_pct").notNull(), // 100 pra vale-presente
+  quantity: integer("quantity").notNull(),
+  expiresAt: date("expires_at").notNull(),
+
+  createdById: text("created_by_id").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+})
+
+export const couponRecipients = pgTable(
+  "coupon_recipients",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+
+    couponId: text("coupon_id")
+      .notNull()
+      .references(() => coupons.id, { onDelete: "cascade" }),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    clientId: text("client_id")
+      .notNull()
+      .references(() => clients.id, { onDelete: "cascade" }),
+
+    token: text("token").notNull().unique(),
+    status: couponRecipientStatusEnum("status").notNull().default("pending"),
+
+    sentAt: timestamp("sent_at"),
+    redeemedAt: timestamp("redeemed_at"),
+    redeemedAppointmentId: text("redeemed_appointment_id").references(() => appointments.id, { onDelete: "set null" }),
+
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => [unique("uniq_coupon_client").on(t.couponId, t.clientId)]
+)
+
+export type Coupon = typeof coupons.$inferSelect
+export type CouponRecipient = typeof couponRecipients.$inferSelect
+export type CouponKind = (typeof couponKindEnum.enumValues)[number]
+export type CouponRecipientStatus = (typeof couponRecipientStatusEnum.enumValues)[number]
 
 // ── packages ──────────────────────────────────────────────────────────────────
 
@@ -870,6 +998,8 @@ export const whatsappSystemTemplateSettings = pgTable("whatsapp_system_template_
   postVisitNoLinkTemplateId: text("post_visit_no_link_template_id"),
   publicBookingRejectedTemplateId: text("public_booking_rejected_template_id"),
   publicBookingManualRejectedTemplateId: text("public_booking_manual_rejected_template_id"),
+  couponSendTemplateId: text("coupon_send_template_id"),
+  giftVoucherSendTemplateId: text("gift_voucher_send_template_id"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 })

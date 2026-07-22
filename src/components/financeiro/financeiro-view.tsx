@@ -25,6 +25,7 @@ type Transaction = {
   paymentMethod: PaymentMethod | null
   professionalId: string
   professionalName: string
+  couponKind: "discount" | "gift" | null
 }
 
 type Summary = {
@@ -91,6 +92,17 @@ function PaymentBadge({ method }: { method: PaymentMethod }) {
     <span className={cn("inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium", cfg.color)}>
       <cfg.icon size={11} strokeWidth={2} />
       {cfg.label}
+    </span>
+  )
+}
+
+function CouponBadge({ kind }: { kind: "discount" | "gift" }) {
+  return (
+    <span className={cn(
+      "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium",
+      kind === "gift" ? "bg-pink-50 text-pink-700 border-pink-200" : "bg-primary/5 text-primary border-primary/20"
+    )}>
+      {kind === "gift" ? "Vale-presente" : "Cupom"}
     </span>
   )
 }
@@ -626,6 +638,7 @@ export function FinanceiroView() {
                 <div className="flex items-center gap-2 flex-wrap">
                   <p className="text-xs text-muted-foreground">{formatDate(tx.date)}</p>
                   {tx.paymentMethod && <PaymentBadge method={tx.paymentMethod} />}
+                  {tx.couponKind && <CouponBadge kind={tx.couponKind} />}
                   <span className="text-xs text-muted-foreground">{tx.professionalName}</span>
                 </div>
               </div>

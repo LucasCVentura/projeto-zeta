@@ -5,25 +5,13 @@ import {
   organizations, organizationMembers, users,
   appointments, clients, transactions, clientPhotos,
   adminChatMessages, chatSessions, procedures, packages, anamnesisAnswers,
-  trialReactivationTokens,
+  trialReactivationTokens, featureFlags, featureFlagOrgs,
 } from "@/db/schema"
 import { eq, count, sum, max, gte, lt, sql, or, and, desc, asc, isNull } from "drizzle-orm"
-import { auth } from "@/lib/auth"
-import { redirect } from "next/navigation"
 import { revalidatePath } from "next/cache"
 import { nowBRT, todayBRT } from "@/lib/date"
-
-const ADMIN_EMAIL = "lucascv8525@gmail.com"
-
-async function requireAdmin() {
-  const session = await auth()
-  if (session?.user?.email !== ADMIN_EMAIL) redirect("/dashboard")
-}
-
-async function assertAdmin() {
-  const session = await auth()
-  if (session?.user?.email !== ADMIN_EMAIL) throw new Error("UNAUTHORIZED")
-}
+import { syncFeatureRegistry, getFeatureRegistryEntry } from "@/lib/feature-flags"
+import { requireAdmin, assertAdmin } from "@/lib/admin-guard"
 
 export async function getAdminMetricsAction() {
   await assertAdmin()
@@ -250,6 +238,82 @@ export async function cancelOrgAction(orgId: string) {
     .update(organizations)
     .set({ subscriptionStatus: "canceled" })
     .where(eq(organizations.id, orgId))
+
+  revalidatePath("/admin")
+}
+
+// ── Novas Features (launch control) ──────────────────────────────────────────
+// Mecanismo genérico de rollout gradual: toda feature grande nova entra no
+// registro (src/lib/feature-flags.ts, FEATURE_REGISTRY), liga-se org por org
+// aqui no admin, e no final vira padrão pra todo mundo com um clique. O gatilho
+// real (o que de fato bloqueia a feature) mora em isFeatureEnabled — isso aqui
+// é só o painel de controle.
+
+export async function getFeatureFlagsAction() {
+  await assertAdmin()
+  await syncFeatureRegistry()
+
+  const rows = await db
+    .select({
+      id: featureFlags.id,
+      key: featureFlags.key,
+      label: featureFlags.label,
+      description: featureFlags.description,
+      enabledForAll: featureFlags.enabledForAll,
+      enabledCount: sql<number>`count(${featureFlagOrgs.organizationId})`,
+    })
+    .from(featureFlags)
+    .leftJoin(featureFlagOrgs, eq(featureFlagOrgs.featureFlagId, featureFlags.id))
+    .groupBy(featureFlags.id)
+    .orderBy(asc(featureFlags.createdAt))
+
+  // changelogDraft mora no código (FEATURE_REGISTRY), não no banco — é copy
+  // versionada junto do PR que traz a feature, não algo editável em runtime.
+  return rows.map((r) => ({ ...r, changelogDraft: getFeatureRegistryEntry(r.key)?.changelogDraft ?? null }))
+}
+
+export async function getFeatureFlagOrgsAction(key: string) {
+  await assertAdmin()
+
+  const [feature] = await db.select({ id: featureFlags.id }).from(featureFlags).where(eq(featureFlags.key, key))
+  if (!feature) return []
+
+  const rows = await db
+    .select({
+      id: organizations.id,
+      name: organizations.name,
+      ownerEmail: users.email,
+      ownerName: users.name,
+      enabled: sql<boolean>`(${featureFlagOrgs.organizationId} IS NOT NULL)`,
+    })
+    .from(organizations)
+    .leftJoin(organizationMembers, and(eq(organizationMembers.organizationId, organizations.id), eq(organizationMembers.role, "owner")))
+    .leftJoin(users, eq(users.id, organizationMembers.userId))
+    .leftJoin(featureFlagOrgs, and(eq(featureFlagOrgs.organizationId, organizations.id), eq(featureFlagOrgs.featureFlagId, feature.id)))
+    .orderBy(sql`(${featureFlagOrgs.organizationId} IS NOT NULL) DESC`, asc(organizations.name))
+
+  return rows
+}
+
+export async function setFeatureFlagForOrgAction(key: string, orgId: string, enabled: boolean) {
+  await requireAdmin()
+
+  const [feature] = await db.select({ id: featureFlags.id }).from(featureFlags).where(eq(featureFlags.key, key))
+  if (!feature) return
+
+  if (enabled) {
+    await db.insert(featureFlagOrgs).values({ featureFlagId: feature.id, organizationId: orgId }).onConflictDoNothing()
+  } else {
+    await db.delete(featureFlagOrgs).where(and(eq(featureFlagOrgs.featureFlagId, feature.id), eq(featureFlagOrgs.organizationId, orgId)))
+  }
+
+  revalidatePath("/admin")
+}
+
+export async function setFeatureFlagForAllAction(key: string, enabled: boolean) {
+  await requireAdmin()
+
+  await db.update(featureFlags).set({ enabledForAll: enabled, updatedAt: new Date() }).where(eq(featureFlags.key, key))
 
   revalidatePath("/admin")
 }
@@ -691,6 +755,8 @@ export type AdminWhatsAppTemplateSetting = {
   postVisitNoLinkTemplateId: string | null
   publicBookingRejectedTemplateId: string | null
   publicBookingManualRejectedTemplateId: string | null
+  couponSendTemplateId: string | null
+  giftVoucherSendTemplateId: string | null
 }
 
 export async function getWhatsAppTemplateSettingsAction(): Promise<AdminWhatsAppTemplateSetting> {
@@ -710,6 +776,8 @@ export async function getWhatsAppTemplateSettingsAction(): Promise<AdminWhatsApp
         ,s.post_visit_no_link_template_id as "postVisitNoLinkTemplateId"
         ,s.public_booking_rejected_template_id as "publicBookingRejectedTemplateId"
         ,s.public_booking_manual_rejected_template_id as "publicBookingManualRejectedTemplateId"
+        ,s.coupon_send_template_id as "couponSendTemplateId"
+        ,s.gift_voucher_send_template_id as "giftVoucherSendTemplateId"
       FROM whatsapp_system_template_settings s
       WHERE s.singleton_key = 'default'
       LIMIT 1
@@ -728,6 +796,8 @@ export async function getWhatsAppTemplateSettingsAction(): Promise<AdminWhatsApp
       postVisitNoLinkTemplateId: one?.postVisitNoLinkTemplateId ?? null,
       publicBookingRejectedTemplateId: one?.publicBookingRejectedTemplateId ?? null,
       publicBookingManualRejectedTemplateId: one?.publicBookingManualRejectedTemplateId ?? null,
+      couponSendTemplateId: one?.couponSendTemplateId ?? null,
+      giftVoucherSendTemplateId: one?.giftVoucherSendTemplateId ?? null,
     }
   } catch (err) {
     console.error("[Admin] Falha ao carregar config global de template WhatsApp:", err)
@@ -744,6 +814,8 @@ export async function getWhatsAppTemplateSettingsAction(): Promise<AdminWhatsApp
       postVisitNoLinkTemplateId: null,
       publicBookingRejectedTemplateId: null,
       publicBookingManualRejectedTemplateId: null,
+      couponSendTemplateId: null,
+      giftVoucherSendTemplateId: null,
     }
   }
 }
@@ -761,6 +833,8 @@ export async function saveWhatsAppTemplateSettingAction(input: {
   postVisitNoLinkTemplateId: string
   publicBookingRejectedTemplateId: string
   publicBookingManualRejectedTemplateId: string
+  couponSendTemplateId: string
+  giftVoucherSendTemplateId: string
 }) {
   await requireAdmin()
   const bookingTemplateId = input.bookingSummaryTemplateId.trim() || null
@@ -775,9 +849,11 @@ export async function saveWhatsAppTemplateSettingAction(input: {
   const postVisitNoLinkTemplateId = input.postVisitNoLinkTemplateId.trim() || null
   const publicBookingRejectedTemplateId = input.publicBookingRejectedTemplateId.trim() || null
   const publicBookingManualRejectedTemplateId = input.publicBookingManualRejectedTemplateId.trim() || null
+  const couponSendTemplateId = input.couponSendTemplateId.trim() || null
+  const giftVoucherSendTemplateId = input.giftVoucherSendTemplateId.trim() || null
   await db.execute(sql`
     INSERT INTO whatsapp_system_template_settings (
-      id, singleton_key, booking_summary_template_id, package_summary_template_id, reminder_confirmation_template_id, post_visit_template_id, trial_outreach_template_id, trial_expired_outreach_template_id, testimonial_outreach_template_id, winback_outreach_template_id, daily_agenda_template_id, post_visit_no_link_template_id, public_booking_rejected_template_id, public_booking_manual_rejected_template_id, created_at, updated_at
+      id, singleton_key, booking_summary_template_id, package_summary_template_id, reminder_confirmation_template_id, post_visit_template_id, trial_outreach_template_id, trial_expired_outreach_template_id, testimonial_outreach_template_id, winback_outreach_template_id, daily_agenda_template_id, post_visit_no_link_template_id, public_booking_rejected_template_id, public_booking_manual_rejected_template_id, coupon_send_template_id, gift_voucher_send_template_id, created_at, updated_at
     )
     VALUES (
       ${crypto.randomUUID()},
@@ -794,6 +870,8 @@ export async function saveWhatsAppTemplateSettingAction(input: {
       ${postVisitNoLinkTemplateId},
       ${publicBookingRejectedTemplateId},
       ${publicBookingManualRejectedTemplateId},
+      ${couponSendTemplateId},
+      ${giftVoucherSendTemplateId},
       now(),
       now()
     )
@@ -810,6 +888,8 @@ export async function saveWhatsAppTemplateSettingAction(input: {
       post_visit_no_link_template_id = EXCLUDED.post_visit_no_link_template_id,
       public_booking_rejected_template_id = EXCLUDED.public_booking_rejected_template_id,
       public_booking_manual_rejected_template_id = EXCLUDED.public_booking_manual_rejected_template_id,
+      coupon_send_template_id = EXCLUDED.coupon_send_template_id,
+      gift_voucher_send_template_id = EXCLUDED.gift_voucher_send_template_id,
       updated_at = now()
   `)
   revalidatePath("/admin")

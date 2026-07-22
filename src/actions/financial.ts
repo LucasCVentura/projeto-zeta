@@ -1,10 +1,11 @@
 "use server"
 
 import { db } from "@/db"
-import { transactions, appointments, appointmentProcedures, clientPackages, packages, supplies, procedureSupplies, procedures, users, organizationMembers, type PaymentMethod } from "@/db/schema"
+import { transactions, appointments, appointmentProcedures, clientPackages, packages, supplies, procedureSupplies, procedures, users, organizationMembers, couponRecipients, coupons, type PaymentMethod } from "@/db/schema"
 import { eq, and, gte, lte, sum, sql, inArray } from "drizzle-orm"
 import { requireSession } from "@/lib/session"
 import { can } from "@/lib/permissions"
+import { isFeatureEnabled } from "@/lib/feature-flags"
 import { revalidatePath, revalidateTag } from "next/cache"
 import type { ActionResult } from "./auth"
 
@@ -14,6 +15,7 @@ export async function completeAppointmentWithRevenueAction(data: {
   description?: string
   date: string
   paymentMethod?: PaymentMethod | null
+  couponRecipientId?: string | null
 }): Promise<ActionResult> {
   const { userId, organizationId, role } = await requireSession()
 
@@ -77,55 +79,81 @@ export async function completeAppointmentWithRevenueAction(data: {
   // Cria transação avulsa quando não é sessão de pacote, ou quando há procedimentos avulsos além do pacote.
   const createStandalone = !appt.clientPackageId || avulso.length > 0
 
-  await db.transaction(async (tx) => {
-    await tx
-      .update(appointments)
-      .set({ status: "completed", updatedAt: new Date() })
-      .where(
-        and(
-          eq(appointments.id, data.appointmentId),
-          eq(appointments.organizationId, organizationId)
-        )
-      )
-
-    if (createStandalone) {
-      await tx.insert(transactions).values({
-        organizationId,
-        professionalId: performingProfessionalId,
-        appointmentId: data.appointmentId,
-        amount: data.amount,
-        commissionAmount: standaloneCommission,
-        description: data.description || null,
-        date: data.date,
-        paymentMethod: data.paymentMethod ?? null,
-      })
-    }
-
-    if (appt.clientPackageId) {
-      // Sessão de pacote: receita já registrada na venda — transação zerada só para comissão
-      await tx.insert(transactions).values({
-        organizationId,
-        professionalId: performingProfessionalId,
-        appointmentId: data.appointmentId,
-        clientPackageId: appt.clientPackageId,
-        amount: 0,
-        commissionAmount: packageCommissionAmount,
-        description: data.description || null,
-        date: data.date,
-        paymentMethod: null,
-      })
+  try {
+    await db.transaction(async (tx) => {
+      // Revalida e resgata o cupom/vale-presente DENTRO da transação — o UPDATE
+      // condicional em status só afeta linha se ainda não tiver sido resgatado,
+      // o que fecha a corrida de duas abas escaneando o mesmo QR ao mesmo tempo.
+      if (data.couponRecipientId) {
+        const [redeemed] = await tx
+          .update(couponRecipients)
+          .set({ status: "redeemed", redeemedAt: new Date(), redeemedAppointmentId: data.appointmentId })
+          .where(
+            and(
+              eq(couponRecipients.id, data.couponRecipientId),
+              eq(couponRecipients.organizationId, organizationId),
+              inArray(couponRecipients.status, ["sent", "pending"])
+            )
+          )
+          .returning({ id: couponRecipients.id })
+        if (!redeemed) throw new Error("COUPON_ALREADY_REDEEMED")
+      }
 
       await tx
-        .update(clientPackages)
-        .set({ sessionsUsed: sql`${clientPackages.sessionsUsed} + 1` })
+        .update(appointments)
+        .set({ status: "completed", updatedAt: new Date() })
         .where(
           and(
-            eq(clientPackages.id, appt.clientPackageId),
-            eq(clientPackages.organizationId, organizationId)
+            eq(appointments.id, data.appointmentId),
+            eq(appointments.organizationId, organizationId)
           )
         )
+
+      if (createStandalone) {
+        await tx.insert(transactions).values({
+          organizationId,
+          professionalId: performingProfessionalId,
+          appointmentId: data.appointmentId,
+          couponRecipientId: data.couponRecipientId ?? null,
+          amount: data.amount,
+          commissionAmount: standaloneCommission,
+          description: data.description || null,
+          date: data.date,
+          paymentMethod: data.paymentMethod ?? null,
+        })
+      }
+
+      if (appt.clientPackageId) {
+        // Sessão de pacote: receita já registrada na venda — transação zerada só para comissão
+        await tx.insert(transactions).values({
+          organizationId,
+          professionalId: performingProfessionalId,
+          appointmentId: data.appointmentId,
+          clientPackageId: appt.clientPackageId,
+          amount: 0,
+          commissionAmount: packageCommissionAmount,
+          description: data.description || null,
+          date: data.date,
+          paymentMethod: null,
+        })
+
+        await tx
+          .update(clientPackages)
+          .set({ sessionsUsed: sql`${clientPackages.sessionsUsed} + 1` })
+          .where(
+            and(
+              eq(clientPackages.id, appt.clientPackageId),
+              eq(clientPackages.organizationId, organizationId)
+            )
+          )
+      }
+    })
+  } catch (err) {
+    if (err instanceof Error && err.message === "COUPON_ALREADY_REDEEMED") {
+      return { success: false, error: "Esse cupom já foi resgatado em outro atendimento." }
     }
-  })
+    throw err
+  }
 
   // Baixa de estoque para TODOS os procedimentos do atendimento (fora da transação principal)
   const procedureIds = [...new Set(procs.map((p) => p.procedureId).filter((id): id is string => Boolean(id)))]
@@ -241,6 +269,7 @@ export async function getAppointmentCompletionDataAction(appointmentId: string) 
     returnIntervalDays: firstReturn?.returnIntervalDays ?? null,
     returnProcedureName: firstReturn?.name ?? null,
     returnProcedureId: firstReturn?.procedureId ?? null,
+    couponsEnabled: await isFeatureEnabled(organizationId, "coupons"),
   }
 }
 
@@ -292,9 +321,12 @@ export async function getTransactionsAction(year: number, month: number) {
       txClientPackageId: transactions.clientPackageId,
       procedureId: appointments.procedureId,
       apptClientPackageId: appointments.clientPackageId,
+      couponKind: coupons.kind,
     })
     .from(transactions)
     .leftJoin(appointments, eq(appointments.id, transactions.appointmentId))
+    .leftJoin(couponRecipients, eq(couponRecipients.id, transactions.couponRecipientId))
+    .leftJoin(coupons, eq(coupons.id, couponRecipients.couponId))
     .innerJoin(users, eq(users.id, transactions.professionalId))
     .where(
       and(
@@ -392,6 +424,7 @@ export async function getTransactionsAction(year: number, month: number) {
       paymentMethod: r.paymentMethod ?? null,
       professionalId: r.professionalId,
       professionalName: r.professionalName,
+      couponKind: r.couponKind ?? null,
       cost,
     }
   })

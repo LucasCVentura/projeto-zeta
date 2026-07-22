@@ -75,7 +75,7 @@ const allNavItems = [
   },
 ]
 
-export function MobileNav({ role, changelogHasNew, changelogEntries, profileIncomplete }: { role: OrgRole; changelogHasNew: boolean; changelogEntries: ChangelogEntry[]; profileIncomplete?: boolean }) {
+export function MobileNav({ role, changelogHasNew, changelogEntries, profileIncomplete, couponsEnabled }: { role: OrgRole; changelogHasNew: boolean; changelogEntries: ChangelogEntry[]; profileIncomplete?: boolean; couponsEnabled?: boolean }) {
   const pathname = usePathname()
   const [menuOpen, setMenuOpen] = useState(false)
   const { data: session } = useSession()
@@ -178,6 +178,21 @@ export function MobileNav({ role, changelogHasNew, changelogEntries, profileInco
             </svg>
             Ajuda
           </Link>
+
+          {can(role, "financial:write") && couponsEnabled && (
+            <Link
+              href="/cupons"
+              className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm hover:bg-accent transition-colors"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+                <path d="M2 9a3 3 0 1 0 0 6" />
+                <path d="M20 9a3 3 0 1 1 0 6" />
+                <rect x="4" y="6" width="16" height="12" rx="2" />
+                <line x1="12" y1="6" x2="12" y2="18" strokeDasharray="2 2" />
+              </svg>
+              Cupons e vale-presentes
+            </Link>
+          )}
 
           <Link
             href="/configuracoes"

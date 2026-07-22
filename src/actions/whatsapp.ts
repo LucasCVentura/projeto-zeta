@@ -3,7 +3,7 @@
 import { db } from "@/db"
 import { whatsappPendingConfirmations, appointments, clients } from "@/db/schema"
 import { eq, inArray, sql } from "drizzle-orm"
-import { sendWhatsAppTemplate, sendWhatsApp } from "@/lib/whatsapp-client"
+import { sendWhatsAppTemplate, sendWhatsAppTemplateWithMedia, sendWhatsApp } from "@/lib/whatsapp-client"
 import { notifyOrganizationProfessionals } from "@/actions/notifications"
 
 const CONFIRMATION_TTL_DAYS = 3
@@ -23,6 +23,10 @@ const TEMPLATE_PUBLIC_BOOKING_REJECTED_ID =
   process.env.GUPSHUP_TEMPLATE_KIRA_AGENDAMENTO_RECUSADO_ID || "kira_agendamento_recusado"
 const TEMPLATE_PUBLIC_BOOKING_MANUAL_REJECTED_ID =
   process.env.GUPSHUP_TEMPLATE_KIRA_AGENDAMENTO_RECUSADO_MANUAL_ID || "kira_agendamento_recusado_manual"
+const TEMPLATE_COUPON_SEND_ID =
+  process.env.GUPSHUP_TEMPLATE_KIRA_CUPOM_ID || "kira_cupom"
+const TEMPLATE_GIFT_VOUCHER_SEND_ID =
+  process.env.GUPSHUP_TEMPLATE_KIRA_VALE_PRESENTE_ID || "kira_vale_presente"
 
 async function getGlobalTemplateIds() {
   try {
@@ -35,6 +39,8 @@ async function getGlobalTemplateIds() {
       postVisitNoLinkTemplateId: string | null
       publicBookingRejectedTemplateId: string | null
       publicBookingManualRejectedTemplateId: string | null
+      couponSendTemplateId: string | null
+      giftVoucherSendTemplateId: string | null
     }>(sql`
       SELECT
         booking_summary_template_id as "bookingSummaryTemplateId",
@@ -44,7 +50,9 @@ async function getGlobalTemplateIds() {
         daily_agenda_template_id as "dailyAgendaTemplateId",
         post_visit_no_link_template_id as "postVisitNoLinkTemplateId",
         public_booking_rejected_template_id as "publicBookingRejectedTemplateId",
-        public_booking_manual_rejected_template_id as "publicBookingManualRejectedTemplateId"
+        public_booking_manual_rejected_template_id as "publicBookingManualRejectedTemplateId",
+        coupon_send_template_id as "couponSendTemplateId",
+        gift_voucher_send_template_id as "giftVoucherSendTemplateId"
       FROM whatsapp_system_template_settings
       WHERE singleton_key = 'default'
       LIMIT 1
@@ -59,6 +67,8 @@ async function getGlobalTemplateIds() {
       postVisitNoLinkTemplateId: one?.postVisitNoLinkTemplateId?.trim() || TEMPLATE_POST_VISIT_NO_LINK_ID,
       publicBookingRejectedTemplateId: one?.publicBookingRejectedTemplateId?.trim() || TEMPLATE_PUBLIC_BOOKING_REJECTED_ID,
       publicBookingManualRejectedTemplateId: one?.publicBookingManualRejectedTemplateId?.trim() || TEMPLATE_PUBLIC_BOOKING_MANUAL_REJECTED_ID,
+      couponSendTemplateId: one?.couponSendTemplateId?.trim() || TEMPLATE_COUPON_SEND_ID,
+      giftVoucherSendTemplateId: one?.giftVoucherSendTemplateId?.trim() || TEMPLATE_GIFT_VOUCHER_SEND_ID,
     }
   } catch {
     return {
@@ -70,6 +80,8 @@ async function getGlobalTemplateIds() {
       postVisitNoLinkTemplateId: TEMPLATE_POST_VISIT_NO_LINK_ID,
       publicBookingRejectedTemplateId: TEMPLATE_PUBLIC_BOOKING_REJECTED_ID,
       publicBookingManualRejectedTemplateId: TEMPLATE_PUBLIC_BOOKING_MANUAL_REJECTED_ID,
+      couponSendTemplateId: TEMPLATE_COUPON_SEND_ID,
+      giftVoucherSendTemplateId: TEMPLATE_GIFT_VOUCHER_SEND_ID,
     }
   }
 }
@@ -255,6 +267,32 @@ export async function sendPublicBookingManuallyRejected(params: {
     safeParam(clientName, "Cliente"),
     safeParam(orgName, "Clinica"),
     bookingLink,
+  ])
+}
+
+// ── Cupom de desconto / vale-presente (com imagem + QR code) ────────────────
+
+export async function sendCouponWhatsApp(params: {
+  clientPhone: string
+  clientName: string
+  orgName: string
+  procedure: string
+  kind: "discount" | "gift"
+  discountPct: number
+  expiresAt: string
+  imageUrl: string
+}): Promise<{ messageId: string } | null> {
+  const { clientPhone, clientName, orgName, procedure, kind, discountPct, expiresAt, imageUrl } = params
+  const templates = await getGlobalTemplateIds()
+  const templateId = kind === "gift" ? templates.giftVoucherSendTemplateId : templates.couponSendTemplateId
+  const offer = kind === "gift" ? "um presente" : `${discountPct}% de desconto`
+
+  return sendWhatsAppTemplateWithMedia(clientPhone, templateId, imageUrl, [
+    safeParam(clientName, "Cliente"),
+    safeParam(orgName, "Clinica"),
+    offer,
+    safeParam(procedure, "procedimento"),
+    formatDate(expiresAt),
   ])
 }
 

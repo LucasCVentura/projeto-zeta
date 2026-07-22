@@ -16,6 +16,7 @@ export default defineConfig({
         "src/lib/media-url.ts",
         "src/lib/session.ts",
         "src/lib/permissions.ts",
+        "src/lib/admin-guard.ts",
         "src/lib/resend.ts",
         "src/lib/stripe.ts",
         "src/lib/storage.ts",
@@ -27,6 +28,7 @@ export default defineConfig({
         // fortemente dependente do banco (encontra/cria cliente, rate limit, criação de
         // agendamento) — coberto por teste manual/e2e (Playwright) contra Postgres real
         "src/lib/public-booking.ts",
+        "src/lib/feature-flags.ts",
       ],
       thresholds: {
         lines: 90,

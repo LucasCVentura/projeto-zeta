@@ -13,7 +13,9 @@ import { Label } from "@/components/ui/label"
 import { completeAppointmentWithRevenueAction, getAppointmentCompletionDataAction } from "@/actions/financial"
 import { createAppointmentAction } from "@/actions/schedule"
 import { suggestReturnDateAction } from "@/actions/ai"
-import { CheckCircle, CalendarClock, Sparkles, Loader2, Zap, CreditCard, CalendarRange, Banknote, Package } from "lucide-react"
+import { redeemCouponAction } from "@/actions/coupons"
+import { QrScannerModal } from "@/components/coupons/qr-scanner-modal"
+import { CheckCircle, CalendarClock, Sparkles, Loader2, Zap, CreditCard, CalendarRange, Banknote, Package, QrCode, Ticket, Gift, X } from "lucide-react"
 import type { PaymentMethod } from "@/db/schema"
 
 const PAYMENT_METHODS: { value: PaymentMethod; label: string; icon: React.ElementType }[] = [
@@ -81,6 +83,17 @@ export function CompleteAppointmentModal({
   const [aiExplanation, setAiExplanation] = useState<string | null>(null)
   const [returnScheduled, setReturnScheduled] = useState(false)
 
+  // cupom/vale-presente escaneado
+  const [scannerOpen, setScannerOpen] = useState(false)
+  const [couponError, setCouponError] = useState<string | null>(null)
+  const [appliedCoupon, setAppliedCoupon] = useState<{
+    couponRecipientId: string
+    kind: "discount" | "gift"
+    procedureName: string
+    discountPct: number
+    discountAmount: number
+  } | null>(null)
+
   // Derivados da resposta estruturada
   const procedures = completion?.procedures ?? []
   const isPackageSession = !!completion?.clientPackageId
@@ -96,6 +109,8 @@ export function CompleteAppointmentModal({
     setPaymentMethod(null)
     setReturnScheduled(false)
     setAiExplanation(null)
+    setAppliedCoupon(null)
+    setCouponError(null)
     setDataLoading(true)
     setStep("value")
     getAppointmentCompletionDataAction(appointmentId).then((data) => {
@@ -114,6 +129,31 @@ export function CompleteAppointmentModal({
   function handleValueChange(e: React.ChangeEvent<HTMLInputElement>) {
     const digits = e.target.value.replace(/\D/g, "")
     setRawValue(maskPrice(Number(digits)))
+  }
+
+  async function handleQrDecoded(token: string) {
+    setScannerOpen(false)
+    setCouponError(null)
+    const result = await redeemCouponAction(token, appointmentId)
+    if (!result.success) { setCouponError(result.error); return }
+
+    const matchedProc = procedures.find((p) => p.procedureId === result.procedureId)
+    const discountAmount = matchedProc ? Math.round(matchedProc.price * result.discountPct / 100) : 0
+
+    setAppliedCoupon({
+      couponRecipientId: result.couponRecipientId,
+      kind: result.kind,
+      procedureName: result.procedureName,
+      discountPct: result.discountPct,
+      discountAmount,
+    })
+    setRawValue((prev) => maskPrice(Math.max(0, parsePriceInput(prev) - discountAmount)))
+  }
+
+  function handleRemoveCoupon() {
+    if (!appliedCoupon) return
+    setRawValue((prev) => maskPrice(parsePriceInput(prev) + appliedCoupon.discountAmount))
+    setAppliedCoupon(null)
   }
 
   async function handleAiSuggest() {
@@ -163,6 +203,7 @@ export function CompleteAppointmentModal({
       description,
       date,
       paymentMethod,
+      couponRecipientId: appliedCoupon?.couponRecipientId ?? null,
     })
 
     setIsLoading(false)
@@ -259,6 +300,39 @@ export function CompleteAppointmentModal({
               <div className="rounded-lg bg-destructive/10 border border-destructive/20 px-4 py-3 text-sm text-destructive">
                 {error}
               </div>
+            )}
+
+            {couponError && (
+              <div className="rounded-lg bg-destructive/10 border border-destructive/20 px-4 py-3 text-sm text-destructive">
+                {couponError}
+              </div>
+            )}
+
+            {/* Cupom / vale-presente — feature em rollout gradual por organização */}
+            {!purePackage && completion?.couponsEnabled && (
+              appliedCoupon ? (
+                <div className="flex items-center justify-between gap-2 rounded-lg bg-primary/5 border border-primary/20 px-3 py-2.5">
+                  <div className="flex items-center gap-2 min-w-0">
+                    {appliedCoupon.kind === "gift" ? <Gift size={14} className="text-primary shrink-0" /> : <Ticket size={14} className="text-primary shrink-0" />}
+                    <p className="text-xs text-primary truncate">
+                      {appliedCoupon.kind === "gift"
+                        ? `Vale-presente: ${appliedCoupon.procedureName} grátis`
+                        : `Cupom aplicado: -${appliedCoupon.discountPct}% em ${appliedCoupon.procedureName}`}
+                    </p>
+                  </div>
+                  <button type="button" onClick={handleRemoveCoupon} className="text-muted-foreground hover:text-foreground shrink-0">
+                    <X size={14} />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setScannerOpen(true)}
+                  className="flex w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border py-2.5 text-xs font-medium text-muted-foreground hover:border-primary/40 hover:text-primary transition-colors"
+                >
+                  <QrCode size={14} /> Escanear cupom ou vale-presente
+                </button>
+              )
             )}
 
             {/* Lista de procedimentos */}
@@ -370,6 +444,12 @@ export function CompleteAppointmentModal({
           </form>
         )}
       </DialogContent>
+
+      <QrScannerModal
+        open={scannerOpen}
+        onClose={() => setScannerOpen(false)}
+        onDecoded={handleQrDecoded}
+      />
     </Dialog>
   )
 }

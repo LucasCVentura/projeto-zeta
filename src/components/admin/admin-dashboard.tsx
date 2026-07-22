@@ -1,17 +1,20 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { extendTrialAction, cancelOrgAction, setLifetimeAction, markInboundEmailReadAction, saveWhatsAppTemplateSettingAction, getInboundEmailsAction, getWhatsAppMessageLogsAction, getAdminMetricsAction, getWhatsAppTemplateSettingsAction, getClinicDetailAction, getAdminChatUnreadCountAction } from "@/actions/admin"
+import { extendTrialAction, cancelOrgAction, setLifetimeAction, markInboundEmailReadAction, saveWhatsAppTemplateSettingAction, getInboundEmailsAction, getWhatsAppMessageLogsAction, getAdminMetricsAction, getWhatsAppTemplateSettingsAction, getClinicDetailAction, getAdminChatUnreadCountAction, getFeatureFlagsAction, getFeatureFlagOrgsAction, setFeatureFlagForOrgAction, setFeatureFlagForAllAction } from "@/actions/admin"
 import { useSearchParams } from "next/navigation"
 import type { WhatsAppLogsParams, ClinicDetail } from "@/actions/admin"
 import { getAllFeedbackAction, getLatestFeedbackSummaryAction } from "@/actions/feedback"
 import { AdminChat } from "@/components/admin/admin-chat"
+import { ChangelogManager, ChangelogEntryForm } from "@/components/admin/changelog-manager"
+import { suggestNextVersionAction } from "@/actions/changelog"
 import {
   Trophy, TrendingUp, Users, DollarSign, ChevronDown, ChevronUp,
   Sprout, Rocket, Gem, Coins, Star, Activity, MessageSquare, Mail, MailOpen,
   Wallet, CalendarDays, LayoutDashboard, Building2, MessageCircle, Settings,
   Phone, BarChart3, Menu, X, ArrowLeft, Image as ImageIcon, Stethoscope,
   Package, Send, Clock, AlertTriangle, ClipboardList, UserCircle, AtSign, MapPin,
+  Ticket, ChevronRight, Sparkles,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -38,6 +41,8 @@ type Service = { name: string; category: string; tier: string; monthlyCost: numb
 type FeedbackItem = { id: string; content: string; createdAt: Date; orgName: string | null; userName: string | null }
 type FeedbackSummary = { summary: string; feedbackCount: number; generatedAt: Date } | null
 type InboundEmail = { id: string; from: string; subject: string; body: string; read: boolean; receivedAt: Date }
+type FeatureFlagSummary = { id: string; key: string; label: string; description: string | null; enabledForAll: boolean; enabledCount: number; changelogDraft: string | null }
+type FeatureFlagOrg = { id: string; name: string; ownerEmail: string | null; ownerName: string | null; enabled: boolean }
 type WhatsAppLog = {
   id: string; messageId: string | null; organizationId: string | null; organizationName: string | null
   destination: string | null; templateId: string | null; eventType: string; error: string | null
@@ -52,6 +57,8 @@ type WhatsAppTemplateSetting = {
   postVisitNoLinkTemplateId: string | null
   publicBookingRejectedTemplateId: string | null
   publicBookingManualRejectedTemplateId: string | null
+  couponSendTemplateId: string | null
+  giftVoucherSendTemplateId: string | null
 }
 
 // ── Constantes ────────────────────────────────────────────────────────────────
@@ -436,9 +443,20 @@ export function AdminDashboard() {
   const [postVisitNoLinkTemplateId, setPostVisitNoLinkTemplateId] = useState("")
   const [publicBookingRejectedTemplateId, setPublicBookingRejectedTemplateId] = useState("")
   const [publicBookingManualRejectedTemplateId, setPublicBookingManualRejectedTemplateId] = useState("")
+  const [couponSendTemplateId, setCouponSendTemplateId] = useState("")
+  const [giftVoucherSendTemplateId, setGiftVoucherSendTemplateId] = useState("")
   const [chatUnreadCount, setChatUnreadCount] = useState(0)
   const [chatInitialPhone, setChatInitialPhone] = useState<string | null>(null)
   const [pendingCancelOrg, setPendingCancelOrg] = useState<{ id: string; name: string } | null>(null)
+  const [featureFlagsList, setFeatureFlagsList] = useState<FeatureFlagSummary[]>([])
+  const [selectedFeatureKey, setSelectedFeatureKey] = useState<string | null>(null)
+  const [featureFlagOrgsList, setFeatureFlagOrgsList] = useState<FeatureFlagOrg[]>([])
+  const [featureFlagOrgsLoading, setFeatureFlagOrgsLoading] = useState(false)
+  const [featureFlagSearch, setFeatureFlagSearch] = useState("")
+  const [featureFlagBusyId, setFeatureFlagBusyId] = useState<string | null>(null)
+  const [pendingBulkFeatureAction, setPendingBulkFeatureAction] = useState<"disable" | null>(null)
+  const [showActivateAllFlow, setShowActivateAllFlow] = useState(false)
+  const [activateFlowVersion, setActivateFlowVersion] = useState("")
   const [activeSection, setActiveSection] = useState("overview")
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [logFilterOrg, setLogFilterOrg] = useState("")
@@ -489,6 +507,8 @@ export function AdminDashboard() {
       setPostVisitNoLinkTemplateId(t.postVisitNoLinkTemplateId ?? "")
       setPublicBookingRejectedTemplateId(t.publicBookingRejectedTemplateId ?? "")
       setPublicBookingManualRejectedTemplateId(t.publicBookingManualRejectedTemplateId ?? "")
+      setCouponSendTemplateId(t.couponSendTemplateId ?? "")
+      setGiftVoucherSendTemplateId(t.giftVoucherSendTemplateId ?? "")
     }).catch(() => {})
   }, [])
 
@@ -518,6 +538,10 @@ export function AdminDashboard() {
       const emails = await getInboundEmailsAction().catch(() => [])
       setInboundEmails(emails as InboundEmail[])
     }
+    if (section === "features") {
+      const rows = await getFeatureFlagsAction().catch(() => [])
+      setFeatureFlagsList(rows)
+    }
   }, [loadedTabs, fetchLogs])
 
   useEffect(() => {
@@ -534,6 +558,8 @@ export function AdminDashboard() {
     { id: "chat",           label: "Chat",            icon: MessageCircle, badge: chatUnreadCount },
     { id: "suporte",        label: "Suporte",         icon: Mail, badge: unreadCount },
     { id: "whatsapp-config",label: "Config WhatsApp", icon: Settings },
+    { id: "features",       label: "Novas Features",  icon: Ticket },
+    { id: "changelog",      label: "Changelog",       icon: Sparkles },
   ]
 
   // ── Handlers ────────────────────────────────────────────────────────────────
@@ -563,6 +589,56 @@ export function AdminDashboard() {
     await setLifetimeAction(orgId)
     setOrgs(prev => prev.map(o => o.id === orgId ? { ...o, subscriptionStatus: "lifetime" } : o))
     setActionLoading(null)
+  }
+
+  async function openFeature(key: string) {
+    setSelectedFeatureKey(key)
+    setFeatureFlagSearch("")
+    setShowActivateAllFlow(false)
+    setFeatureFlagOrgsLoading(true)
+    const rows = await getFeatureFlagOrgsAction(key).catch(() => [])
+    setFeatureFlagOrgsList(rows)
+    setFeatureFlagOrgsLoading(false)
+  }
+
+  function closeFeature() {
+    setSelectedFeatureKey(null)
+    setFeatureFlagOrgsList([])
+    setShowActivateAllFlow(false)
+  }
+
+  async function handleToggleFeatureOrg(orgId: string, next: boolean) {
+    if (!selectedFeatureKey) return
+    setFeatureFlagBusyId(orgId)
+    await setFeatureFlagForOrgAction(selectedFeatureKey, orgId, next)
+    setFeatureFlagOrgsList(prev => prev.map(o => o.id === orgId ? { ...o, enabled: next } : o))
+    setFeatureFlagsList(prev => prev.map(f => f.key === selectedFeatureKey
+      ? { ...f, enabledCount: f.enabledCount + (next ? 1 : -1) }
+      : f))
+    setFeatureFlagBusyId(null)
+  }
+
+  async function handleBulkFeatureFlag(enabled: boolean) {
+    if (!selectedFeatureKey) return
+    setPendingBulkFeatureAction(null)
+    setFeatureFlagBusyId("__all__")
+    await setFeatureFlagForAllAction(selectedFeatureKey, enabled)
+    setFeatureFlagOrgsList(prev => prev.map(o => ({ ...o, enabled })))
+    setFeatureFlagsList(prev => prev.map(f => f.key === selectedFeatureKey ? { ...f, enabledForAll: enabled } : f))
+    setFeatureFlagBusyId(null)
+  }
+
+  // "Ativar pra todas" de uma feature sempre passa por aqui primeiro — o
+  // changelog e o rollout final são publicados juntos, num clique só.
+  async function openActivateAllFlow() {
+    const next = await suggestNextVersionAction().catch(() => "")
+    setActivateFlowVersion(next)
+    setShowActivateAllFlow(true)
+  }
+
+  async function handleActivateAllSaved() {
+    setShowActivateAllFlow(false)
+    await handleBulkFeatureFlag(true)
   }
 
   async function openClinic(orgId: string) {
@@ -605,6 +681,8 @@ export function AdminDashboard() {
         postVisitNoLinkTemplateId,
         publicBookingRejectedTemplateId,
         publicBookingManualRejectedTemplateId,
+        couponSendTemplateId,
+        giftVoucherSendTemplateId,
       })
     } catch { setTemplateError("Não foi possível salvar. Tente novamente.") }
     finally { setTemplateSaving(false) }
@@ -1286,6 +1364,14 @@ export function AdminDashboard() {
               <p className="text-sm font-medium">Agendamento público recusado manualmente <code className="text-xs bg-muted px-1.5 py-0.5 rounded ml-1">kira_agendamento_recusado_manual</code></p>
               <Input value={publicBookingManualRejectedTemplateId} onChange={e => setPublicBookingManualRejectedTemplateId(e.target.value)} placeholder="UUID do template de recusa manual" className="font-mono text-xs" />
             </div>
+            <div className="space-y-1.5">
+              <p className="text-sm font-medium">Cupom de desconto (precisa de header de imagem) <code className="text-xs bg-muted px-1.5 py-0.5 rounded ml-1">kira_cupom</code></p>
+              <Input value={couponSendTemplateId} onChange={e => setCouponSendTemplateId(e.target.value)} placeholder="UUID do template de cupom" className="font-mono text-xs" />
+            </div>
+            <div className="space-y-1.5">
+              <p className="text-sm font-medium">Vale-presente (precisa de header de imagem) <code className="text-xs bg-muted px-1.5 py-0.5 rounded ml-1">kira_vale_presente</code></p>
+              <Input value={giftVoucherSendTemplateId} onChange={e => setGiftVoucherSendTemplateId(e.target.value)} placeholder="UUID do template de vale-presente" className="font-mono text-xs" />
+            </div>
             {templateError && <p className="text-xs text-destructive">{templateError}</p>}
             <Button onClick={handleSaveTemplate} disabled={templateSaving} className="w-full">
               {templateSaving ? "Salvando..." : "Salvar configurações"}
@@ -1293,6 +1379,157 @@ export function AdminDashboard() {
           </div>
         </div>
       )
+
+      case "features": {
+        // ── Detalhe de uma feature: lista de clínicas + toggle ──
+        if (selectedFeatureKey) {
+          const feature = featureFlagsList.find(f => f.key === selectedFeatureKey)
+          const search = featureFlagSearch.trim().toLowerCase()
+          const filtered = featureFlagOrgsList.filter(o =>
+            !search || o.name.toLowerCase().includes(search) || o.ownerEmail?.toLowerCase().includes(search)
+          )
+          const enabledCount = featureFlagOrgsList.filter(o => o.enabled).length
+
+          return (
+            <div className="max-w-2xl space-y-5">
+              <button onClick={closeFeature} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
+                <ArrowLeft size={14} /> Novas Features
+              </button>
+
+              <div>
+                <h3 className="font-heading text-lg font-semibold">{feature?.label ?? selectedFeatureKey}</h3>
+                {feature?.description && <p className="text-sm text-muted-foreground mt-1">{feature.description}</p>}
+              </div>
+
+              {feature?.enabledForAll && (
+                <div className="rounded-lg bg-primary/5 border border-primary/20 px-4 py-3 text-sm text-primary">
+                  Liberada pra <strong>todo mundo</strong> — os toggles individuais abaixo não fazem mais diferença.
+                </div>
+              )}
+
+              <p className="text-sm text-muted-foreground">
+                <strong>{enabledCount}</strong> de <strong>{featureFlagOrgsList.length}</strong> clínicas com acesso liberado.
+              </p>
+
+              {showActivateAllFlow ? (
+                <ChangelogEntryForm
+                  initialVersion={activateFlowVersion}
+                  initialItems={[{ type: "new", text: feature?.changelogDraft ?? feature?.description ?? "" }]}
+                  featureFlagId={feature?.id}
+                  onCancel={() => setShowActivateAllFlow(false)}
+                  onSaved={handleActivateAllSaved}
+                />
+              ) : (
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={openActivateAllFlow}
+                    disabled={featureFlagBusyId === "__all__"}
+                    className="flex-1"
+                  >
+                    Ativar pra todas
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setPendingBulkFeatureAction("disable")}
+                    disabled={featureFlagBusyId === "__all__"}
+                    className="flex-1 text-destructive hover:text-destructive"
+                  >
+                    Desativar pra todas
+                  </Button>
+                </div>
+              )}
+
+              <Input
+                placeholder="Buscar por clínica ou e-mail da dona..."
+                value={featureFlagSearch}
+                onChange={e => setFeatureFlagSearch(e.target.value)}
+              />
+
+              {featureFlagOrgsLoading ? (
+                <div className="py-10 text-center text-sm text-muted-foreground">Carregando...</div>
+              ) : (
+                <div className="rounded-xl border border-border divide-y divide-border">
+                  {filtered.length === 0 && (
+                    <p className="px-4 py-6 text-center text-sm text-muted-foreground">Nenhuma clínica encontrada.</p>
+                  )}
+                  {filtered.map(org => (
+                    <div key={org.id} className="flex items-center justify-between gap-3 px-4 py-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate">{org.name}</p>
+                        <p className="text-xs text-muted-foreground truncate">{org.ownerEmail ?? "sem dona"}</p>
+                      </div>
+                      <button
+                        onClick={() => handleToggleFeatureOrg(org.id, !org.enabled)}
+                        disabled={featureFlagBusyId === org.id || featureFlagBusyId === "__all__"}
+                        className={cn(
+                          "shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50",
+                          org.enabled
+                            ? "bg-primary/10 text-primary border border-primary/30"
+                            : "bg-muted text-muted-foreground border border-border"
+                        )}
+                      >
+                        {featureFlagBusyId === org.id ? "..." : org.enabled ? "Ativo" : "Inativo"}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <ConfirmDialog
+                open={pendingBulkFeatureAction === "disable"}
+                title="Desativar pra todas as clínicas?"
+                description={`Isso desliga "${feature?.label ?? selectedFeatureKey}" pra TODAS as organizações.`}
+                confirmLabel="Desativar pra todas"
+                onConfirm={() => handleBulkFeatureFlag(false)}
+                onCancel={() => setPendingBulkFeatureAction(null)}
+              />
+            </div>
+          )
+        }
+
+        // ── Lista de features registradas ──
+        return (
+          <div className="max-w-2xl space-y-5">
+            <p className="text-sm text-muted-foreground">
+              Launch control — toda feature grande nova passa por aqui: libera pra uma clínica de teste,
+              depois pra todo mundo. Registro fica em <code className="text-xs bg-muted px-1.5 py-0.5 rounded">src/lib/feature-flags.ts</code>.
+            </p>
+
+            <div className="space-y-2">
+              {featureFlagsList.length === 0 && (
+                <div className="py-16 text-center text-sm text-muted-foreground">Nenhuma feature registrada ainda.</div>
+              )}
+              {featureFlagsList.map(f => (
+                <button
+                  key={f.key}
+                  onClick={() => openFeature(f.key)}
+                  className="w-full flex items-center justify-between gap-3 rounded-xl border border-border bg-card px-4 py-3.5 text-left hover:border-primary/30 hover:bg-primary/5 transition-colors"
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium truncate">{f.label}</p>
+                    {f.description && <p className="text-xs text-muted-foreground truncate">{f.description}</p>}
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {f.enabledForAll ? (
+                      <span className="rounded-full bg-primary/10 text-primary border border-primary/30 px-2.5 py-1 text-xs font-medium">
+                        Todo mundo
+                      </span>
+                    ) : (
+                      <span className="rounded-full bg-muted text-muted-foreground border border-border px-2.5 py-1 text-xs font-medium">
+                        {f.enabledCount} clínica{f.enabledCount !== 1 ? "s" : ""}
+                      </span>
+                    )}
+                    <ChevronRight size={16} className="text-muted-foreground" />
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )
+      }
+
+      case "changelog": return <ChangelogManager />
 
       case "chat": return <AdminChat trialOutreachTemplateId={trialOutreachTemplateId || null} trialExpiredOutreachTemplateId={trialExpiredOutreachTemplateId || null} testimonialOutreachTemplateId={testimonialOutreachTemplateId || null} winbackOutreachTemplateId={winbackOutreachTemplateId || null} initialPhone={chatInitialPhone} onInitialPhoneConsumed={() => setChatInitialPhone(null)} />
 

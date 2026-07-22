@@ -99,3 +99,41 @@ export async function sendWhatsAppTemplate(
   if (data.status === "submitted" && data.messageId) return { messageId: data.messageId }
   throw new Error(`Gupshup template not submitted (status=${data.status}, template=${templateId}, destination=${destination})`)
 }
+
+// Template com cabeçalho de mídia (imagem) — usado pra cupons/vale-presentes.
+// O template precisa ter sido criado no painel do Gupshup com header do tipo
+// IMAGE; pelo formato documentado do Gupshup, a URL da mídia entra como o
+// primeiro item de "params" (preenche o header), seguida dos parâmetros do
+// corpo do template, na ordem em que aparecem no texto.
+export async function sendWhatsAppTemplateWithMedia(
+  to: string,
+  templateId: string,
+  imageUrl: string,
+  bodyParams: string[]
+): Promise<{ messageId: string } | null> {
+  const destination = normalizePhone(to)
+  if (!destination) return null
+  if (!process.env.GUPSHUP_API_KEY || !process.env.GUPSHUP_SENDER || !process.env.GUPSHUP_APP_NAME) {
+    throw new Error("Missing Gupshup env vars (GUPSHUP_API_KEY, GUPSHUP_SENDER, GUPSHUP_APP_NAME)")
+  }
+
+  const params = new URLSearchParams({
+    channel: "whatsapp",
+    source: process.env.GUPSHUP_SENDER!,
+    destination,
+    "src.name": process.env.GUPSHUP_APP_NAME!,
+    template: JSON.stringify({ id: templateId, params: [imageUrl, ...bodyParams] }),
+  })
+
+  const res = await fetch(`${BASE_URL}/template/msg`, {
+    method: "POST",
+    headers: { apikey: process.env.GUPSHUP_API_KEY!, "Content-Type": "application/x-www-form-urlencoded" },
+    body: params.toString(),
+  })
+
+  if (!res.ok) throw new Error(`Gupshup template (media) error ${res.status}: ${await res.text()}`)
+
+  const data = await res.json() as { status: string; messageId?: string }
+  if (data.status === "submitted" && data.messageId) return { messageId: data.messageId }
+  throw new Error(`Gupshup template (media) not submitted (status=${data.status}, template=${templateId}, destination=${destination})`)
+}
