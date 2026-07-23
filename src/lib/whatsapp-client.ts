@@ -2,8 +2,13 @@ const BASE_URL = "https://api.gupshup.io/wa/api/v1"
 
 function normalizePhone(to: string): string | null {
   const digits = to.replace(/\D/g, "")
-  if (!digits || digits.length < 10) return null
-  return `55${digits.replace(/^55/, "")}`
+  // DDD (2) + fixo (8) ou celular (9) = 10 ou 11 dígitos sem código do país.
+  if (digits.length === 10 || digits.length === 11) return `55${digits}`
+  // já vem com código do país (55 + DDD + número) = 12 ou 13 dígitos.
+  // Decide pelo tamanho, não por bater o prefixo "55" — DDD 55 (Santa Maria/RS)
+  // é real, e um replace(/^55/, "") ingênuo arrancava o DDD junto.
+  if ((digits.length === 12 || digits.length === 13) && digits.startsWith("55")) return digits
+  return null
 }
 
 export async function sendWhatsApp(to: string, body: string): Promise<void> {
