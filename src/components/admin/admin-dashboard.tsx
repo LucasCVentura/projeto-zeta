@@ -1,11 +1,12 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { extendTrialAction, cancelOrgAction, setLifetimeAction, markInboundEmailReadAction, saveWhatsAppTemplateSettingAction, getInboundEmailsAction, getWhatsAppMessageLogsAction, getAdminMetricsAction, getWhatsAppTemplateSettingsAction, getClinicDetailAction, getAdminChatUnreadCountAction, getFeatureFlagsAction, getFeatureFlagOrgsAction, setFeatureFlagForOrgAction, setFeatureFlagForAllAction } from "@/actions/admin"
+import { extendTrialAction, cancelOrgAction, setLifetimeAction, markInboundEmailReadAction, saveWhatsAppTemplateSettingAction, getInboundEmailsAction, getWhatsAppMessageLogsAction, getAdminMetricsAction, getWhatsAppTemplateSettingsAction, getClinicDetailAction, getAdminChatUnreadCountAction, getFeatureFlagsAction, getFeatureFlagOrgsAction, setFeatureFlagForOrgAction, setFeatureFlagForAllAction, getSupportUnreadCountAction } from "@/actions/admin"
 import { useSearchParams } from "next/navigation"
 import type { WhatsAppLogsParams, ClinicDetail } from "@/actions/admin"
 import { getAllFeedbackAction, getLatestFeedbackSummaryAction } from "@/actions/feedback"
 import { AdminChat } from "@/components/admin/admin-chat"
+import { AdminSupport } from "@/components/admin/admin-support"
 import { ChangelogManager, ChangelogEntryForm } from "@/components/admin/changelog-manager"
 import { suggestNextVersionAction } from "@/actions/changelog"
 import {
@@ -14,7 +15,7 @@ import {
   Wallet, CalendarDays, LayoutDashboard, Building2, MessageCircle, Settings,
   Phone, BarChart3, Menu, X, ArrowLeft, Image as ImageIcon, Stethoscope,
   Package, Send, Clock, AlertTriangle, ClipboardList, UserCircle, AtSign, MapPin,
-  Ticket, ChevronRight, Sparkles,
+  Ticket, ChevronRight, Sparkles, MessagesSquare,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -446,6 +447,7 @@ export function AdminDashboard() {
   const [couponSendTemplateId, setCouponSendTemplateId] = useState("")
   const [giftVoucherSendTemplateId, setGiftVoucherSendTemplateId] = useState("")
   const [chatUnreadCount, setChatUnreadCount] = useState(0)
+  const [supportUnreadCount, setSupportUnreadCount] = useState(0)
   const [chatInitialPhone, setChatInitialPhone] = useState<string | null>(null)
   const [pendingCancelOrg, setPendingCancelOrg] = useState<{ id: string; name: string } | null>(null)
   const [featureFlagsList, setFeatureFlagsList] = useState<FeatureFlagSummary[]>([])
@@ -478,6 +480,15 @@ export function AdminDashboard() {
     getAdminChatUnreadCountAction().then(setChatUnreadCount).catch(() => {})
     const interval = setInterval(() => {
       getAdminChatUnreadCountAction().then(setChatUnreadCount).catch(() => {})
+    }, 15000)
+    return () => clearInterval(interval)
+  }, [])
+
+  // Idem pro contador de chamados de suporte não lidos
+  useEffect(() => {
+    getSupportUnreadCountAction().then(setSupportUnreadCount).catch(() => {})
+    const interval = setInterval(() => {
+      getSupportUnreadCountAction().then(setSupportUnreadCount).catch(() => {})
     }, 15000)
     return () => clearInterval(interval)
   }, [])
@@ -555,6 +566,7 @@ export function AdminDashboard() {
     { id: "financeiro",     label: "Financeiro",      icon: Wallet },
     { id: "whatsapp",       label: `WhatsApp (${whatsappLogs.length})`, icon: Phone },
     { id: "conteudo",       label: "Conteúdo",        icon: CalendarDays },
+    { id: "chamados",       label: "Chamados",        icon: MessagesSquare, badge: supportUnreadCount },
     { id: "chat",           label: "Chat",            icon: MessageCircle, badge: chatUnreadCount },
     { id: "suporte",        label: "Suporte",         icon: Mail, badge: unreadCount },
     { id: "whatsapp-config",label: "Config WhatsApp", icon: Settings },
@@ -1535,6 +1547,15 @@ export function AdminDashboard() {
       }
 
       case "changelog": return <ChangelogManager />
+
+      case "chamados": {
+        // getAdminMetricsAction pode duplicar uma org se ela tiver mais de um
+        // membro com role "owner" (join com organization_members) — filtra aqui
+        // pra não listar a mesma clínica duas vezes no seletor de chamado.
+        const seenOrgIds = new Set<string>()
+        const uniqueOrgs = orgs.filter(o => (seenOrgIds.has(o.id) ? false : (seenOrgIds.add(o.id), true)))
+        return <AdminSupport orgs={uniqueOrgs.map(o => ({ id: o.id, name: o.name }))} />
+      }
 
       case "chat": return <AdminChat trialOutreachTemplateId={trialOutreachTemplateId || null} trialExpiredOutreachTemplateId={trialExpiredOutreachTemplateId || null} testimonialOutreachTemplateId={testimonialOutreachTemplateId || null} winbackOutreachTemplateId={winbackOutreachTemplateId || null} initialPhone={chatInitialPhone} onInitialPhoneConsumed={() => setChatInitialPhone(null)} />
 

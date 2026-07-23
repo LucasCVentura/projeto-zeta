@@ -6,12 +6,14 @@ import {
   appointments, clients, transactions, clientPhotos,
   adminChatMessages, chatSessions, procedures, packages, anamnesisAnswers,
   trialReactivationTokens, featureFlags, featureFlagOrgs,
+  supportThreads, supportMessages,
 } from "@/db/schema"
-import { eq, count, sum, max, gte, lt, sql, or, and, desc, asc, isNull } from "drizzle-orm"
+import { eq, count, sum, max, gte, lt, sql, or, and, desc, asc, isNull, isNotNull } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { nowBRT, todayBRT } from "@/lib/date"
 import { syncFeatureRegistry, getFeatureRegistryEntry } from "@/lib/feature-flags"
 import { requireAdmin, assertAdmin } from "@/lib/admin-guard"
+import { notifyOrganizationProfessionals } from "@/actions/notifications"
 
 export async function getAdminMetricsAction() {
   await assertAdmin()
@@ -1006,4 +1008,142 @@ Seja direto, prático e específico para o nicho de estética no Brasil. Quando 
   })
 
   return completion.choices[0].message.content ?? ""
+}
+
+// ── Chamados de suporte ────────────────────────────────────────────────────────
+// Thread única contínua por organização — ver src/actions/support.ts pro lado
+// da clínica. Substitui o papel de suporte das abas Admin Chat (WhatsApp) e
+// Suporte (e-mail) pra clínica que já é cliente pagante.
+
+// Usado pelo admin pra iniciar um chamado com uma clínica que ainda não escreveu
+// primeiro (ex: avisar proativamente sobre um problema) — get-or-create, igual
+// ao lado da clínica em src/actions/support.ts.
+export async function getOrCreateSupportThreadForOrgAction(organizationId: string) {
+  await assertAdmin()
+
+  await db.insert(supportThreads).values({ organizationId }).onConflictDoNothing({ target: supportThreads.organizationId })
+
+  const [thread] = await db
+    .select({
+      id: supportThreads.id,
+      organizationId: supportThreads.organizationId,
+      orgName: organizations.name,
+      status: supportThreads.status,
+      lastMessageAt: supportThreads.lastMessageAt,
+      lastMessagePreview: supportThreads.lastMessagePreview,
+      unreadByAdmin: supportThreads.unreadByAdmin,
+    })
+    .from(supportThreads)
+    .innerJoin(organizations, eq(organizations.id, supportThreads.organizationId))
+    .where(eq(supportThreads.organizationId, organizationId))
+
+  return thread
+}
+
+export async function getSupportUnreadCountAction(): Promise<number> {
+  await assertAdmin()
+
+  const [row] = await db
+    .select({ count: count() })
+    .from(supportThreads)
+    .where(eq(supportThreads.unreadByAdmin, true))
+
+  return row?.count ?? 0
+}
+
+export async function getSupportThreadsAction() {
+  await assertAdmin()
+
+  return db
+    .select({
+      id: supportThreads.id,
+      organizationId: supportThreads.organizationId,
+      orgName: organizations.name,
+      status: supportThreads.status,
+      lastMessageAt: supportThreads.lastMessageAt,
+      lastMessagePreview: supportThreads.lastMessagePreview,
+      unreadByAdmin: supportThreads.unreadByAdmin,
+    })
+    .from(supportThreads)
+    .innerJoin(organizations, eq(organizations.id, supportThreads.organizationId))
+    // Esconde threads "fantasma" — criadas (get-or-create, seja pela clínica
+    // abrindo /chamado ou pelo admin clicando errado no seletor) mas nunca
+    // usadas, sem nenhuma mensagem enviada ainda.
+    .where(isNotNull(supportThreads.lastMessagePreview))
+    .orderBy(desc(supportThreads.lastMessageAt))
+}
+
+export async function getSupportMessagesAction(threadId: string) {
+  await assertAdmin()
+
+  const messages = await db
+    .select()
+    .from(supportMessages)
+    .where(eq(supportMessages.threadId, threadId))
+    .orderBy(asc(supportMessages.createdAt))
+
+  await db
+    .update(supportMessages)
+    .set({ readAt: new Date() })
+    .where(and(eq(supportMessages.threadId, threadId), eq(supportMessages.senderType, "org"), isNull(supportMessages.readAt)))
+
+  await db.update(supportThreads).set({ unreadByAdmin: false }).where(eq(supportThreads.id, threadId))
+
+  return messages
+}
+
+export async function sendAdminSupportMessageAction(threadId: string, formData: FormData): Promise<{ success: boolean; error?: string }> {
+  await requireAdmin()
+
+  const [thread] = await db.select().from(supportThreads).where(eq(supportThreads.id, threadId))
+  if (!thread) return { success: false, error: "Chamado não encontrado." }
+
+  const content = (formData.get("content") as string | null)?.trim() || null
+  const file = formData.get("image") as File | null
+
+  if (!content && (!file || file.size === 0)) {
+    return { success: false, error: "Escreva uma mensagem ou anexe uma imagem." }
+  }
+
+  let imageUrl: string | null = null
+  if (file && file.size > 0) {
+    if (file.size > 10 * 1024 * 1024) return { success: false, error: "Imagem muito grande. Máximo 10MB." }
+    if (!file.type.startsWith("image/")) return { success: false, error: "Formato inválido." }
+
+    const { uploadSupportImageToStorage } = await import("@/lib/storage")
+    const ext = file.type.includes("png") ? "png" : "jpg"
+    const objectName = `support/${thread.organizationId}/${thread.id}-${crypto.randomUUID()}.${ext}`
+    const buffer = Buffer.from(await file.arrayBuffer())
+    imageUrl = await uploadSupportImageToStorage(objectName, buffer, file.type)
+  }
+
+  await db.insert(supportMessages).values({
+    threadId,
+    senderType: "admin",
+    senderUserId: null,
+    content,
+    imageUrl,
+  })
+
+  const preview = content ?? "📷 Imagem"
+  await db
+    .update(supportThreads)
+    .set({ lastMessageAt: new Date(), lastMessagePreview: preview, unreadByOrg: true, updatedAt: new Date() })
+    .where(eq(supportThreads.id, threadId))
+
+  await notifyOrganizationProfessionals({
+    organizationId: thread.organizationId,
+    type: "support_reply",
+    title: "Nova resposta do suporte",
+    body: preview,
+    href: "/ajuda",
+  })
+
+  return { success: true }
+}
+
+export async function setSupportThreadStatusAction(threadId: string, status: "open" | "resolved") {
+  await requireAdmin()
+
+  await db.update(supportThreads).set({ status, updatedAt: new Date() }).where(eq(supportThreads.id, threadId))
 }

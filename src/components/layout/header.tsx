@@ -5,6 +5,8 @@ import Link from "next/link"
 import { useState, useRef, useEffect, useCallback } from "react"
 import { getLowStockSuppliesAction } from "@/actions/supplies"
 import { getNotificationsAction, markNotificationReadAction, markAllNotificationsReadAction } from "@/actions/notifications"
+import { getMySupportUnreadAction } from "@/actions/support"
+import { MessagesSquare } from "lucide-react"
 import type { Notification } from "@/db/schema"
 
 const titles: Record<string, string> = {
@@ -33,7 +35,7 @@ function saveDismissed(ids: Set<string>) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify([...ids]))
 }
 
-export function Header() {
+export function Header({ supportTicketsEnabled }: { supportTicketsEnabled?: boolean } = {}) {
   const pathname = usePathname()
   const title = Object.entries(titles).find(([key]) =>
     pathname === key || pathname.startsWith(key + "/")
@@ -44,7 +46,17 @@ export function Header() {
   const [dismissed, setDismissed] = useState<Set<string>>(new Set())
   const [dbNotifs, setDbNotifs] = useState<Notification[]>([])
   const [loaded, setLoaded] = useState(false)
+  const [supportUnread, setSupportUnread] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!supportTicketsEnabled) return
+    getMySupportUnreadAction().then(setSupportUnread).catch(() => {})
+    const interval = setInterval(() => {
+      getMySupportUnreadAction().then(setSupportUnread).catch(() => {})
+    }, 30_000)
+    return () => clearInterval(interval)
+  }, [supportTicketsEnabled])
 
   const loadAll = useCallback(async () => {
     setDismissed(getDismissed())
@@ -104,6 +116,21 @@ export function Header() {
       <h1 className="font-heading text-lg font-semibold">{title}</h1>
 
       <div className="flex items-center gap-2">
+        {supportTicketsEnabled && (
+          <Link
+            href="/chamado"
+            className="relative flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground touch-target"
+            title="Chamado"
+          >
+            <MessagesSquare size={18} strokeWidth={1.75} />
+            {supportUnread && (
+              <span className="absolute right-1.5 top-1.5 flex h-2.5 w-2.5">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
+                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-primary ring-2 ring-background" />
+              </span>
+            )}
+          </Link>
+        )}
         <div ref={ref} className="relative">
           <button
             onClick={() => setOpen((v) => !v)}

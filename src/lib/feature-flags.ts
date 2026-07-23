@@ -29,6 +29,12 @@ export const FEATURE_REGISTRY = [
     description: "Sidebar promove Procedimentos, Pacotes e Equipe pro menu principal. No mobile, o botão \"Mais\" abre um painel em grade que sobe de trás da barra, no lugar da tela cheia antiga.",
     changelogDraft: "Menu reorganizado: Procedimentos, Pacotes e Equipe agora têm atalho direto no menu — e no celular, o botão \"Mais\" abre um painel rápido em vez de tomar a tela toda",
   },
+  {
+    key: "support-tickets",
+    label: "Chamados de suporte",
+    description: "Substitui o suporte via WhatsApp/e-mail por uma conversa contínua dentro do painel, em Ajuda — com histórico e envio de imagens.",
+    changelogDraft: "Chamados de suporte: agora dá pra falar com a gente direto pelo painel, em Ajuda — manda print de qualquer problema e a conversa fica salva, sem depender de WhatsApp ou e-mail",
+  },
 ] as const
 
 export type FeatureKey = (typeof FEATURE_REGISTRY)[number]["key"]

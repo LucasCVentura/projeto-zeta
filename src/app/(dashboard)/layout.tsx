@@ -35,6 +35,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const couponsEnabled = membership ? await isFeatureEnabled(membership.organizationId, "coupons") : false
   // Sidebar/mobile nav reorganizados, em rollout gradual por organização.
   const navRedesignEnabled = membership ? await isFeatureEnabled(membership.organizationId, "nav-redesign") : false
+  // Chamados de suporte, em rollout gradual por organização.
+  const supportTicketsEnabled = membership ? await isFeatureEnabled(membership.organizationId, "support-tickets") : false
 
   let trialDaysLeft: number | null = null
 
@@ -98,7 +100,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         <div className="flex flex-1 flex-col overflow-hidden">
           <NoticesBanner notices={getActiveNotices()} />
           {trialDaysLeft !== null && <TrialBanner daysLeft={trialDaysLeft} />}
-          <Header />
+          <Header supportTicketsEnabled={supportTicketsEnabled} />
           <main className="flex-1 overflow-y-auto pb-16 lg:pb-0">
             {children}
           </main>

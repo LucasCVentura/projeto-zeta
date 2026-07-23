@@ -1080,6 +1080,37 @@ export const chatSessions = pgTable("chat_sessions", {
 
 export type ChatSession = typeof chatSessions.$inferSelect
 
+// ── support_threads ───────────────────────────────────────────────────────────
+// Thread única e contínua de suporte por organização — substitui o papel de
+// suporte das abas Chat (WhatsApp) e Suporte (e-mail) do /admin.
+
+export const supportThreads = pgTable("support_threads", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  organizationId: text("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }).unique(),
+  status: text("status").notNull().default("open"), // "open" | "resolved"
+  lastMessageAt: timestamp("last_message_at").notNull().defaultNow(),
+  lastMessagePreview: text("last_message_preview"),
+  unreadByAdmin: boolean("unread_by_admin").notNull().default(false),
+  unreadByOrg: boolean("unread_by_org").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+})
+export type SupportThread = typeof supportThreads.$inferSelect
+
+// ── support_messages ────────────────────────────────────────────────────────
+
+export const supportMessages = pgTable("support_messages", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  threadId: text("thread_id").notNull().references(() => supportThreads.id, { onDelete: "cascade" }),
+  senderType: text("sender_type").notNull(), // "admin" | "org"
+  senderUserId: text("sender_user_id").references(() => users.id, { onDelete: "set null" }),
+  content: text("content"), // pode ser null se for mensagem só de imagem
+  imageUrl: text("image_url"), // supabase://support/...
+  readAt: timestamp("read_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+})
+export type SupportMessage = typeof supportMessages.$inferSelect
+
 // ── ai_photo_analyses ─────────────────────────────────────────────────────────
 
 export const aiPhotoAnalyses = pgTable("ai_photo_analyses", {

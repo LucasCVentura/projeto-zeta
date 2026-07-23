@@ -78,3 +78,23 @@ export function documentStorageUrlToObjectName(url: string): string {
   if (url.startsWith(prefix)) return url.slice(prefix.length)
   return url
 }
+
+// ── support ───────────────────────────────────────────────────────────────────
+// Imagens anexadas em chamados de suporte — bucket separado de "documents"
+// porque é conteúdo efêmero (print de erro), não documento legal do cliente.
+
+const SUPPORT_BUCKET = "support"
+
+export async function uploadSupportImageToStorage(
+  objectName: string,
+  buffer: Buffer,
+  contentType: string
+): Promise<string> {
+  const { error } = await getClient().storage
+    .from(SUPPORT_BUCKET)
+    .upload(objectName, buffer, { contentType, upsert: true })
+
+  if (error) throw new Error(`Support image upload failed: ${error.message}`)
+
+  return `supabase://${SUPPORT_BUCKET}/${objectName}`
+}
