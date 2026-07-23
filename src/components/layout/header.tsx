@@ -51,12 +51,18 @@ export function Header({ supportTicketsEnabled }: { supportTicketsEnabled?: bool
 
   useEffect(() => {
     if (!supportTicketsEnabled) return
-    getMySupportUnreadAction().then(setSupportUnread).catch(() => {})
+    // Também reconsulta a cada troca de rota — ao visitar /chamado, a mensagem
+    // já é marcada como lida no servidor, e isso reflete o badge na hora, sem
+    // esperar o próximo tick do poll de 30s. Pequeno atraso pra dar tempo da
+    // página do chamado terminar de marcar como lida antes de checar de novo.
+    const timeout = setTimeout(() => {
+      getMySupportUnreadAction().then(setSupportUnread).catch(() => {})
+    }, 400)
     const interval = setInterval(() => {
       getMySupportUnreadAction().then(setSupportUnread).catch(() => {})
     }, 30_000)
-    return () => clearInterval(interval)
-  }, [supportTicketsEnabled])
+    return () => { clearTimeout(timeout); clearInterval(interval) }
+  }, [supportTicketsEnabled, pathname])
 
   const loadAll = useCallback(async () => {
     setDismissed(getDismissed())

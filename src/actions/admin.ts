@@ -13,7 +13,6 @@ import { revalidatePath } from "next/cache"
 import { nowBRT, todayBRT } from "@/lib/date"
 import { syncFeatureRegistry, getFeatureRegistryEntry } from "@/lib/feature-flags"
 import { requireAdmin, assertAdmin } from "@/lib/admin-guard"
-import { notifyOrganizationProfessionals } from "@/actions/notifications"
 
 export async function getAdminMetricsAction() {
   await assertAdmin()
@@ -1131,13 +1130,8 @@ export async function sendAdminSupportMessageAction(threadId: string, formData: 
     .set({ lastMessageAt: new Date(), lastMessagePreview: preview, unreadByOrg: true, updatedAt: new Date() })
     .where(eq(supportThreads.id, threadId))
 
-  await notifyOrganizationProfessionals({
-    organizationId: thread.organizationId,
-    type: "support_reply",
-    title: "Nova resposta do suporte",
-    body: preview,
-    href: "/ajuda",
-  })
+  // Aviso fica só no ícone dedicado (ver getMySupportUnreadAction) — não duplica
+  // no sininho de notificações, que é pra outro tipo de aviso.
 
   return { success: true }
 }
