@@ -11,6 +11,7 @@ type Props = {
   hasNew: boolean
   entries: ChangelogEntry[]
   collapsed?: boolean
+  stacked?: boolean
   onOpen?: () => void
   triggerClassName?: string
 }
@@ -21,7 +22,7 @@ const TYPE_CONFIG = {
   fix:         { label: "Fix",      icon: Wrench,   className: "bg-amber-500/10 text-amber-400" },
 }
 
-export function WhatsNewModal({ hasNew: initialHasNew, entries, collapsed, onOpen, triggerClassName }: Props) {
+export function WhatsNewModal({ hasNew: initialHasNew, entries, collapsed, stacked, onOpen, triggerClassName }: Props) {
   const [open, setOpen] = useState(false)
   const [hasNew, setHasNew] = useState(initialHasNew)
   const [visible, setVisible] = useState(false)
@@ -63,17 +64,19 @@ export function WhatsNewModal({ hasNew: initialHasNew, entries, collapsed, onOpe
         className={cn(
           "relative flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors",
           collapsed && "justify-center px-0",
+          stacked && "flex-col gap-1",
           triggerClassName
         )}
       >
         <span className="relative shrink-0">
-          <Zap size={18} />
-          {hasNew && collapsed && (
+          <Zap size={stacked ? 20 : 18} />
+          {hasNew && (collapsed || stacked) && (
             <span className="absolute -top-0.5 -right-0.5 flex h-2 w-2 rounded-full bg-primary ring-1 ring-background" />
           )}
         </span>
-        {!collapsed && <span>Novidades</span>}
-        {hasNew && !collapsed && (
+        {stacked && <span className="text-[10px] font-medium">Novidades</span>}
+        {!collapsed && !stacked && <span>Novidades</span>}
+        {hasNew && !collapsed && !stacked && (
           <span className="ml-auto flex h-2 w-2 rounded-full bg-primary ring-2 ring-background" />
         )}
       </button>

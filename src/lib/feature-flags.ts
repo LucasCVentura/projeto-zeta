@@ -23,6 +23,12 @@ export const FEATURE_REGISTRY = [
     description: "Criar cupons de desconto e vale-presentes, enviar por WhatsApp com QR code e resgatar na finalização do atendimento.",
     changelogDraft: "Cupons e vale-presentes: crie promoções com desconto ou presenteie uma cliente com um procedimento grátis — envia por WhatsApp com QR code, e o resgate já aplica tudo certinho na hora de finalizar o atendimento",
   },
+  {
+    key: "nav-redesign",
+    label: "Menu reorganizado",
+    description: "Sidebar promove Procedimentos, Pacotes e Equipe pro menu principal. No mobile, o botão \"Mais\" abre um painel em grade que sobe de trás da barra, no lugar da tela cheia antiga.",
+    changelogDraft: "Menu reorganizado: Procedimentos, Pacotes e Equipe agora têm atalho direto no menu — e no celular, o botão \"Mais\" abre um painel rápido em vez de tomar a tela toda",
+  },
 ] as const
 
 export type FeatureKey = (typeof FEATURE_REGISTRY)[number]["key"]

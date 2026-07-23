@@ -76,6 +76,47 @@ const allNavItems = [
     ),
   },
   {
+    label: "Procedimentos",
+    href: "/configuracoes/procedimentos",
+    requiredAction: "org:update" as const,
+    requiresNavRedesign: true,
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+        <path d="M11 2v6a2 2 0 0 0 .59 1.41L20 18a2 2 0 0 1-1.41 3.42H5.41A2 2 0 0 1 4 18l8.41-8.59A2 2 0 0 0 13 8V2" />
+        <path d="M8.5 2h7" />
+        <path d="M7 16h10" />
+      </svg>
+    ),
+  },
+  {
+    label: "Pacotes",
+    href: "/configuracoes/pacotes",
+    requiredAction: "org:update" as const,
+    requiresNavRedesign: true,
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+        <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8Z" />
+        <path d="M3.27 6.96 12 12l8.73-5.04M12 22V12" />
+      </svg>
+    ),
+  },
+  {
+    label: "Equipe",
+    href: "/configuracoes/equipe",
+    requiredAction: null,
+    ownerOnly: true,
+    requiresNavRedesign: true,
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+        <circle cx="9" cy="7" r="4" />
+        <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+        <path d="M17 11l1.5 1.5L21 10" />
+      </svg>
+    ),
+  },
+  {
     label: "Cupons",
     href: "/cupons",
     requiredAction: "financial:write" as const,
@@ -114,13 +155,15 @@ const allNavItems = [
   },
 ]
 
-export function Sidebar({ role, changelogHasNew, changelogEntries, profileIncomplete, couponsEnabled }: { role: OrgRole; changelogHasNew: boolean; changelogEntries: ChangelogEntry[]; profileIncomplete?: boolean; couponsEnabled?: boolean }) {
+export function Sidebar({ role, changelogHasNew, changelogEntries, profileIncomplete, couponsEnabled, navRedesignEnabled }: { role: OrgRole; changelogHasNew: boolean; changelogEntries: ChangelogEntry[]; profileIncomplete?: boolean; couponsEnabled?: boolean; navRedesignEnabled?: boolean }) {
   const pathname = usePathname()
   const { collapsed, toggle: toggleSidebar } = useSidebar()
 
   const navItems = allNavItems.filter((item) =>
     (item.requiredAction === null || can(role, item.requiredAction)) &&
-    (!("requiresCoupons" in item) || couponsEnabled)
+    (!("requiresCoupons" in item) || couponsEnabled) &&
+    (!("ownerOnly" in item) || role === "owner") &&
+    (!("requiresNavRedesign" in item) || navRedesignEnabled)
   )
 
   return (
@@ -155,7 +198,9 @@ export function Sidebar({ role, changelogHasNew, changelogEntries, profileIncomp
       {/* Nav */}
       <nav className="flex flex-1 flex-col gap-1 p-3 min-h-0 overflow-y-auto">
         {navItems.map((item) => {
-          const active = pathname === item.href || pathname.startsWith(item.href + "/")
+          const active = item.href === "/configuracoes"
+            ? pathname === item.href || (pathname.startsWith("/configuracoes/") && !navItems.some((other) => other !== item && pathname.startsWith(other.href)))
+            : pathname === item.href || pathname.startsWith(item.href + "/")
           return (
             <Link
               key={item.href}

@@ -12,7 +12,7 @@ const OPTIONS: { mode: ThemeMode; label: string; icon: typeof Sun }[] = [
   { mode: "dark-slate", label: "Escuro Neutro", icon: MoonStar },
 ]
 
-export function ThemeMenu({ collapsed, triggerClassName }: { collapsed?: boolean; triggerClassName?: string }) {
+export function ThemeMenu({ collapsed, stacked, triggerClassName }: { collapsed?: boolean; stacked?: boolean; triggerClassName?: string }) {
   const { mode, setTheme, mounted } = useTheme()
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
@@ -37,17 +37,19 @@ export function ThemeMenu({ collapsed, triggerClassName }: { collapsed?: boolean
         className={cn(
           "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors",
           collapsed && "justify-center px-0",
+          stacked && "flex-col gap-1",
           triggerClassName
         )}
       >
-        <CurrentIcon size={18} strokeWidth={1.75} className="shrink-0" />
-        {!collapsed && (mounted ? current.label : "Escuro")}
+        <CurrentIcon size={stacked ? 20 : 18} strokeWidth={1.75} className="shrink-0" />
+        {stacked && <span className="text-[10px] font-medium">Tema</span>}
+        {!collapsed && !stacked && (mounted ? current.label : "Escuro")}
       </button>
 
       {open && (
         <div className={cn(
           "absolute z-50 min-w-44 rounded-lg border bg-popover shadow-lg overflow-hidden",
-          collapsed ? "left-full bottom-0 ml-1" : "bottom-full left-0 right-0 mb-1"
+          stacked ? "bottom-full left-1/2 -translate-x-1/2 mb-1" : collapsed ? "left-full bottom-0 ml-1" : "bottom-full left-0 right-0 mb-1"
         )}>
           {OPTIONS.map((option) => {
             const Icon = option.icon
