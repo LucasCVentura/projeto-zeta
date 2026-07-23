@@ -36,7 +36,7 @@ export async function GET(
 
   if (!row) return new Response("Not found", { status: 404 })
 
-  const qrDataUrl = await QRCode.toDataURL(row.token, { margin: 1, width: 400 })
+  const qrDataUrl = await QRCode.toDataURL(row.token, { margin: 1, width: 320 })
   const isGift = row.kind === "gift"
 
   const bg = isGift
@@ -45,6 +45,8 @@ export async function GET(
   const textColor = isGift ? "#3A1526" : "#FFF6EC"
   const accent = isGift ? "#7A2E4E" : "#D984AD"
 
+  // 1200x630 (~1.91:1) — proporção exigida pelo WhatsApp pro header de imagem
+  // do template; fora disso a imagem chega esticada/cortada pro cliente.
   return new ImageResponse(
     (
       <div
@@ -52,57 +54,54 @@ export async function GET(
           width: "100%",
           height: "100%",
           display: "flex",
-          flexDirection: "column",
           alignItems: "center",
           justifyContent: "space-between",
+          gap: 48,
           background: bg,
-          padding: "56px 48px",
+          padding: "0 64px",
           fontFamily: "Arial, Helvetica, sans-serif",
         }}
       >
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+        <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", gap: 14, maxWidth: 660 }}>
           <div style={{ fontSize: 26, fontWeight: 700, color: textColor, opacity: 0.85 }}>{row.orgName}</div>
-          <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: 3, color: accent }}>
+          <div style={{ fontSize: 21, fontWeight: 700, letterSpacing: 3, color: accent }}>
             {isGift ? "VALE-PRESENTE" : "CUPOM DE DESCONTO"}
           </div>
-        </div>
-
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
-          <div style={{ fontSize: isGift ? 54 : 88, fontWeight: 900, color: textColor, textAlign: "center", lineHeight: 1.1 }}>
+          <div style={{ fontSize: isGift ? 58 : 80, fontWeight: 900, color: textColor, lineHeight: 1.1, marginTop: 10 }}>
             {isGift ? "Um presente" : `${row.discountPct}% OFF`}
           </div>
-          <div style={{ fontSize: 34, fontWeight: 700, color: textColor, textAlign: "center" }}>
-            {row.procedureName}
-          </div>
-          <div style={{ fontSize: 20, color: textColor, opacity: 0.75 }}>
+          <div style={{ fontSize: 36, fontWeight: 700, color: textColor }}>{row.procedureName}</div>
+          <div style={{ fontSize: 22, color: textColor, opacity: 0.75, marginTop: 6 }}>
             {isGift ? `Pra você, ${row.clientName}` : `Válido até ${formatDate(row.expiresAt)}`}
           </div>
           {isGift && (
-            <div style={{ fontSize: 18, color: textColor, opacity: 0.7 }}>
+            <div style={{ fontSize: 20, color: textColor, opacity: 0.7 }}>
               Válido até {formatDate(row.expiresAt)}
             </div>
           )}
         </div>
+
+        <div style={{ width: 1, alignSelf: "stretch", marginTop: 48, marginBottom: 48, background: textColor, opacity: 0.2 }} />
 
         <div
           style={{
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
-            gap: 16,
+            gap: 12,
             background: "#FFFFFF",
             borderRadius: 24,
-            padding: "24px 24px 16px",
+            padding: "24px 24px 18px",
           }}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={qrDataUrl} width={280} height={280} alt="" />
-          <div style={{ fontSize: 16, color: "#12080E", fontWeight: 600 }}>
+          <img src={qrDataUrl} width={290} height={290} alt="" />
+          <div style={{ fontSize: 14, color: "#12080E", fontWeight: 600, textAlign: "center", maxWidth: 290 }}>
             Mostre esse QR code na hora do atendimento
           </div>
         </div>
       </div>
     ),
-    { width: 800, height: 1200 }
+    { width: 1200, height: 630 }
   )
 }

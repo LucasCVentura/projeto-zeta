@@ -43,7 +43,10 @@ const params = new URLSearchParams({
   vertical: "Cupom de desconto pra cliente",
   content,
   example,
-  exampleMedia: "https://kiraclinic.com.br/brand/kira-bonsai-512.png",
+  // www: sem o www a URL faz redirect 307 (canônico do Vercel) e o fetcher da
+  // Gupshup não segue redirect — a Meta rejeitava o template dizendo que o
+  // exemplo de imagem não foi fornecido.
+  exampleMedia: "https://www.kiraclinic.com.br/brand/kira-bonsai-512.png",
   enableSample: "true",
   allowTemplateCategoryChange: "false",
 })
