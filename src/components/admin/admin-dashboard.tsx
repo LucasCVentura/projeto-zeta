@@ -609,12 +609,17 @@ export function AdminDashboard() {
 
   async function handleToggleFeatureOrg(orgId: string, next: boolean) {
     if (!selectedFeatureKey) return
+    const prevEnabled = featureFlagOrgsList.find(o => o.id === orgId)?.enabled ?? false
     setFeatureFlagBusyId(orgId)
     await setFeatureFlagForOrgAction(selectedFeatureKey, orgId, next)
     setFeatureFlagOrgsList(prev => prev.map(o => o.id === orgId ? { ...o, enabled: next } : o))
-    setFeatureFlagsList(prev => prev.map(f => f.key === selectedFeatureKey
-      ? { ...f, enabledCount: f.enabledCount + (next ? 1 : -1) }
-      : f))
+    // só ajusta o contador se o estado realmente mudou — clicar num toggle que já
+    // estava no valor `next` (ex: lista desatualizada) não pode inflar a contagem
+    if (prevEnabled !== next) {
+      setFeatureFlagsList(prev => prev.map(f => f.key === selectedFeatureKey
+        ? { ...f, enabledCount: f.enabledCount + (next ? 1 : -1) }
+        : f))
+    }
     setFeatureFlagBusyId(null)
   }
 
