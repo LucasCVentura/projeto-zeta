@@ -1,13 +1,13 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { createCouponAction, cancelCouponAction } from "@/actions/coupons"
 import { ClientMultiselect } from "./client-multiselect"
-import { Ticket, Gift, Plus, X, Loader2 } from "lucide-react"
+import { Ticket, Gift, Plus, X, Loader2, Send, QrCode } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { CouponKind } from "@/db/schema"
 
@@ -30,6 +30,8 @@ function formatDate(dateStr: string) {
   return new Date(dateStr + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })
 }
 
+const HINT_KEY = "kira:coupons-hint-dismissed"
+
 export function CouponsView({
   procedures,
   clients,
@@ -40,7 +42,17 @@ export function CouponsView({
   initialCoupons: CouponRow[]
 }) {
   const [coupons, setCoupons] = useState(initialCoupons)
+  const [showHint, setShowHint] = useState(false)
   const [showForm, setShowForm] = useState(false)
+
+  useEffect(() => {
+    if (!localStorage.getItem(HINT_KEY)) setShowHint(true)
+  }, [])
+
+  function dismissHint() {
+    localStorage.setItem(HINT_KEY, "1")
+    setShowHint(false)
+  }
   const [kind, setKind] = useState<CouponKind>("discount")
   const [procedureId, setProcedureId] = useState("")
   const [discountPct, setDiscountPct] = useState("20")
@@ -110,6 +122,48 @@ export function CouponsView({
       {success && (
         <div className="rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-700">
           {success}
+        </div>
+      )}
+
+      {/* Dica de uso — aparece só na primeira visita */}
+      {showHint && (
+        <div className="relative rounded-xl border border-primary/20 bg-primary/5 p-5 space-y-4">
+          <button
+            onClick={dismissHint}
+            className="absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground hover:bg-accent transition-colors"
+          >
+            <X size={14} />
+          </button>
+
+          <p className="text-sm font-semibold text-primary">Como funcionam os cupons e vale-presentes?</p>
+
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="flex gap-3">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary font-bold text-sm">1</div>
+              <div>
+                <p className="text-sm font-medium">Crie aqui</p>
+                <p className="text-xs text-muted-foreground">Escolha cupom de desconto ou vale-presente, o procedimento, validade e pra quem enviar.</p>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                <Send size={15} className="text-primary" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">Cliente recebe no WhatsApp</p>
+                <p className="text-xs text-muted-foreground">O envio já sai automático, com o QR code pronto pra usar.</p>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                <QrCode size={15} className="text-primary" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">Resgata na finalização</p>
+                <p className="text-xs text-muted-foreground">Ao concluir o atendimento, clique em &quot;Escanear cupom ou vale-presente&quot; e aponte a câmera pro QR code.</p>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
