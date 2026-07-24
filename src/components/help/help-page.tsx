@@ -5,6 +5,7 @@ import { submitFeedbackAction } from "@/actions/feedback"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Mail, MessageSquarePlus, CheckCircle2, Loader2, MessageCircle } from "lucide-react"
+import { GuidesGrid } from "./guides-grid"
 
 export function HelpPage() {
   const [content, setContent] = useState("")
@@ -23,6 +24,8 @@ export function HelpPage() {
 
   return (
     <div className="max-w-2xl mx-auto px-5 py-10 space-y-10">
+      <GuidesGrid />
+
       {/* Contato */}
       <div className="rounded-xl border border-border bg-card p-6 space-y-4">
         <div className="flex items-center gap-2">

@@ -25,10 +25,12 @@ export default defineConfig({
         "src/lib/changelog.ts",
         "src/lib/chat-bot.ts",
         "src/lib/notices.ts",
+        "src/lib/guides.ts",
         // fortemente dependente do banco (encontra/cria cliente, rate limit, criação de
         // agendamento) — coberto por teste manual/e2e (Playwright) contra Postgres real
         "src/lib/public-booking.ts",
         "src/lib/feature-flags.ts",
+        "src/lib/coupon-dispatch.ts",
       ],
       thresholds: {
         lines: 90,
