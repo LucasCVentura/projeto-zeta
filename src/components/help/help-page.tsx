@@ -4,10 +4,11 @@ import { useState } from "react"
 import { submitFeedbackAction } from "@/actions/feedback"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { Mail, MessageSquarePlus, CheckCircle2, Loader2, MessageCircle } from "lucide-react"
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
+import { Mail, MessageSquarePlus, CheckCircle2, Loader2, MessageCircle, BookOpen } from "lucide-react"
 import { GuidesGrid } from "./guides-grid"
 
-export function HelpPage() {
+export function HelpPage({ guidesEnabled }: { guidesEnabled: boolean }) {
   const [content, setContent] = useState("")
   const [loading, setLoading] = useState(false)
   const [sent, setSent] = useState(false)
@@ -23,78 +24,99 @@ export function HelpPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto px-5 py-10 space-y-10">
-      <GuidesGrid />
+    <div className="max-w-2xl mx-auto px-5 py-10">
+      <Tabs defaultValue={guidesEnabled ? "guias" : "contato"}>
+        <TabsList className="mb-6">
+          <TabsTrigger value="contato">Contato</TabsTrigger>
+          {guidesEnabled && <TabsTrigger value="guias">Guias</TabsTrigger>}
+          <TabsTrigger value="sugestoes">Sugestões</TabsTrigger>
+        </TabsList>
 
-      {/* Contato */}
-      <div className="rounded-xl border border-border bg-card p-6 space-y-4">
-        <div className="flex items-center gap-2">
-          <Mail size={16} className="text-primary" />
-          <h2 className="font-semibold text-sm">Fale conosco</h2>
-        </div>
-        <p className="text-sm text-muted-foreground">
-          Tem alguma dúvida, problema ou precisa de ajuda? Entre em contato diretamente pelo e-mail abaixo — respondemos em até 24 horas úteis.
-        </p>
-        <a
-          href="mailto:suporte@kiraclinic.com.br"
-          className="inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline"
-        >
-          <Mail size={14} />
-          suporte@kiraclinic.com.br
-        </a>
-      </div>
-
-      {/* WhatsApp */}
-      <div className="rounded-xl border border-border bg-card p-6 space-y-4">
-        <div className="flex items-center gap-2">
-          <MessageCircle size={16} className="text-primary" />
-          <h2 className="font-semibold text-sm">Suporte via WhatsApp</h2>
-        </div>
-        <p className="text-sm text-muted-foreground">
-          Prefere falar por WhatsApp? Manda uma mensagem pra gente — nosso atendimento é das 9h às 0h.
-        </p>
-        <a
-          href="https://wa.me/5521983612233"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline"
-        >
-          <MessageCircle size={14} />
-          (21) 98361-2233
-        </a>
-      </div>
-
-      {/* Sugestões */}
-      <div className="rounded-xl border border-border bg-card p-6 space-y-4">
-        <div className="flex items-center gap-2">
-          <MessageSquarePlus size={16} className="text-primary" />
-          <h2 className="font-semibold text-sm">Sugestões e melhorias</h2>
-        </div>
-        <p className="text-sm text-muted-foreground">
-          Tem uma ideia que tornaria o Kira melhor para você? Conta pra gente — toda sugestão é lida e considerada pela equipe.
-        </p>
-
-        {sent ? (
-          <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
-            <CheckCircle2 size={16} />
-            Obrigado! Sua sugestão foi enviada com sucesso.
+        <TabsContent value="contato" className="space-y-6">
+          {/* E-mail */}
+          <div className="rounded-xl border border-border bg-card p-6 space-y-4">
+            <div className="flex items-center gap-2">
+              <Mail size={16} className="text-primary" />
+              <h2 className="font-semibold text-sm">Fale conosco</h2>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Tem alguma dúvida, problema ou precisa de ajuda? Entre em contato diretamente pelo e-mail abaixo — respondemos em até 24 horas úteis.
+            </p>
+            <a
+              href="mailto:suporte@kiraclinic.com.br"
+              className="inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline"
+            >
+              <Mail size={14} />
+              suporte@kiraclinic.com.br
+            </a>
           </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-3">
-            <Textarea
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder="Ex: Seria ótimo ter um relatório mensal automático por e-mail..."
-              className="min-h-[120px] text-sm resize-none"
-              disabled={loading}
-            />
-            <Button type="submit" size="sm" disabled={loading || !content.trim()}>
-              {loading ? <Loader2 size={14} className="animate-spin mr-2" /> : null}
-              Enviar sugestão
-            </Button>
-          </form>
+
+          {/* WhatsApp */}
+          <div className="rounded-xl border border-border bg-card p-6 space-y-4">
+            <div className="flex items-center gap-2">
+              <MessageCircle size={16} className="text-primary" />
+              <h2 className="font-semibold text-sm">Suporte via WhatsApp</h2>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Prefere falar por WhatsApp? Manda uma mensagem pra gente — nosso atendimento é das 9h às 0h.
+            </p>
+            <a
+              href="https://wa.me/5521983612233"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline"
+            >
+              <MessageCircle size={14} />
+              (21) 98361-2233
+            </a>
+          </div>
+        </TabsContent>
+
+        {guidesEnabled && (
+          <TabsContent value="guias">
+            <div className="rounded-xl border border-border bg-card p-6 space-y-4">
+              <div className="flex items-center gap-2">
+                <BookOpen size={16} className="text-primary" />
+                <h2 className="font-semibold text-sm">Guias</h2>
+              </div>
+              <GuidesGrid />
+            </div>
+          </TabsContent>
         )}
-      </div>
+
+        <TabsContent value="sugestoes">
+          <div className="rounded-xl border border-border bg-card p-6 space-y-4">
+            <div className="flex items-center gap-2">
+              <MessageSquarePlus size={16} className="text-primary" />
+              <h2 className="font-semibold text-sm">Sugestões e melhorias</h2>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Tem uma ideia que tornaria o Kira melhor para você? Conta pra gente — toda sugestão é lida e considerada pela equipe.
+            </p>
+
+            {sent ? (
+              <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
+                <CheckCircle2 size={16} />
+                Obrigado! Sua sugestão foi enviada com sucesso.
+              </div>
+            ) : (
+              <form onSubmit={handleSubmit} className="space-y-3">
+                <Textarea
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  placeholder="Ex: Seria ótimo ter um relatório mensal automático por e-mail..."
+                  className="min-h-[120px] text-sm resize-none"
+                  disabled={loading}
+                />
+                <Button type="submit" size="sm" disabled={loading || !content.trim()}>
+                  {loading ? <Loader2 size={14} className="animate-spin mr-2" /> : null}
+                  Enviar sugestão
+                </Button>
+              </form>
+            )}
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }

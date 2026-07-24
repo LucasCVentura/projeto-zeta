@@ -35,6 +35,12 @@ export const FEATURE_REGISTRY = [
     description: "Substitui o suporte via WhatsApp/e-mail por uma conversa contínua dentro do painel, em Ajuda — com histórico e envio de imagens.",
     changelogDraft: "Chamados de suporte: agora dá pra falar com a gente direto pelo painel, em Ajuda — manda print de qualquer problema e a conversa fica salva, sem depender de WhatsApp ou e-mail",
   },
+  {
+    key: "guides",
+    label: "Guias",
+    description: "Aba \"Guias\" em Ajuda, com passo a passo de cada funcionalidade (screenshots reais do app), organizada em abas junto de Contato e Sugestões.",
+    changelogDraft: "Guias: nova aba em Ajuda com o passo a passo de cada funcionalidade, com telas reais do Kira",
+  },
 ] as const
 
 export type FeatureKey = (typeof FEATURE_REGISTRY)[number]["key"]
