@@ -1,15 +1,18 @@
 import { NextRequest, NextResponse } from "next/server"
-import { db } from "@/db"
-import { couponRecipients, coupons, clients, procedures, organizations } from "@/db/schema"
-import { eq, and, or, isNotNull } from "drizzle-orm"
-import { sendCouponWhatsApp } from "@/actions/whatsapp"
+import { dispatchPendingCoupons } from "@/lib/coupon-dispatch"
 
-// O plano Vercel em uso só permite crons diários (não dá pra rodar de poucos em
-// poucos minutos), então o "enfileirado com limite" vira: 1x/dia, num teto por
-// execução — ainda protege contra disparar milhares de mensagens síncronas de
-// uma vez só. O "envio" É a alocação do cupom (ver coupon_recipients), então
-// isso não muda quem recebeu o quê, só o ritmo de disparo real no WhatsApp.
+// Rede de segurança, não o caminho principal — o envio de verdade acontece na
+// hora, via after() em createCouponAction (ver src/actions/coupons.ts). Esse
+// cron só varre o que sobrou: campanhas maiores que o limite de disparo
+// imediato, ou envios que falharam por algum erro transiente.
+//
+// Roda 1x/dia porque é o máximo que o plano Vercel em uso permite — não dá
+// pra rodar de poucos em poucos minutos sem upgrade.
 const BATCH_SIZE = 200
+
+// Com o delay de 500ms entre envios (ver coupon-dispatch.ts), um lote cheio de
+// 200 passa fácil do timeout default de function — sobe pro teto do plano Hobby.
+export const maxDuration = 60
 
 export async function GET(req: NextRequest) {
   const authHeader = req.headers.get("authorization")
@@ -17,67 +20,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://kiraclinic.com.br"
+  const result = await dispatchPendingCoupons(BATCH_SIZE)
 
-  const rows = await db
-    .select({
-      recipientId: couponRecipients.id,
-      token: couponRecipients.token,
-      clientName: clients.name,
-      clientPhone: clients.whatsapp,
-      clientPhoneFallback: clients.phone,
-      kind: coupons.kind,
-      discountPct: coupons.discountPct,
-      expiresAt: coupons.expiresAt,
-      procedureName: procedures.name,
-      orgName: organizations.name,
-    })
-    .from(couponRecipients)
-    .innerJoin(coupons, eq(coupons.id, couponRecipients.couponId))
-    .innerJoin(procedures, eq(procedures.id, coupons.procedureId))
-    .innerJoin(clients, eq(clients.id, couponRecipients.clientId))
-    .innerJoin(organizations, eq(organizations.id, couponRecipients.organizationId))
-    .where(
-      and(
-        eq(couponRecipients.status, "pending"),
-        or(isNotNull(clients.whatsapp), isNotNull(clients.phone))
-      )
-    )
-    .limit(BATCH_SIZE)
-
-  let sent = 0
-  let failed = 0
-
-  if (process.env.WHATSAPP_ENABLED === "true") {
-    for (const row of rows) {
-      const clientPhone = row.clientPhone ?? row.clientPhoneFallback
-      if (!clientPhone) continue
-      try {
-        await sendCouponWhatsApp({
-          clientPhone,
-          clientName: row.clientName,
-          orgName: row.orgName,
-          procedure: row.procedureName,
-          kind: row.kind,
-          discountPct: row.discountPct,
-          expiresAt: row.expiresAt,
-          imageUrl: `${baseUrl}/api/coupons/recipient/${row.recipientId}/image`,
-        })
-        await db
-          .update(couponRecipients)
-          .set({ status: "sent", sentAt: new Date() })
-          .where(eq(couponRecipients.id, row.recipientId))
-        sent++
-      } catch (err) {
-        console.error("[Cron][SendCoupons] erro ao enviar cupom", { recipientId: row.recipientId, error: err })
-        await db
-          .update(couponRecipients)
-          .set({ status: "failed" })
-          .where(eq(couponRecipients.id, row.recipientId))
-        failed++
-      }
-    }
-  }
-
-  return NextResponse.json({ ok: true, sent, failed, batch: rows.length })
+  return NextResponse.json({ ok: true, ...result })
 }

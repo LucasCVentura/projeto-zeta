@@ -14,7 +14,14 @@ import { requireSession } from "@/lib/session"
 import { can } from "@/lib/permissions"
 import { isFeatureEnabled } from "@/lib/feature-flags"
 import { revalidatePath } from "next/cache"
+import { after } from "next/server"
+import { dispatchPendingCoupons } from "@/lib/coupon-dispatch"
 import type { ActionResult } from "./auth"
+
+// Teto de envio imediato (via after(), logo após a criação) — campanhas
+// maiores que isso mandam os primeiros na hora e o resto fica pending, pego
+// pelo sweep diário do cron. Ver maxDuration em app/(dashboard)/cupons/page.tsx.
+const IMMEDIATE_DISPATCH_LIMIT = 30
 
 // ── Flag de rollout ────────────────────────────────────────────────────────────
 // Feature liberada org por org antes de virar padrão (ver /admin → Novas Features).
@@ -90,6 +97,10 @@ export async function createCouponAction(data: {
     .onConflictDoNothing({ target: [couponRecipients.couponId, couponRecipients.clientId] })
     .returning({ id: couponRecipients.id })
 
+  // Dispara o envio de verdade só depois da resposta ir pro usuário — não
+  // trava a tela esperando N mensagens saírem uma a uma.
+  after(() => dispatchPendingCoupons(IMMEDIATE_DISPATCH_LIMIT))
+
   revalidatePath("/cupons")
   return { success: true, queued: inserted.length }
 }
@@ -109,7 +120,8 @@ export async function getCouponsAction() {
       expiresAt: coupons.expiresAt,
       createdAt: coupons.createdAt,
       procedureName: procedures.name,
-      pending: sql<number>`count(*) filter (where ${couponRecipients.status} in ('pending','sent'))`,
+      queued: sql<number>`count(*) filter (where ${couponRecipients.status} = 'pending')`,
+      sent: sql<number>`count(*) filter (where ${couponRecipients.status} = 'sent')`,
       redeemed: sql<number>`count(*) filter (where ${couponRecipients.status} = 'redeemed')`,
       failed: sql<number>`count(*) filter (where ${couponRecipients.status} = 'failed')`,
       total: sql<number>`count(${couponRecipients.id})`,

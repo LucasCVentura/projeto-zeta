@@ -7,9 +7,12 @@ import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { createCouponAction, cancelCouponAction } from "@/actions/coupons"
 import { ClientMultiselect } from "./client-multiselect"
-import { Ticket, Gift, Plus, X, Loader2, Send, QrCode } from "lucide-react"
+import { Ticket, Gift, Plus, X, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { getGuide } from "@/lib/guides"
 import type { CouponKind } from "@/db/schema"
+
+const couponsGuide = getGuide("coupons")!
 
 type Procedure = { id: string; name: string; price: number }
 type ClientOption = { id: string; name: string }
@@ -20,7 +23,8 @@ type CouponRow = {
   quantity: number
   expiresAt: string
   procedureName: string
-  pending: number
+  queued: number
+  sent: number
   redeemed: number
   failed: number
   total: number
@@ -113,7 +117,7 @@ export function CouponsView({
   async function handleCancel(couponId: string) {
     const result = await cancelCouponAction(couponId)
     if (result.success) {
-      setCoupons((prev) => prev.map((c) => (c.id === couponId ? { ...c, pending: 0 } : c)))
+      setCoupons((prev) => prev.map((c) => (c.id === couponId ? { ...c, queued: 0, sent: 0, failed: 0 } : c)))
     }
   }
 
@@ -138,31 +142,17 @@ export function CouponsView({
           <p className="text-sm font-semibold text-primary">Como funcionam os cupons e vale-presentes?</p>
 
           <div className="grid gap-3 sm:grid-cols-3">
-            <div className="flex gap-3">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary font-bold text-sm">1</div>
-              <div>
-                <p className="text-sm font-medium">Crie aqui</p>
-                <p className="text-xs text-muted-foreground">Escolha cupom de desconto ou vale-presente, o procedimento, validade e pra quem enviar.</p>
+            {couponsGuide.steps.map((step, i) => (
+              <div key={i} className="flex gap-3">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary font-bold text-sm">
+                  {i + 1}
+                </div>
+                <div>
+                  <p className="text-sm font-medium">{step.title}</p>
+                  <p className="text-xs text-muted-foreground">{step.description}</p>
+                </div>
               </div>
-            </div>
-            <div className="flex gap-3">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                <Send size={15} className="text-primary" />
-              </div>
-              <div>
-                <p className="text-sm font-medium">Cliente recebe no WhatsApp</p>
-                <p className="text-xs text-muted-foreground">O envio já sai automático, com o QR code pronto pra usar.</p>
-              </div>
-            </div>
-            <div className="flex gap-3">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                <QrCode size={15} className="text-primary" />
-              </div>
-              <div>
-                <p className="text-sm font-medium">Resgata na finalização</p>
-                <p className="text-xs text-muted-foreground">Ao concluir o atendimento, clique em &quot;Escanear cupom ou vale-presente&quot; e aponte a câmera pro QR code.</p>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
       )}
@@ -312,7 +302,7 @@ export function CouponsView({
                   {c.kind === "gift" ? "Vale-presente" : `${c.discountPct}% off`} · válido até {formatDate(c.expiresAt)}
                 </p>
               </div>
-              {c.pending > 0 && (
+              {c.queued + c.sent > 0 && (
                 <button
                   onClick={() => handleCancel(c.id)}
                   className="text-xs text-destructive hover:underline underline-offset-4 shrink-0"
@@ -321,9 +311,9 @@ export function CouponsView({
                 </button>
               )}
             </div>
-            <div className="flex gap-2">
-              <Badge variant="outline">{c.total} enviado{c.total !== 1 ? "s" : ""}</Badge>
-              {c.pending > 0 && <Badge variant="secondary">{c.pending} na fila</Badge>}
+            <div className="flex gap-2 flex-wrap">
+              {c.queued > 0 && <Badge variant="secondary">{c.queued} na fila</Badge>}
+              {c.sent > 0 && <Badge variant="outline">{c.sent} enviado{c.sent !== 1 ? "s" : ""}</Badge>}
               {c.redeemed > 0 && <Badge variant="default">{c.redeemed} resgatado{c.redeemed !== 1 ? "s" : ""}</Badge>}
               {c.failed > 0 && <Badge variant="destructive">{c.failed} falhou</Badge>}
             </div>

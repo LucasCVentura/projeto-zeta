@@ -76,7 +76,7 @@ export async function GET(
           </div>
           {isGift && (
             <div style={{ fontSize: 20, color: textColor, opacity: 0.7 }}>
-              Válido até {formatDate(row.expiresAt)}
+              {`Válido até ${formatDate(row.expiresAt)}`}
             </div>
           )}
         </div>

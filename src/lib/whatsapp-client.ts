@@ -107,9 +107,12 @@ export async function sendWhatsAppTemplate(
 
 // Template com cabeçalho de mídia (imagem) — usado pra cupons/vale-presentes.
 // O template precisa ter sido criado no painel do Gupshup com header do tipo
-// IMAGE; pelo formato documentado do Gupshup, a URL da mídia entra como o
-// primeiro item de "params" (preenche o header), seguida dos parâmetros do
-// corpo do template, na ordem em que aparecem no texto.
+// IMAGE. A imagem do header NÃO entra em "template.params" (isso é só pros
+// placeholders do corpo, {{1}}..{{N}}) — vai num campo "message" separado,
+// conforme a doc oficial: https://docs.gupshup.io/reference/sending-image-template
+// Botar a URL como 1º item de params (como fizemos antes) faz a Gupshup contar
+// um parâmetro a mais do que o template espera e falhar com "localizable_params
+// does not match".
 export async function sendWhatsAppTemplateWithMedia(
   to: string,
   templateId: string,
@@ -127,7 +130,8 @@ export async function sendWhatsAppTemplateWithMedia(
     source: process.env.GUPSHUP_SENDER!,
     destination,
     "src.name": process.env.GUPSHUP_APP_NAME!,
-    template: JSON.stringify({ id: templateId, params: [imageUrl, ...bodyParams] }),
+    template: JSON.stringify({ id: templateId, params: bodyParams }),
+    message: JSON.stringify({ type: "image", image: { link: imageUrl } }),
   })
 
   const res = await fetch(`${BASE_URL}/template/msg`, {

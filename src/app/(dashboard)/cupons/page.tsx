@@ -4,6 +4,11 @@ import { getClientsListAction } from "@/actions/clients"
 import { getCouponsAction, isCouponsEnabledAction } from "@/actions/coupons"
 import { CouponsView } from "@/components/coupons/coupons-view"
 
+// createCouponAction dispara o envio real via after() logo após criar o cupom
+// (ver src/actions/coupons.ts) — precisa de mais que o timeout default pra dar
+// tempo de mandar várias mensagens de WhatsApp em sequência.
+export const maxDuration = 45
+
 export default async function CuponsPage() {
   // Feature em rollout gradual, por organização — ver /admin → Novas Features.
   if (!(await isCouponsEnabledAction())) notFound()
