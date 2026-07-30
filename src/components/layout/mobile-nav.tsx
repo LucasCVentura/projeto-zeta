@@ -75,9 +75,9 @@ const allNavItems = [
   },
 ]
 
-type NavProps = { role: OrgRole; changelogHasNew: boolean; changelogEntries: ChangelogEntry[]; profileIncomplete?: boolean; couponsEnabled?: boolean; navRedesignEnabled?: boolean }
+type NavProps = { role: OrgRole; changelogHasNew: boolean; changelogEntries: ChangelogEntry[]; profileIncomplete?: boolean; couponsEnabled?: boolean }
 
-export function MobileNav({ role, changelogHasNew, changelogEntries, profileIncomplete, couponsEnabled, navRedesignEnabled }: NavProps) {
+export function MobileNav({ role, changelogHasNew, changelogEntries, profileIncomplete, couponsEnabled }: NavProps) {
   const pathname = usePathname()
   const [menuOpen, setMenuOpen] = useState(false)
   const { data: session } = useSession()
@@ -87,13 +87,9 @@ export function MobileNav({ role, changelogHasNew, changelogEntries, profileInco
     item.requiredAction === null || can(role, item.requiredAction)
   )
 
-  const name = session?.user?.name ?? "Minha conta"
   const image = session?.user?.image
-  const initials = name.split(" ").slice(0, 2).map((n: string) => n[0]).join("").toUpperCase()
 
-  const dockHrefs = navRedesignEnabled
-    ? ["/perfil", "/configuracoes/procedimentos", "/configuracoes/pacotes", "/configuracoes/equipe", "/cupons", "/ajuda", "/configuracoes"]
-    : ["/configuracoes", "/perfil"]
+  const dockHrefs = ["/perfil", "/configuracoes/procedimentos", "/configuracoes/pacotes", "/configuracoes/equipe", "/cupons", "/ajuda", "/configuracoes"]
   const menuActive = dockHrefs.some((href) => pathname === href || pathname.startsWith(href + "/"))
 
   useEffect(() => {
@@ -118,9 +114,8 @@ export function MobileNav({ role, changelogHasNew, changelogEntries, profileInco
 
   return (
     <>
-      {navRedesignEnabled ? (
-        /* Dock — sobe de trás da barra ao abrir "Mais", desce e some ao fechar */
-        <div
+      {/* Dock — sobe de trás da barra ao abrir "Mais", desce e some ao fechar */}
+      <div
           ref={sheetRef}
           className={cn(
             "fixed bottom-16 left-0 right-0 z-40 origin-bottom border-t border-border bg-background shadow-xl transition-all duration-200 lg:hidden",
@@ -238,129 +233,6 @@ export function MobileNav({ role, changelogHasNew, changelogEntries, profileInco
           </div>
           </div>
         </div>
-      ) : (
-        <>
-          {/* Bottom sheet overlay */}
-          {menuOpen && (
-            <div className="fixed inset-0 z-40 bg-black/40 lg:hidden" onClick={() => setMenuOpen(false)} />
-          )}
-
-          {/* Bottom sheet */}
-          <div
-            ref={sheetRef}
-            className={cn(
-              "fixed bottom-16 left-0 right-0 z-50 rounded-t-2xl border-t border-border bg-background shadow-xl transition-transform duration-200 lg:hidden",
-              menuOpen ? "translate-y-0" : "translate-y-full pointer-events-none"
-            )}
-          >
-            {/* Handle */}
-            <div className="flex justify-center pt-3 pb-1">
-              <div className="h-1 w-10 rounded-full bg-border" />
-            </div>
-
-            {/* User info */}
-            <div className="flex items-center gap-3 px-5 py-4 border-b border-border">
-              <div className="relative shrink-0">
-                <div className="relative flex h-10 w-10 items-center justify-center rounded-full bg-primary/15 text-sm font-semibold text-primary overflow-hidden">
-                  {image ? (
-                    <Image src={mediaUrl(image)} alt={name} fill className="object-cover" sizes="40px" unoptimized />
-                  ) : initials}
-                </div>
-                {profileIncomplete && (
-                  <span className="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5">
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
-                    <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-primary ring-1 ring-background" />
-                  </span>
-                )}
-              </div>
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium">{name}</p>
-                <p className="truncate text-xs text-muted-foreground">{session?.user?.email ?? "Minha conta"}</p>
-              </div>
-            </div>
-
-            {/* Menu items */}
-            <div className="p-3 space-y-1">
-              <Link
-                href="/perfil"
-                className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm hover:bg-accent transition-colors"
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
-                  <circle cx="12" cy="8" r="4" /><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
-                </svg>
-                Ver perfil
-                {profileIncomplete && (
-                  <span className="ml-auto flex h-1.5 w-1.5 rounded-full bg-primary" />
-                )}
-              </Link>
-
-              <Link
-                href="/ajuda"
-                className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm hover:bg-accent transition-colors"
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
-                  <circle cx="12" cy="12" r="9" />
-                  <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
-                  <circle cx="12" cy="17" r="0.5" fill="currentColor" />
-                </svg>
-                Ajuda
-              </Link>
-
-              {can(role, "financial:write") && couponsEnabled && (
-                <Link
-                  href="/cupons"
-                  className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm hover:bg-accent transition-colors"
-                >
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
-                    <path d="M2 9a3 3 0 1 0 0 6" />
-                    <path d="M20 9a3 3 0 1 1 0 6" />
-                    <rect x="4" y="6" width="16" height="12" rx="2" />
-                    <line x1="12" y1="6" x2="12" y2="18" strokeDasharray="2 2" />
-                  </svg>
-                  Cupons e vale-presentes
-                </Link>
-              )}
-
-              <Link
-                href="/configuracoes"
-                className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm hover:bg-accent transition-colors"
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
-                  <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
-                  <circle cx="12" cy="12" r="3" />
-                </svg>
-                Configurações
-              </Link>
-
-              <ThemeMenu triggerClassName="rounded-xl px-4 py-3 font-normal" />
-
-              <WhatsNewModal
-                hasNew={changelogHasNew}
-                entries={changelogEntries}
-                onOpen={() => setMenuOpen(false)}
-                triggerClassName="rounded-xl px-4 py-3 font-normal"
-              />
-
-              <div className="border-t border-border my-1" />
-
-              <button
-                onClick={handleLogout}
-                className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm text-destructive hover:bg-destructive/10 transition-colors"
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
-                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                  <polyline points="16 17 21 12 16 7" />
-                  <line x1="21" y1="12" x2="9" y2="12" />
-                </svg>
-                Sair
-              </button>
-            </div>
-
-            {/* Safe area spacing */}
-            <div className="h-2" />
-          </div>
-        </>
-      )}
 
       {/* Nav bar */}
       <nav className="fixed bottom-0 left-0 right-0 z-50 flex h-16 items-center justify-around border-t border-border bg-background px-2 lg:hidden">
@@ -393,7 +265,7 @@ export function MobileNav({ role, changelogHasNew, changelogEntries, profileInco
           <span className="relative">
             <svg
               width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75"
-              className={cn("transition-transform duration-200", navRedesignEnabled && menuOpen && "rotate-90")}
+              className={cn("transition-transform duration-200", menuOpen && "rotate-90")}
             >
               <circle cx="12" cy="12" r="1" /><circle cx="19" cy="12" r="1" /><circle cx="5" cy="12" r="1" />
             </svg>

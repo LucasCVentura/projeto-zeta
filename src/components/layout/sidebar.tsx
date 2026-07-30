@@ -79,7 +79,6 @@ const allNavItems = [
     label: "Procedimentos",
     href: "/configuracoes/procedimentos",
     requiredAction: "org:update" as const,
-    requiresNavRedesign: true,
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
         <path d="M11 2v6a2 2 0 0 0 .59 1.41L20 18a2 2 0 0 1-1.41 3.42H5.41A2 2 0 0 1 4 18l8.41-8.59A2 2 0 0 0 13 8V2" />
@@ -92,7 +91,6 @@ const allNavItems = [
     label: "Pacotes",
     href: "/configuracoes/pacotes",
     requiredAction: "org:update" as const,
-    requiresNavRedesign: true,
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
         <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8Z" />
@@ -105,7 +103,6 @@ const allNavItems = [
     href: "/configuracoes/equipe",
     requiredAction: null,
     ownerOnly: true,
-    requiresNavRedesign: true,
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
         <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
@@ -155,15 +152,14 @@ const allNavItems = [
   },
 ]
 
-export function Sidebar({ role, changelogHasNew, changelogEntries, profileIncomplete, couponsEnabled, navRedesignEnabled }: { role: OrgRole; changelogHasNew: boolean; changelogEntries: ChangelogEntry[]; profileIncomplete?: boolean; couponsEnabled?: boolean; navRedesignEnabled?: boolean }) {
+export function Sidebar({ role, changelogHasNew, changelogEntries, profileIncomplete, couponsEnabled }: { role: OrgRole; changelogHasNew: boolean; changelogEntries: ChangelogEntry[]; profileIncomplete?: boolean; couponsEnabled?: boolean }) {
   const pathname = usePathname()
   const { collapsed, toggle: toggleSidebar } = useSidebar()
 
   const navItems = allNavItems.filter((item) =>
     (item.requiredAction === null || can(role, item.requiredAction)) &&
     (!("requiresCoupons" in item) || couponsEnabled) &&
-    (!("ownerOnly" in item) || role === "owner") &&
-    (!("requiresNavRedesign" in item) || navRedesignEnabled)
+    (!("ownerOnly" in item) || role === "owner")
   )
 
   return (

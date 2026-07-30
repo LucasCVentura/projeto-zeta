@@ -24,12 +24,6 @@ export const FEATURE_REGISTRY = [
     changelogDraft: "Cupons e vale-presentes: crie promoções com desconto ou presenteie uma cliente com um procedimento grátis — envia por WhatsApp com QR code, e o resgate já aplica tudo certinho na hora de finalizar o atendimento",
   },
   {
-    key: "nav-redesign",
-    label: "Menu reorganizado",
-    description: "Sidebar promove Procedimentos, Pacotes e Equipe pro menu principal. No mobile, o botão \"Mais\" abre um painel em grade que sobe de trás da barra, no lugar da tela cheia antiga.",
-    changelogDraft: "Menu reorganizado: Procedimentos, Pacotes e Equipe agora têm atalho direto no menu — e no celular, o botão \"Mais\" abre um painel rápido em vez de tomar a tela toda",
-  },
-  {
     key: "support-tickets",
     label: "Chamados de suporte",
     description: "Substitui o suporte via WhatsApp/e-mail por uma conversa contínua dentro do painel, em Ajuda — com histórico e envio de imagens.",
