@@ -1,16 +1,17 @@
 "use client"
 
 import Link from "next/link"
-import { useState } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { registerAction, loginAction } from "@/actions/auth"
 import { GoogleButton } from "@/components/auth/google-button"
+import { REFERRAL_COOKIE, MANUAL_NF_REF, DEFAULT_TRIAL_DAYS, MANUAL_NF_TRIAL_DAYS } from "@/lib/referral"
 // FacebookButton fica pronto mas oculto até a verificação de empresa da Meta ser concluída
 // import { FacebookButton } from "@/components/auth/facebook-button"
 
@@ -52,11 +53,31 @@ const otherSegments = [
 
 // ── component ───────────────────────────────────────────────────────────────
 export default function RegisterPage() {
+  return (
+    <Suspense>
+      <RegisterForm />
+    </Suspense>
+  )
+}
+
+function RegisterForm() {
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showCustomSegment, setShowCustomSegment] = useState(false)
   const router = useRouter()
+  const searchParams = useSearchParams()
+
+  // O cadastro em si já lê o cookie kira_ref no servidor (registerAction/auth.ts)
+  // pra decidir o trial de verdade — isso aqui é só pra não prometer "7 dias"
+  // na tela pra quem chegou via /manual-nf com direito a 30.
+  const [isReferred, setIsReferred] = useState(searchParams.get("ref") === MANUAL_NF_REF)
+  useEffect(() => {
+    if (isReferred) return
+    const match = document.cookie.match(new RegExp(`(?:^|; )${REFERRAL_COOKIE}=([^;]*)`))
+    if (match && decodeURIComponent(match[1]) === MANUAL_NF_REF) setIsReferred(true)
+  }, [isReferred])
+  const trialDays = isReferred ? MANUAL_NF_TRIAL_DAYS : DEFAULT_TRIAL_DAYS
 
   const {
     register,
@@ -109,7 +130,7 @@ export default function RegisterPage() {
     <div className="space-y-6">
       <div className="space-y-1.5">
         <h2 className="font-heading text-2xl font-bold tracking-tight">Criar conta</h2>
-        <p className="text-muted-foreground text-sm">7 dias grátis, sem cartão de crédito.</p>
+        <p className="text-muted-foreground text-sm">{trialDays} dias grátis, sem cartão de crédito.</p>
       </div>
 
       <GoogleButton label="Criar conta com Google" />

@@ -2,11 +2,13 @@
 
 import { hash } from "bcryptjs"
 import { eq } from "drizzle-orm"
+import { cookies } from "next/headers"
 import { signIn } from "@/lib/auth"
 import { db } from "@/db"
 import { users, organizations, organizationMembers } from "@/db/schema"
 import { uniqueSlug } from "@/lib/slug"
 import { AuthError } from "next-auth"
+import { REFERRAL_COOKIE, trialEndsAtFor } from "@/lib/referral"
 
 export type ActionResult =
   | { success: true }
@@ -51,6 +53,7 @@ export async function registerAction(data: {
 
   const hashedPassword = await hash(data.password, 12)
   const userId = crypto.randomUUID()
+  const referral = (await cookies()).get(REFERRAL_COOKIE)?.value
 
   const orgName = data.clinicName?.trim() || data.name
   const slug = await uniqueSlug(orgName, async (s) => {
@@ -88,7 +91,7 @@ export async function registerAction(data: {
         ownerId: userId,
         instagram: data.instagram ? data.instagram.replace(/^@/, "") : null,
         subscriptionStatus: "trialing",
-        trialEndsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        trialEndsAt: trialEndsAtFor(referral),
       })
       .returning({ id: organizations.id })
 

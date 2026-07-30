@@ -4,9 +4,11 @@ import Google from "next-auth/providers/google"
 import Facebook from "next-auth/providers/facebook"
 import { eq } from "drizzle-orm"
 import { compare } from "bcryptjs"
+import { cookies } from "next/headers"
 import { db } from "@/db"
 import { users, organizations, organizationMembers } from "@/db/schema"
 import { uniqueSlug } from "@/lib/slug"
+import { REFERRAL_COOKIE, trialEndsAtFor } from "@/lib/referral"
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   session: {
@@ -77,6 +79,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         } else {
           const name = user.name ?? user.email.split("@")[0]
           const newUserId = crypto.randomUUID()
+          const referral = (await cookies()).get(REFERRAL_COOKIE)?.value
           const slug = await uniqueSlug(name, async (s) => {
             const [row] = await db
               .select({ id: organizations.id })
@@ -102,7 +105,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                 type: "individual",
                 ownerId: newUserId,
                 subscriptionStatus: "trialing",
-                trialEndsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+                trialEndsAt: trialEndsAtFor(referral),
               })
               .returning({ id: organizations.id })
 
