@@ -5,6 +5,7 @@ import { db } from "@/db"
 import { whatsappPendingConfirmations } from "@/db/schema"
 import { eq, sql } from "drizzle-orm"
 import { handleInboundMessage } from "@/lib/chat-bot"
+import { toWhatsAppDestination, onlyDigits } from "@/lib/phone"
 
 export async function POST(req: NextRequest) {
   try {
@@ -50,16 +51,14 @@ export async function POST(req: NextRequest) {
         await handleWhatsAppReplyByPhone(buttonTitle, payload.source)
       } else {
         // Botão do menu do chatbot (ex: Suporte, Comercial)
-        const digits = payload.source.replace(/\D/g, "")
-        const normalizedPhone = digits.startsWith("55") ? digits : `55${digits}`
+        const normalizedPhone = toWhatsAppDestination(payload.source) ?? onlyDigits(payload.source)
         const senderName = payload.sender?.name ?? null
         await handleInboundMessage(normalizedPhone, buttonTitle, senderName)
       }
     } else if (buttonTitle && isAppointmentButton) {
       await handleWhatsAppReplyByPhone(buttonTitle, payload.source)
     } else if (replyType === "text" && payload.source) {
-      const digits = payload.source.replace(/\D/g, "")
-      const normalizedPhone = digits.startsWith("55") ? digits : `55${digits}`
+      const normalizedPhone = toWhatsAppDestination(payload.source) ?? onlyDigits(payload.source)
       const messageText = payload.payload?.text ?? buttonTitle ?? ""
       const senderName = payload.sender?.name ?? null
 

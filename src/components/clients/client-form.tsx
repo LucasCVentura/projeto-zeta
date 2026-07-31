@@ -10,18 +10,13 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { cn } from "@/lib/utils"
 import { createClientAction } from "@/actions/clients"
+import { maskPhoneInput } from "@/lib/phone"
 
 function maskCPF(v: string) {
   return v.replace(/\D/g, "").slice(0, 11)
     .replace(/(\d{3})(\d)/, "$1.$2")
     .replace(/(\d{3})(\d)/, "$1.$2")
     .replace(/(\d{3})(\d{1,2})$/, "$1-$2")
-}
-
-function maskPhone(v: string) {
-  const d = v.replace(/\D/g, "").slice(0, 11)
-  if (d.length <= 10) return d.replace(/(\d{2})(\d{4})(\d{0,4})/, "($1) $2-$3").trim()
-  return d.replace(/(\d{2})(\d{5})(\d{0,4})/, "($1) $2-$3").trim()
 }
 
 const schema = z.object({
@@ -149,7 +144,7 @@ export function ClientForm({ defaultValues }: { defaultValues?: Partial<FormData
               placeholder="(11) 99999-9999"
               inputMode="numeric"
               {...register("whatsapp")}
-              onChange={(e) => setValue("whatsapp", maskPhone(e.target.value))}
+              onChange={(e) => setValue("whatsapp", maskPhoneInput(e.target.value))}
             />
           </div>
 

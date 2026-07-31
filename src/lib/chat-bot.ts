@@ -3,6 +3,7 @@ import { chatSessions, adminChatMessages, users, organizationMembers, organizati
 import { eq, and } from "drizzle-orm"
 import { sendWhatsApp, sendWhatsAppQuickReply } from "@/lib/whatsapp-client"
 import { sendAdminPush } from "@/actions/push"
+import { toLocalDigits, phoneMatchCandidates, onlyDigits } from "@/lib/phone"
 
 const SESSION_TTL_MS = 2 * 60 * 60 * 1000  // 2 horas
 
@@ -10,12 +11,9 @@ const BTN_SUPPORT    = "🛠 Suporte"
 const BTN_COMMERCIAL = "💬 Comercial"
 
 function formatPhoneForPush(phone: string): string {
-  const digits = phone.replace(/\D/g, "")
-  const local = digits.startsWith("55") ? digits.slice(2) : digits
-  if (local.length < 10) return phone
-  const ddd = local.slice(0, 2)
-  const rest = local.slice(2)
-  return `(${ddd}) ${rest}`
+  const local = toLocalDigits(phone)
+  if (!local) return phone
+  return `(${local.slice(0, 2)}) ${local.slice(2)}`
 }
 
 function isOutOfHours(): boolean {
@@ -76,9 +74,8 @@ async function sendOutOfHours(phone: string) {
 }
 
 async function findUserByPhone(phone: string) {
-  const digits = phone.replace(/\D/g, "")
-  const withDdi = digits.startsWith("55") ? digits : `55${digits}`
-  const withoutDdi = digits.startsWith("55") ? digits.slice(2) : digits
+  // O telefone do dono é salvo local no perfil, mas chega com DDI pelo webhook.
+  const candidates = new Set(phoneMatchCandidates(phone))
 
   const rows = await db
     .select({ userName: users.name, orgName: organizations.name, phone: users.phone, whatsapp: users.whatsapp })
@@ -87,11 +84,9 @@ async function findUserByPhone(phone: string) {
     .innerJoin(organizations, eq(organizations.id, organizationMembers.organizationId))
     .where(eq(organizationMembers.role, "owner"))
 
-  return rows.find(r => {
-    const p = (r.phone ?? "").replace(/\D/g, "")
-    const w = (r.whatsapp ?? "").replace(/\D/g, "")
-    return p === withDdi || p === withoutDdi || w === withDdi || w === withoutDdi
-  }) ?? null
+  return rows.find(r =>
+    candidates.has(onlyDigits(r.phone ?? "")) || candidates.has(onlyDigits(r.whatsapp ?? ""))
+  ) ?? null
 }
 
 async function handleAwaitingCpf(phone: string, text: string) {

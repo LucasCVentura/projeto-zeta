@@ -5,6 +5,7 @@ import { whatsappPendingConfirmations, appointments, clients } from "@/db/schema
 import { eq, inArray, sql } from "drizzle-orm"
 import { sendWhatsAppTemplate, sendWhatsAppTemplateWithMedia, sendWhatsApp } from "@/lib/whatsapp-client"
 import { notifyOrganizationProfessionals } from "@/actions/notifications"
+import { phoneMatchCandidates } from "@/lib/phone"
 
 const CONFIRMATION_TTL_DAYS = 3
 const TEMPLATE_BOOKING_SUMMARY_ID =
@@ -415,8 +416,11 @@ export async function handleWhatsAppButtonReply(messageId: string, buttonTitle: 
 // Fallback para clientes que enviam quick reply como texto sem context.id/gsId.
 // Nesse caso, tentamos resolver pelo telefone de origem e pelo pending mais recente ainda válido.
 export async function handleWhatsAppReplyByPhone(buttonTitle: string, fromPhone: string) {
-  const digits = (fromPhone || "").replace(/\D/g, "")
-  if (!digits) return
+  // O webhook manda sempre com DDI ("5511983854128"), mas o telefone da cliente
+  // é salvo local ("11983854128") — comparar cru nunca casava, e toda resposta
+  // que caía nesse fallback era descartada em silêncio.
+  const candidates = phoneMatchCandidates(fromPhone)
+  if (!candidates.length) return
 
   const rows = await db.execute<{
     messageId: string
@@ -426,7 +430,8 @@ export async function handleWhatsAppReplyByPhone(buttonTitle: string, fromPhone:
     JOIN appointments a ON a.id = p.appointment_id
     JOIN clients c ON c.id = a.client_id
     WHERE p.expires_at > now()
-      AND regexp_replace(coalesce(c.phone, ''), '[^0-9]', '', 'g') = ${digits}
+      AND regexp_replace(coalesce(c.phone, ''), '[^0-9]', '', 'g')
+          IN (${sql.join(candidates.map((c) => sql`${c}`), sql`, `)})
     ORDER BY p.created_at DESC
     LIMIT 1
   `)

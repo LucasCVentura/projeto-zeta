@@ -5,14 +5,9 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
+import { formatPhoneDisplay as formatPhone } from "@/lib/phone"
 import { Search, CalendarDays, User } from "lucide-react"
 
-function formatPhone(p: string): string {
-  const d = p.replace(/\D/g, "").replace(/^55/, "")
-  if (d.length === 11) return `(${d.slice(0,2)}) ${d.slice(2,7)}-${d.slice(7)}`
-  if (d.length === 10) return `(${d.slice(0,2)}) ${d.slice(2,6)}-${d.slice(6)}`
-  return p
-}
 import { getClientsListAction } from "@/actions/clients"
 
 type Client = {

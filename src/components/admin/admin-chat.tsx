@@ -18,6 +18,7 @@ import { Send, MessageSquare, Plus, ChevronLeft, Sparkles, Search, Phone, Archiv
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
+import { formatPhoneDisplay as formatPhone } from "@/lib/phone"
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 
@@ -54,12 +55,6 @@ function formatTime(date: Date | string) {
   return d.toLocaleDateString("pt-BR", { day: "numeric", month: "short" })
 }
 
-function formatPhone(phone: string) {
-  const d = phone.replace(/\D/g, "").replace(/^55/, "")
-  if (d.length === 11) return `(${d.slice(0,2)}) ${d.slice(2,7)}-${d.slice(7)}`
-  if (d.length === 10) return `(${d.slice(0,2)}) ${d.slice(2,6)}-${d.slice(6)}`
-  return phone
-}
 
 function QueueBadge({ queue }: { queue: string | null }) {
   if (!queue) return null

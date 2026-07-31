@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { cn } from "@/lib/utils"
+import { maskPhoneInput } from "@/lib/phone"
 
 type Professional = { id: string; name: string }
 type Procedure = { id: string; name: string; price: number }
@@ -24,12 +25,6 @@ type Step =
 
 function formatCurrency(cents: number) {
   return (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
-}
-
-function maskPhone(v: string) {
-  const d = v.replace(/\D/g, "").slice(0, 11)
-  if (d.length <= 10) return d.replace(/(\d{2})(\d{4})(\d{0,4})/, "($1) $2-$3").trim()
-  return d.replace(/(\d{2})(\d{5})(\d{0,4})/, "($1) $2-$3").trim()
 }
 
 function nextDates(count: number): string[] {
@@ -319,7 +314,7 @@ export function BookingFlow({
               <Input
                 id="clientPhone"
                 value={clientPhone}
-                onChange={(e) => setClientPhone(maskPhone(e.target.value))}
+                onChange={(e) => setClientPhone(maskPhoneInput(e.target.value))}
                 placeholder="(00) 00000-0000"
                 inputMode="numeric"
               />

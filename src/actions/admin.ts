@@ -13,6 +13,7 @@ import { revalidatePath } from "next/cache"
 import { nowBRT, todayBRT } from "@/lib/date"
 import { syncFeatureRegistry, getFeatureRegistryEntry } from "@/lib/feature-flags"
 import { requireAdmin, assertAdmin } from "@/lib/admin-guard"
+import { toWhatsAppDestination, onlyDigits } from "@/lib/phone"
 
 export async function getAdminMetricsAction() {
   await assertAdmin()
@@ -321,10 +322,11 @@ export async function setFeatureFlagForAllAction(key: string, enabled: boolean) 
 
 // ── Admin Chat ────────────────────────────────────────────────────────────────
 
-// Normaliza para "55XXXXXXXXXXX" — resolve divergência entre formato do webhook e digitação manual
+// Normaliza para "55XXXXXXXXXXX" — resolve divergência entre formato do webhook e digitação manual.
+// Precisa ser total (é chave de Set/Record pra agrupar conversa), por isso cai
+// nos dígitos crus quando o número não é interpretável.
 function normalizePhone(phone: string) {
-  const digits = phone.replace(/\D/g, "")
-  return digits.startsWith("55") ? digits : `55${digits}`
+  return toWhatsAppDestination(phone) ?? onlyDigits(phone)
 }
 
 // Total de mensagens não lidas — pra badge no menu, sem carregar o histórico inteiro
