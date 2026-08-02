@@ -1548,14 +1548,8 @@ export function AdminDashboard() {
 
       case "changelog": return <ChangelogManager />
 
-      case "chamados": {
-        // getAdminMetricsAction pode duplicar uma org se ela tiver mais de um
-        // membro com role "owner" (join com organization_members) — filtra aqui
-        // pra não listar a mesma clínica duas vezes no seletor de chamado.
-        const seenOrgIds = new Set<string>()
-        const uniqueOrgs = orgs.filter(o => (seenOrgIds.has(o.id) ? false : (seenOrgIds.add(o.id), true)))
-        return <AdminSupport orgs={uniqueOrgs.map(o => ({ id: o.id, name: o.name }))} />
-      }
+      case "chamados":
+        return <AdminSupport orgs={orgs.map(o => ({ id: o.id, name: o.name }))} />
 
       case "chat": return <AdminChat trialOutreachTemplateId={trialOutreachTemplateId || null} trialExpiredOutreachTemplateId={trialExpiredOutreachTemplateId || null} testimonialOutreachTemplateId={testimonialOutreachTemplateId || null} winbackOutreachTemplateId={winbackOutreachTemplateId || null} initialPhone={chatInitialPhone} onInitialPhoneConsumed={() => setChatInitialPhone(null)} />
 
@@ -1567,7 +1561,8 @@ export function AdminDashboard() {
             <div className="w-80 shrink-0 border-r border-border flex flex-col">
               <div className="px-4 py-3 border-b border-border shrink-0">
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Entrada · {inboundEmails.length} {unreadCount > 0 && <span className="text-primary">{unreadCount} não lidos</span>}
+                  Entrada · {inboundEmails.length}
+                  {unreadCount > 0 && <span className="text-primary"> · {unreadCount} não lidos</span>}
                 </p>
               </div>
               <div className="flex-1 overflow-y-auto divide-y divide-border">

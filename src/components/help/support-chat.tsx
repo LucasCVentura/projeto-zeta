@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef } from "react"
 import { getMySupportMessagesAction, sendSupportMessageAction } from "@/actions/support"
-import type { SupportThread, SupportMessage } from "@/db/schema"
+import type { OrgSupportMessage } from "@/actions/support"
+import type { SupportThread } from "@/db/schema"
 import { mediaUrl } from "@/lib/media-url"
 import { Send, MessagesSquare, ImagePlus, X, CheckCircle2, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -19,7 +20,7 @@ function formatTime(date: Date | string) {
 
 export function SupportChat() {
   const [thread, setThread] = useState<SupportThread | null>(null)
-  const [messages, setMessages] = useState<SupportMessage[]>([])
+  const [messages, setMessages] = useState<OrgSupportMessage[]>([])
   const [text, setText] = useState("")
   const [image, setImage] = useState<{ file: File; preview: string } | null>(null)
   const [sending, setSending] = useState(false)
@@ -28,15 +29,27 @@ export function SupportChat() {
   const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    getMySupportMessagesAction().then(({ thread, messages }) => { setThread(thread); setMessages(messages) })
+    // Só conta como lido com a aba à frente — deixar a página aberta esquecida
+    // não deve marcar "visto" pro suporte.
+    const isVisible = () => typeof document === "undefined" || document.visibilityState === "visible"
 
-    const interval = setInterval(async () => {
-      const { thread, messages } = await getMySupportMessagesAction()
+    async function refresh(markAsRead: boolean) {
+      const { thread, messages } = await getMySupportMessagesAction(markAsRead)
       setThread(thread)
       setMessages(messages)
-    }, 3000)
+    }
 
-    return () => clearInterval(interval)
+    refresh(isVisible())
+    const interval = setInterval(() => { refresh(isVisible()) }, 3000)
+
+    // Voltou pra aba: confirma a leitura na hora, sem esperar o próximo ciclo.
+    const onVisibility = () => { if (isVisible()) refresh(true) }
+    document.addEventListener("visibilitychange", onVisibility)
+
+    return () => {
+      clearInterval(interval)
+      document.removeEventListener("visibilitychange", onVisibility)
+    }
   }, [])
 
   useEffect(() => {
@@ -70,7 +83,8 @@ export function SupportChat() {
 
     setText("")
     setImage(null)
-    const updated = await getMySupportMessagesAction()
+    // Acabou de enviar: está olhando a tela, então confirma a leitura junto.
+    const updated = await getMySupportMessagesAction(true)
     setThread(updated.thread)
     setMessages(updated.messages)
     setSending(false)

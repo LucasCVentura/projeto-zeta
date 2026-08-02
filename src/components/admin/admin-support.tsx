@@ -10,7 +10,7 @@ import {
 } from "@/actions/admin"
 import type { SupportMessage } from "@/db/schema"
 import { mediaUrl } from "@/lib/media-url"
-import { Send, MessagesSquare, Search, ImagePlus, X, CheckCircle2, RotateCcw, Plus, ChevronLeft, Loader2 } from "lucide-react"
+import { Send, MessagesSquare, Search, ImagePlus, X, CheckCircle2, CheckCheck, RotateCcw, Plus, ChevronLeft, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
@@ -51,6 +51,13 @@ function ThreadView({ thread, onStatusChange }: { thread: Thread; onStatusChange
   const [error, setError] = useState<string | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+
+  // "Visto às HH:MM" só na última mensagem lida — nas anteriores fica só o ✓✓,
+  // senão vira repetição quando a clínica lê várias de uma vez.
+  const lastReadIndex = messages.reduce(
+    (acc, m, i) => (m.senderType === "admin" && m.readAt ? i : acc),
+    -1
+  )
 
   useEffect(() => {
     setMessages([])
@@ -133,6 +140,10 @@ function ThreadView({ thread, onStatusChange }: { thread: Thread; onStatusChange
         {messages.map((msg, i) => {
           const isOut = msg.senderType === "admin"
           const prevSame = i > 0 && messages[i - 1].senderType === msg.senderType
+          // Confirmação de leitura só existe deste lado — a clínica não vê que
+          // lemos as dela (o readAt nem sai da action do lado dela).
+          const wasRead = isOut && !!msg.readAt
+          const isLastRead = wasRead && i === lastReadIndex
           return (
             <div key={msg.id} className={cn("flex", isOut ? "justify-end" : "justify-start", prevSame ? "mt-0.5" : "mt-2")}>
               <div className={cn(
@@ -144,7 +155,18 @@ function ThreadView({ thread, onStatusChange }: { thread: Thread; onStatusChange
                   <img src={mediaUrl(msg.imageUrl)} alt="" className="rounded-lg max-w-full mb-1.5" />
                 )}
                 {msg.content && <p className="text-sm whitespace-pre-wrap leading-snug">{msg.content}</p>}
-                <p className="text-[10px] opacity-50 mt-1 text-right">{formatTime(msg.createdAt)}</p>
+                <p className="text-[10px] opacity-50 mt-1 text-right flex items-center justify-end gap-1">
+                  {formatTime(msg.createdAt)}
+                  {wasRead && (
+                    <span
+                      className="inline-flex items-center gap-0.5"
+                      title={`Lido em ${new Date(msg.readAt!).toLocaleString("pt-BR")}`}
+                    >
+                      <CheckCheck className="size-3" />
+                      {isLastRead && `Visto ${formatTime(msg.readAt!)}`}
+                    </span>
+                  )}
+                </p>
               </div>
             </div>
           )

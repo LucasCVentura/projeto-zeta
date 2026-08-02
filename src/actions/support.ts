@@ -36,28 +36,43 @@ export async function getMySupportUnreadAction(): Promise<boolean> {
   return thread?.unreadByOrg ?? false
 }
 
-export async function getMySupportMessagesAction(): Promise<{ thread: SupportThread; messages: SupportMessage[] }> {
+// A confirmação de leitura é intencionalmente assimétrica: o admin vê que a
+// clínica leu, a clínica não vê que o admin leu. Por isso `readAt` nunca sai
+// daqui — omitir só na UI não bastaria, o campo apareceria no payload da action
+// pra quem abrisse o devtools.
+export type OrgSupportMessage = Omit<SupportMessage, "readAt">
+
+export async function getMySupportMessagesAction(
+  // Só marca como lido quando a aba está de fato à frente. Sem isso, o polling
+  // do chat marcaria "visto" com a página esquecida aberta num canto, e o
+  // indicador do admin não valeria nada.
+  markAsRead = false
+): Promise<{ thread: SupportThread; messages: OrgSupportMessage[] }> {
   const { organizationId } = await requireSession()
   // A UI já bloqueia acesso à página com a flag desligada — isso aqui é defesa
   // contra chamar a action direto (fetch/devtools) ignorando o rollout gradual.
   if (!(await isFeatureEnabled(organizationId, "support-tickets"))) throw new Error("FEATURE_DISABLED")
   const thread = await getOrCreateThread(organizationId)
 
-  const messages = await db
+  const rows = await db
     .select()
     .from(supportMessages)
     .where(eq(supportMessages.threadId, thread.id))
     .orderBy(asc(supportMessages.createdAt))
 
-  await db
-    .update(supportMessages)
-    .set({ readAt: new Date() })
-    .where(and(eq(supportMessages.threadId, thread.id), eq(supportMessages.senderType, "admin"), isNull(supportMessages.readAt)))
+  if (markAsRead) {
+    await db
+      .update(supportMessages)
+      .set({ readAt: new Date() })
+      .where(and(eq(supportMessages.threadId, thread.id), eq(supportMessages.senderType, "admin"), isNull(supportMessages.readAt)))
 
-  if (thread.unreadByOrg) {
-    await db.update(supportThreads).set({ unreadByOrg: false }).where(eq(supportThreads.id, thread.id))
+    if (thread.unreadByOrg) {
+      await db.update(supportThreads).set({ unreadByOrg: false }).where(eq(supportThreads.id, thread.id))
+      thread.unreadByOrg = false
+    }
   }
 
+  const messages = rows.map(({ readAt: _readAt, ...rest }) => rest)
   return { thread, messages }
 }
 

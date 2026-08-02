@@ -8,19 +8,23 @@ import {
   trialReactivationTokens, featureFlags, featureFlagOrgs,
   supportThreads, supportMessages,
 } from "@/db/schema"
-import { eq, count, sum, max, gte, lt, sql, or, and, desc, asc, isNull, isNotNull } from "drizzle-orm"
+import { eq, count, sum, max, gt, gte, lt, lte, sql, or, and, desc, asc, isNull, isNotNull } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { nowBRT, todayBRT } from "@/lib/date"
 import { syncFeatureRegistry, getFeatureRegistryEntry } from "@/lib/feature-flags"
 import { requireAdmin, assertAdmin } from "@/lib/admin-guard"
 import { toWhatsAppDestination, onlyDigits } from "@/lib/phone"
+import { PLAN_PRICE_CENTS, netPerSubscriptionCents } from "@/lib/config"
 
 export async function getAdminMetricsAction() {
   await assertAdmin()
 
-  const nowBrt = nowBRT()
-  const startOfMonth = new Date(nowBrt.getFullYear(), nowBrt.getMonth(), 1).toISOString()
-  const startOfLastMonth = new Date(nowBrt.getFullYear(), nowBrt.getMonth() - 1, 1).toISOString()
+  // O corte de mês é feito no Postgres, em BRT. Montar a data no JS com
+  // `new Date(ano, mês, 1)` usava o fuso do servidor (UTC na Vercel), o que
+  // jogava quem se cadastrou entre 21h e meia-noite do último dia do mês pro
+  // mês seguinte.
+  const startOfMonthBRT = sql`(date_trunc('month', now() AT TIME ZONE 'America/Sao_Paulo') AT TIME ZONE 'America/Sao_Paulo')`
+  const startOfLastMonthBRT = sql`(${startOfMonthBRT} - interval '1 month')`
 
   // 2 queries no total — evita saturar o pool de conexões do Supabase pgBouncer
   const [countsResult, orgsResult] = await Promise.all([
@@ -31,8 +35,8 @@ export async function getAdminMetricsAction() {
         (SELECT COUNT(*)::int FROM organizations WHERE subscription_status IN ('trialing','incomplete'))      AS trialing_orgs,
         (SELECT COUNT(*)::int FROM organizations WHERE subscription_status = 'incomplete')                    AS incomplete_orgs,
         (SELECT COUNT(*)::int FROM organizations WHERE subscription_status = 'canceled')                      AS cancelled_orgs,
-        (SELECT COUNT(*)::int FROM organizations WHERE created_at >= ${startOfMonth}::timestamptz)            AS new_this_month,
-        (SELECT COUNT(*)::int FROM organizations WHERE created_at >= ${startOfLastMonth}::timestamptz)        AS new_last_month_total
+        (SELECT COUNT(*)::int FROM organizations WHERE created_at >= ${startOfMonthBRT})                      AS new_this_month,
+        (SELECT COUNT(*)::int FROM organizations WHERE created_at >= ${startOfLastMonthBRT})                  AS new_last_month_total
     `),
     db.execute(sql`
       WITH
@@ -41,13 +45,7 @@ export async function getAdminMetricsAction() {
         photo_counts    AS (SELECT organization_id, COUNT(*)::int AS cnt FROM client_photos GROUP BY organization_id),
         revenue_totals  AS (SELECT organization_id, COALESCE(SUM(amount), 0)::bigint AS total FROM transactions GROUP BY organization_id),
         team_counts     AS (SELECT organization_id, COUNT(*)::int AS cnt FROM organization_members WHERE active = true GROUP BY organization_id),
-        last_activity   AS (SELECT organization_id, MAX(date) AS last FROM appointments GROUP BY organization_id),
-        owners          AS (
-          SELECT om.organization_id, u.email AS owner_email, u.name AS owner_name
-          FROM organization_members om
-          JOIN users u ON u.id = om.user_id
-          WHERE om.role = 'owner'
-        )
+        last_activity   AS (SELECT organization_id, MAX(date) AS last FROM appointments GROUP BY organization_id)
       SELECT
         o.id, o.name, o.slug, o.subscription_status, o.trial_ends_at, o.created_at,
         COALESCE(c.cnt, 0)::int        AS clients,
@@ -56,8 +54,8 @@ export async function getAdminMetricsAction() {
         COALESCE(r.total, 0)::bigint   AS revenue,
         COALESCE(t.cnt, 0)::int        AS team,
         la.last                        AS last_activity_at,
-        own.owner_email,
-        own.owner_name
+        own.email                      AS owner_email,
+        own.name                       AS owner_name
       FROM organizations o
       LEFT JOIN client_counts  c   ON c.organization_id  = o.id
       LEFT JOIN appt_counts    a   ON a.organization_id  = o.id
@@ -65,7 +63,11 @@ export async function getAdminMetricsAction() {
       LEFT JOIN revenue_totals r   ON r.organization_id  = o.id
       LEFT JOIN team_counts    t   ON t.organization_id  = o.id
       LEFT JOIN last_activity  la  ON la.organization_id = o.id
-      LEFT JOIN owners         own ON own.organization_id = o.id
+      -- Dono vem por organizations.owner_id (FK 1:1). O join anterior passava
+      -- por organization_members WHERE role='owner', que duplica a linha da org
+      -- quando ela tem mais de um dono — e a aba Clínicas soma clientes,
+      -- atendimentos e receita por linha, dobrando os totais.
+      LEFT JOIN users          own ON own.id             = o.owner_id
       ORDER BY o.created_at DESC
     `),
   ])
@@ -76,8 +78,8 @@ export async function getAdminMetricsAction() {
   const totalOrgs   = Number(counts.total_orgs)
   const activeOrgs  = Number(counts.active_orgs)
   const newOrgsThisMonth = Number(counts.new_this_month)
-  const mrr    = activeOrgs * 4990
-  const netMrr = activeOrgs * (4990 - Math.round(4990 * 0.0399) - 39)
+  const mrr    = activeOrgs * PLAN_PRICE_CENTS
+  const netMrr = activeOrgs * netPerSubscriptionCents()
 
   return {
     totalOrgs,
@@ -110,16 +112,17 @@ export async function getAdminMetricsAction() {
 export async function getClinicDetailAction(orgId: string) {
   await assertAdmin()
 
-  const nowBrt = nowBRT()
-  const startOfMonth = new Date(nowBrt.getFullYear(), nowBrt.getMonth(), 1)
   const today = todayBRT()
+  // Derivado direto do "hoje" em BRT (YYYY-MM-DD), sem passar por Date — montar
+  // com `new Date(ano, mês, 1)` depende do fuso do servidor pra dar o dia certo.
+  const startOfMonth = `${today.slice(0, 7)}-01`
 
   const [
     orgRow, ownerRow, teamRows,
     clientsTotalRow, recentClients,
     apptStatusRows, upcomingRow, recentAppts,
     photosRow, anamnesisRow, proceduresRow, packagesRow,
-    revenueRow, monthRevenueRow, commissionRow, paymentRows,
+    revenueRow, monthRevenueRow, commissionRow, avgTicketRow, paymentRows,
     waTotalRow, waErrorRow,
   ] = await Promise.all([
     db.select({
@@ -142,7 +145,15 @@ export async function getClinicDetailAction(orgId: string) {
     db.select({ name: clients.name, createdAt: clients.createdAt })
       .from(clients).where(eq(clients.organizationId, orgId))
       .orderBy(desc(clients.createdAt)).limit(5),
-    db.select({ status: appointments.status, count: count() })
+    // Total e "já aconteceu" por status na mesma query. Usa FILTER em vez de
+    // agrupar pela expressão de data: repetir a expressão no GROUP BY geraria
+    // um segundo parâmetro ($3 em vez de $2) e o Postgres não a reconheceria
+    // como a mesma do SELECT.
+    db.select({
+      status: appointments.status,
+      count: count(),
+      pastCount: sql<number>`count(*) FILTER (WHERE ${appointments.date} <= ${today})::int`,
+    })
       .from(appointments).where(eq(appointments.organizationId, orgId))
       .groupBy(appointments.status),
     db.select({ count: count() }).from(appointments)
@@ -153,7 +164,10 @@ export async function getClinicDetailAction(orgId: string) {
     })
       .from(appointments)
       .innerJoin(clients, eq(clients.id, appointments.clientId))
-      .where(eq(appointments.organizationId, orgId))
+      // Só o que já aconteceu — sem o filtro de data, ordenar por data desc
+      // trazia os agendamentos futuros primeiro e o painel de "últimos
+      // atendimentos" mostrava datas que ainda nem chegaram.
+      .where(and(eq(appointments.organizationId, orgId), lte(appointments.date, today)))
       .orderBy(desc(appointments.date), desc(appointments.startTime)).limit(6),
     db.select({ count: count() }).from(clientPhotos).where(eq(clientPhotos.organizationId, orgId)),
     db.select({ count: count() }).from(anamnesisAnswers).where(eq(anamnesisAnswers.organizationId, orgId)),
@@ -161,12 +175,26 @@ export async function getClinicDetailAction(orgId: string) {
     db.select({ count: count() }).from(packages).where(eq(packages.organizationId, orgId)),
     db.select({ total: sum(transactions.amount) }).from(transactions).where(eq(transactions.organizationId, orgId)),
     db.select({ total: sum(transactions.amount) }).from(transactions)
-      .where(and(eq(transactions.organizationId, orgId), gte(transactions.date, startOfMonth.toISOString().slice(0, 10)))),
+      .where(and(eq(transactions.organizationId, orgId), gte(transactions.date, startOfMonth))),
     db.select({ total: sum(transactions.commissionAmount) }).from(transactions).where(eq(transactions.organizationId, orgId)),
+    // Ticket médio = valor médio de um atendimento pago. Só transações ligadas
+    // a um atendimento: venda de pacote entra sem atendimento, e as sessões do
+    // pacote entram com valor zero — dividir a receita total pelos concluídos
+    // misturava as duas bases e distorcia pra quem vende pacote.
+    db.select({ avg: sql<string | null>`avg(${transactions.amount})` })
+      .from(transactions)
+      .where(and(
+        eq(transactions.organizationId, orgId),
+        isNotNull(transactions.appointmentId),
+        gt(transactions.amount, 0),
+      )),
     db.select({ method: transactions.paymentMethod, total: sum(transactions.amount), count: count() })
       .from(transactions).where(eq(transactions.organizationId, orgId))
       .groupBy(transactions.paymentMethod),
-    db.execute(sql`SELECT count(*)::int as total FROM whatsapp_message_logs WHERE organization_id = ${orgId}`),
+    // Conta mensagens, não linhas de log: cada mensagem gera um 'enqueued' com
+    // o nosso UUID e depois eventos de status ('sent'/'delivered'/'read'/
+    // 'failed') com o id da Gupshup. Um count(*) cru dobrava o número na tela.
+    db.execute(sql`SELECT count(*)::int as total FROM whatsapp_message_logs WHERE organization_id = ${orgId} AND event_type = 'enqueued'`),
     db.execute(sql`SELECT count(*)::int as total FROM whatsapp_message_logs WHERE organization_id = ${orgId} AND error IS NOT NULL`),
   ])
 
@@ -176,10 +204,17 @@ export async function getClinicDetailAction(orgId: string) {
   const waErrRows = (Array.isArray(waErrorRow) ? waErrorRow : (waErrorRow as { rows?: unknown[] }).rows ?? []) as { total: number }[]
 
   const statusCounts: Record<string, number> = {}
-  for (const r of apptStatusRows) statusCounts[r.status] = r.count
+  const pastStatusCounts: Record<string, number> = {}
+  for (const r of apptStatusRows) {
+    statusCounts[r.status] = r.count
+    pastStatusCounts[r.status] = Number(r.pastCount)
+  }
   const totalAppts = Object.values(statusCounts).reduce((a, b) => a + b, 0)
-  const completed = statusCounts.completed ?? 0
-  const missed = statusCounts.missed ?? 0
+  // As taxas olham só o que já aconteceu — incluir agendamento futuro derrubava
+  // a taxa de conclusão conforme a clínica enchia a agenda pra frente.
+  const pastAppts = Object.values(pastStatusCounts).reduce((a, b) => a + b, 0)
+  const completed = pastStatusCounts.completed ?? 0
+  const missed = pastStatusCounts.missed ?? 0
   const totalRevenue = Number(revenueRow[0]?.total ?? 0)
 
   return {
@@ -191,8 +226,8 @@ export async function getClinicDetailAction(orgId: string) {
       total: totalAppts,
       byStatus: statusCounts,
       upcoming: upcomingRow[0].count,
-      completionRate: totalAppts > 0 ? Math.round((completed / totalAppts) * 100) : 0,
-      missRate: totalAppts > 0 ? Math.round((missed / totalAppts) * 100) : 0,
+      completionRate: pastAppts > 0 ? Math.round((completed / pastAppts) * 100) : 0,
+      missRate: pastAppts > 0 ? Math.round((missed / pastAppts) * 100) : 0,
       recent: recentAppts,
     },
     photos: photosRow[0].count,
@@ -203,7 +238,7 @@ export async function getClinicDetailAction(orgId: string) {
       totalRevenue,
       monthRevenue: Number(monthRevenueRow[0]?.total ?? 0),
       commissions: Number(commissionRow[0]?.total ?? 0),
-      avgTicket: completed > 0 ? Math.round(totalRevenue / completed) : 0,
+      avgTicket: Math.round(Number(avgTicketRow[0]?.avg ?? 0)),
       byPaymentMethod: paymentRows.map(r => ({ method: r.method, total: Number(r.total ?? 0), count: r.count })),
     },
     whatsapp: { sent: waRows[0]?.total ?? 0, errors: waErrRows[0]?.total ?? 0 },
