@@ -3,7 +3,8 @@
 import { useState, useEffect, useCallback } from "react"
 import { extendTrialAction, cancelOrgAction, setLifetimeAction, markInboundEmailReadAction, saveWhatsAppTemplateSettingAction, getInboundEmailsAction, getWhatsAppMessageLogsAction, getAdminMetricsAction, getWhatsAppTemplateSettingsAction, getClinicDetailAction, getAdminChatUnreadCountAction, getFeatureFlagsAction, getFeatureFlagOrgsAction, setFeatureFlagForOrgAction, setFeatureFlagForAllAction, getSupportUnreadCountAction } from "@/actions/admin"
 import { useSearchParams } from "next/navigation"
-import type { WhatsAppLogsParams, ClinicDetail } from "@/actions/admin"
+import type { WhatsAppLogsParams, ClinicDetail, ClinicCard } from "@/actions/admin"
+import { ClinicCardDetailModal } from "@/components/admin/clinic-card-detail-modal"
 import { getAllFeedbackAction, getLatestFeedbackSummaryAction } from "@/actions/feedback"
 import { AdminChat } from "@/components/admin/admin-chat"
 import { AdminSupport } from "@/components/admin/admin-support"
@@ -232,16 +233,17 @@ function ClinicDetailPanel({
   const now = new Date()
   const trialEnd = org.trialEndsAt ? new Date(org.trialEndsAt) : null
   const busy = actionLoading === org.id
+  const [openCard, setOpenCard] = useState<ClinicCard | null>(null)
 
-  const kpis = [
-    { label: "Clientes", value: clients.total, icon: Users },
-    { label: "Atendimentos", value: appointments.total, icon: CalendarDays },
-    { label: "Fotos", value: photos, icon: ImageIcon },
-    { label: "Receita", value: formatBRL(financial.totalRevenue), icon: DollarSign },
-    { label: "Equipe", value: team.total, icon: UserCircle },
-    { label: "Procedimentos", value: procedures, icon: Stethoscope },
-    { label: "Pacotes", value: packages, icon: Package },
-    { label: "Anamneses", value: anamnesisFilled, icon: ClipboardList },
+  const kpis: { label: string; value: string | number; icon: React.ElementType; card: ClinicCard }[] = [
+    { label: "Clientes", value: clients.total, icon: Users, card: "clients" },
+    { label: "Atendimentos", value: appointments.total, icon: CalendarDays, card: "appointments" },
+    { label: "Fotos", value: photos, icon: ImageIcon, card: "photos" },
+    { label: "Receita", value: formatBRL(financial.totalRevenue), icon: DollarSign, card: "revenue" },
+    { label: "Equipe", value: team.total, icon: UserCircle, card: "team" },
+    { label: "Procedimentos", value: procedures, icon: Stethoscope, card: "procedures" },
+    { label: "Pacotes", value: packages, icon: Package, card: "packages" },
+    { label: "Anamneses", value: anamnesisFilled, icon: ClipboardList, card: "anamnesis" },
   ]
 
   const maxStatus = Math.max(1, ...Object.values(appointments.byStatus))
@@ -289,15 +291,23 @@ function ClinicDetailPanel({
         {kpis.map(k => {
           const Icon = k.icon
           return (
-            <div key={k.label} className="rounded-xl border border-border bg-card p-4">
+            <button
+              key={k.label}
+              onClick={() => setOpenCard(k.card)}
+              className="rounded-xl border border-border bg-card p-4 text-left transition-colors hover:border-primary/40 hover:bg-muted/30"
+            >
               <div className="flex items-center gap-2 text-muted-foreground mb-1">
                 <Icon size={14} /><span className="text-[11px]">{k.label}</span>
               </div>
               <p className="font-heading text-lg font-bold tabular-nums">{k.value}</p>
-            </div>
+            </button>
           )
         })}
       </div>
+
+      {openCard && (
+        <ClinicCardDetailModal card={openCard} orgId={org.id} onClose={() => setOpenCard(null)} />
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Atendimentos por status */}

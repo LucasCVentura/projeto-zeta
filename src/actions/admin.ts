@@ -247,6 +247,232 @@ export async function getClinicDetailAction(orgId: string) {
 
 export type ClinicDetail = Awaited<ReturnType<typeof getClinicDetailAction>>
 
+// ── Detalhe por trás de cada card da clínica ────────────────────────────────
+
+export type ClinicCard = "clients" | "appointments" | "photos" | "revenue" | "team" | "procedures" | "packages" | "anamnesis"
+export type CardDetailResult = { columns: { key: string; label: string }[]; rows: Record<string, string>[] }
+
+const APPT_STATUS_LABELS: Record<string, string> = {
+  completed: "Concluído", confirmed: "Confirmado", waiting: "Aguardando",
+  missed: "Faltou", cancelled: "Cancelado",
+}
+const PAYMENT_METHOD_LABELS: Record<string, string> = {
+  pix: "Pix", cartao_debito: "Débito", cartao_credito: "Crédito",
+  parcelado: "Parcelado", dinheiro: "Dinheiro",
+}
+
+function fmtBRL(cents: number) {
+  return (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
+}
+function fmtDate(d: Date | string) {
+  return new Date(d).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })
+}
+
+const CARD_ROW_LIMIT = 200
+
+export async function getClinicCardDetailAction(orgId: string, card: ClinicCard): Promise<CardDetailResult> {
+  await assertAdmin()
+
+  switch (card) {
+    case "clients": {
+      const rows = await db.select({
+        name: clients.name, phone: clients.phone, whatsapp: clients.whatsapp,
+        email: clients.email, createdAt: clients.createdAt,
+      })
+        .from(clients).where(eq(clients.organizationId, orgId))
+        .orderBy(desc(clients.createdAt)).limit(CARD_ROW_LIMIT)
+
+      return {
+        columns: [
+          { key: "name", label: "Nome" },
+          { key: "contato", label: "Contato" },
+          { key: "email", label: "E-mail" },
+          { key: "createdAt", label: "Cadastro" },
+        ],
+        rows: rows.map(r => ({
+          name: r.name,
+          contato: r.whatsapp || r.phone || "—",
+          email: r.email || "—",
+          createdAt: fmtDate(r.createdAt),
+        })),
+      }
+    }
+
+    case "appointments": {
+      const rows = await db.select({
+        date: appointments.date, startTime: appointments.startTime,
+        clientName: clients.name, procedure: appointments.procedure, status: appointments.status,
+      })
+        .from(appointments)
+        .innerJoin(clients, eq(clients.id, appointments.clientId))
+        .where(eq(appointments.organizationId, orgId))
+        .orderBy(desc(appointments.date), desc(appointments.startTime)).limit(CARD_ROW_LIMIT)
+
+      return {
+        columns: [
+          { key: "date", label: "Data" },
+          { key: "startTime", label: "Hora" },
+          { key: "clientName", label: "Cliente" },
+          { key: "procedure", label: "Procedimento" },
+          { key: "status", label: "Status" },
+        ],
+        rows: rows.map(r => ({
+          date: fmtDate(r.date + "T12:00:00"),
+          startTime: r.startTime,
+          clientName: r.clientName,
+          procedure: r.procedure ?? "—",
+          status: APPT_STATUS_LABELS[r.status] ?? r.status,
+        })),
+      }
+    }
+
+    case "photos": {
+      const rows = await db.select({
+        url: clientPhotos.url, clientName: clients.name,
+        procedure: clientPhotos.procedure, takenAt: clientPhotos.takenAt,
+      })
+        .from(clientPhotos)
+        .innerJoin(clients, eq(clients.id, clientPhotos.clientId))
+        .where(eq(clientPhotos.organizationId, orgId))
+        .orderBy(desc(clientPhotos.takenAt)).limit(CARD_ROW_LIMIT)
+
+      return {
+        columns: [
+          { key: "url", label: "Foto" },
+          { key: "clientName", label: "Cliente" },
+          { key: "procedure", label: "Procedimento" },
+          { key: "takenAt", label: "Data" },
+        ],
+        rows: rows.map(r => ({
+          url: r.url,
+          clientName: r.clientName,
+          procedure: r.procedure ?? "—",
+          takenAt: fmtDate(r.takenAt + "T12:00:00"),
+        })),
+      }
+    }
+
+    case "revenue": {
+      const rows = await db.select({
+        date: transactions.date, description: transactions.description,
+        clientName: clients.name, paymentMethod: transactions.paymentMethod, amount: transactions.amount,
+      })
+        .from(transactions)
+        .leftJoin(appointments, eq(appointments.id, transactions.appointmentId))
+        .leftJoin(clients, eq(clients.id, appointments.clientId))
+        .where(eq(transactions.organizationId, orgId))
+        .orderBy(desc(transactions.date)).limit(CARD_ROW_LIMIT)
+
+      return {
+        columns: [
+          { key: "date", label: "Data" },
+          { key: "descricao", label: "Descrição" },
+          { key: "paymentMethod", label: "Forma" },
+          { key: "amount", label: "Valor" },
+        ],
+        rows: rows.map(r => ({
+          date: fmtDate(r.date + "T12:00:00"),
+          descricao: r.clientName ?? r.description ?? "—",
+          paymentMethod: r.paymentMethod ? (PAYMENT_METHOD_LABELS[r.paymentMethod] ?? r.paymentMethod) : "—",
+          amount: fmtBRL(r.amount),
+        })),
+      }
+    }
+
+    case "team": {
+      const rows = await db.select({
+        name: users.name, email: users.email, role: organizationMembers.role, active: organizationMembers.active,
+      })
+        .from(organizationMembers)
+        .innerJoin(users, eq(users.id, organizationMembers.userId))
+        .where(eq(organizationMembers.organizationId, orgId))
+        .limit(CARD_ROW_LIMIT)
+
+      return {
+        columns: [
+          { key: "name", label: "Nome" },
+          { key: "email", label: "E-mail" },
+          { key: "role", label: "Papel" },
+          { key: "active", label: "Ativo" },
+        ],
+        rows: rows.map(r => ({
+          name: r.name,
+          email: r.email,
+          role: r.role === "owner" ? "Dona(o)" : r.role,
+          active: r.active ? "Sim" : "Não",
+        })),
+      }
+    }
+
+    case "procedures": {
+      const rows = await db.select({
+        name: procedures.name, price: procedures.price, commissionPct: procedures.commissionPct, active: procedures.active,
+      })
+        .from(procedures).where(eq(procedures.organizationId, orgId))
+        .orderBy(desc(procedures.active), procedures.name).limit(CARD_ROW_LIMIT)
+
+      return {
+        columns: [
+          { key: "name", label: "Nome" },
+          { key: "price", label: "Preço" },
+          { key: "commissionPct", label: "Comissão" },
+          { key: "active", label: "Ativo" },
+        ],
+        rows: rows.map(r => ({
+          name: r.name,
+          price: fmtBRL(r.price),
+          commissionPct: `${r.commissionPct}%`,
+          active: r.active ? "Sim" : "Não",
+        })),
+      }
+    }
+
+    case "packages": {
+      const rows = await db.select({
+        name: packages.name, totalSessions: packages.totalSessions, price: packages.price, active: packages.active,
+      })
+        .from(packages).where(eq(packages.organizationId, orgId))
+        .orderBy(desc(packages.active), packages.name).limit(CARD_ROW_LIMIT)
+
+      return {
+        columns: [
+          { key: "name", label: "Nome" },
+          { key: "totalSessions", label: "Sessões" },
+          { key: "price", label: "Preço" },
+          { key: "active", label: "Ativo" },
+        ],
+        rows: rows.map(r => ({
+          name: r.name,
+          totalSessions: String(r.totalSessions),
+          price: fmtBRL(r.price),
+          active: r.active ? "Sim" : "Não",
+        })),
+      }
+    }
+
+    case "anamnesis": {
+      const rows = await db.select({
+        clientName: clients.name, updatedAt: anamnesisAnswers.updatedAt,
+      })
+        .from(anamnesisAnswers)
+        .innerJoin(clients, eq(clients.id, anamnesisAnswers.clientId))
+        .where(eq(anamnesisAnswers.organizationId, orgId))
+        .orderBy(desc(anamnesisAnswers.updatedAt)).limit(CARD_ROW_LIMIT)
+
+      return {
+        columns: [
+          { key: "clientName", label: "Cliente" },
+          { key: "updatedAt", label: "Respondido em" },
+        ],
+        rows: rows.map(r => ({
+          clientName: r.clientName,
+          updatedAt: fmtDate(r.updatedAt),
+        })),
+      }
+    }
+  }
+}
+
 export async function extendTrialAction(orgId: string, days: number) {
   await requireAdmin()
 
