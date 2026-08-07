@@ -6,6 +6,7 @@ import { StatusBadge } from "@/components/agenda/status-badge"
 import { RevenueChart, StatusChart } from "@/components/dashboard/dashboard-charts-lazy"
 import { OnboardingChecklist } from "@/components/dashboard/onboarding-checklist"
 import { GoogleReviewNudge } from "@/components/dashboard/google-review-nudge"
+import { DailyTip } from "@/components/dashboard/daily-tip"
 import { PendingBookingsQueue } from "@/components/dashboard/pending-bookings-queue"
 import Link from "next/link"
 import { requireSession } from "@/lib/session"
@@ -61,6 +62,9 @@ export default async function DashboardPage() {
 
   return (
     <div className="container-page py-6 space-y-6">
+      {/* Dica do dia */}
+      <DailyTip />
+
       {/* Aviso: configurar link de avaliação do Google */}
       {showGoogleReviewNudge && <GoogleReviewNudge organizationId={session.organizationId} />}
 

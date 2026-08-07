@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react"
-import { Ticket, Calendar, ScrollText, Package, Boxes, Users, Wallet, ClipboardList } from "lucide-react"
+import { Ticket, Calendar, ScrollText, Package, Boxes, Users, Wallet, ClipboardList, UserPlus, Images, MessageCircle, Link2 } from "lucide-react"
 
 // Registro de guias — mesmo espírito do FEATURE_REGISTRY em feature-flags.ts,
 // mas é só conteúdo (sem banco). Compartilhado entre a seção "Guias" em Ajuda
@@ -88,6 +88,46 @@ export const GUIDES: Guide[] = [
       { title: "Personalize as perguntas", description: "Em Configurações → Anamnese, adicione, reordene ou remova perguntas — já vem com um conjunto padrão pronto.", image: "/guides/anamnese-1-questions.png" },
       { title: "Escolha o tipo de resposta", description: "Texto livre, sim/não (com detalhe), escolha única ou múltipla escolha.", image: "/guides/anamnese-2-types.png" },
       { title: "Cliente responde na ficha", description: "As respostas ficam salvas na ficha da cliente, prontas pra consultar antes de cada atendimento.", image: "/guides/anamnese-3-answers.png" },
+    ],
+  },
+  {
+    key: "clients",
+    title: "Clientes",
+    icon: UserPlus,
+    steps: [
+      { title: "Cadastre manualmente", description: "Em Clientes → Novo, preencha nome, CPF e data de nascimento — telefone e e-mail vêm no passo seguinte.", image: "/guides/clients-1-create.png" },
+      { title: "Ou importe de uma planilha", description: "Em Clientes → Importar, suba um CSV ou Excel da sua lista atual — o Kira detecta as colunas sozinho, sem precisar renomear nada.", image: "/guides/clients-2-import.png" },
+      { title: "Tudo centralizado na ficha", description: "Termos de consentimento, anamnese, pacotes e documentos ficam todos na ficha do cliente, num só lugar.", image: "/guides/clients-3-profile.png" },
+    ],
+  },
+  {
+    key: "photos",
+    title: "Fotos de evolução",
+    icon: Images,
+    steps: [
+      { title: "Registre a evolução", description: "Em Fotos, na ficha do cliente, adicione uma foto vinculada ao procedimento — elas ficam organizadas em linha do tempo por data.", image: "/guides/photos-1-timeline.png" },
+      { title: "Selecione pra comparar", description: "Toque em duas ou mais fotos pra selecioná-las — aparecem as opções de comparar lado a lado ou pedir uma análise por IA.", image: "/guides/photos-2-select.png" },
+      { title: "Veja em tela cheia", description: "Abra qualquer foto em tela cheia, com a data e o procedimento, e navegue entre as fotos daquele cliente.", image: "/guides/photos-3-fullscreen.png" },
+    ],
+  },
+  {
+    key: "whatsapp",
+    title: "WhatsApp automático",
+    icon: MessageCircle,
+    steps: [
+      { title: "Basta ter o WhatsApp cadastrado", description: "Com o número salvo na ficha do cliente, o Kira já sabe pra onde mandar as mensagens — sem nenhuma configuração extra.", image: "/guides/whatsapp-1-contact.png" },
+      { title: "Confirmação e lembrete automáticos", description: "Ao confirmar o agendamento, a cliente já recebe a confirmação no WhatsApp; um lembrete sai sozinho perto da data.", image: "/guides/whatsapp-2-agenda.png" },
+      { title: "Cada status dispara uma mensagem", description: "Mudou pra \"Faltou\" ou concluiu o atendimento? A mensagem certa sai sozinha — incluindo o agradecimento e pedido de avaliação pós-atendimento.", image: "/guides/whatsapp-3-status.png" },
+    ],
+  },
+  {
+    key: "public-booking",
+    title: "Agendamento online",
+    icon: Link2,
+    steps: [
+      { title: "Cliente escolhe o procedimento", description: "Compartilhe o link público da sua agenda — a cliente escolhe a profissional e o procedimento, com preço, sem precisar ligar ou mandar mensagem.", image: "/guides/public-booking-1-procedures.png" },
+      { title: "Escolhe o melhor horário", description: "Só aparecem os horários realmente livres, já considerando sua configuração de agenda.", image: "/guides/public-booking-2-datetime.png" },
+      { title: "Sem criar conta", description: "A cliente só informa nome e WhatsApp pra confirmar — nada de senha ou cadastro. O agendamento já cai na sua agenda.", image: "/guides/public-booking-3-clientinfo.png" },
     ],
   },
 ]
