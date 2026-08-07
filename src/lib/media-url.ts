@@ -1,14 +1,14 @@
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL ?? ""
-
 export function mediaUrl(url: string | null | undefined): string {
   if (!url) return ""
 
+  // Buckets são privados — servidos por /api/media, que checa posse antes de
+  // devolver o arquivo (ver src/app/api/media/[bucket]/[...path]/route.ts).
   if (url.startsWith("supabase://")) {
     const withoutProtocol = url.replace("supabase://", "")
     const slashIdx = withoutProtocol.indexOf("/")
     const bucket = withoutProtocol.slice(0, slashIdx)
     const objectName = withoutProtocol.slice(slashIdx + 1)
-    return `${SUPABASE_URL}/storage/v1/object/public/${bucket}/${objectName}`
+    return `/api/media/${bucket}/${objectName}`
   }
 
   if (url.startsWith("https://")) return url

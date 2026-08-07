@@ -32,9 +32,18 @@ export async function deleteFromStorage(objectName: string): Promise<void> {
   await getClient().storage.from(BUCKET).remove([objectName])
 }
 
-export async function getPublicUrl(objectName: string): Promise<string> {
-  const { data } = getClient().storage.from(BUCKET).getPublicUrl(objectName)
-  return data.publicUrl
+// Buckets são privados — não existe mais getPublicUrl. Servimos via
+// /api/media/[bucket]/[...path], que baixa com a service key e checa posse
+// antes de devolver o arquivo (ver downloadFromStorage abaixo).
+export async function downloadFromStorage(
+  bucket: string,
+  objectName: string
+): Promise<{ buffer: Buffer; contentType: string } | null> {
+  const { data, error } = await getClient().storage.from(bucket).download(objectName)
+  if (error || !data) return null
+
+  const buffer = Buffer.from(await data.arrayBuffer())
+  return { buffer, contentType: data.type || "application/octet-stream" }
 }
 
 export function storageUrlToObjectName(url: string): string {

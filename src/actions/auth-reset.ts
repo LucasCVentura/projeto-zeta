@@ -4,14 +4,24 @@ import { eq, and, gt, isNull } from "drizzle-orm"
 import { db } from "@/db"
 import { users, passwordResetTokens } from "@/db/schema"
 import { hash } from "bcryptjs"
+import { isRateLimited, recordFailure } from "@/lib/rate-limit"
 
 export type ActionResult = { success: true } | { success: false; error: string }
 
 export async function requestPasswordResetAction(email: string): Promise<ActionResult> {
+  const normalizedEmail = email.toLowerCase().trim()
+
+  // Limite aqui não é sobre senha errada, é sobre não deixar floodar a cota
+  // do provedor de e-mail — por isso conta toda chamada, não só falha.
+  if (await isRateLimited("password_reset", normalizedEmail)) {
+    return { success: true } // não revela que foi limitado, mesmo comportamento de sucesso
+  }
+  await recordFailure("password_reset", normalizedEmail)
+
   const [user] = await db
     .select({ id: users.id, name: users.name, email: users.email })
     .from(users)
-    .where(eq(users.email, email.toLowerCase().trim()))
+    .where(eq(users.email, normalizedEmail))
     .limit(1)
 
   // Always return success to avoid email enumeration

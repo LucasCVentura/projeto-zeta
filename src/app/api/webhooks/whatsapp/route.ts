@@ -9,6 +9,15 @@ import { toWhatsAppDestination, onlyDigits } from "@/lib/phone"
 
 export async function POST(req: NextRequest) {
   try {
+    // Gupshup não assina o payload — o segredo vem por query string na URL de
+    // callback configurada no painel deles (mesmo padrão do webhook do Resend).
+    // Sem isso, qualquer um forja eventos (marcar mensagem como lida, disparar
+    // reply automático) só sabendo a URL, que não é segredo.
+    const expectedSecret = process.env.GUPSHUP_WEBHOOK_SECRET
+    if (expectedSecret && req.nextUrl.searchParams.get("secret") !== expectedSecret) {
+      return NextResponse.json({ error: "unauthorized" }, { status: 401 })
+    }
+
     const body = await req.json() as GupshupWebhookPayload
 
     const payload = body?.payload

@@ -24,12 +24,23 @@ const SUPPORTED_TYPES = new Set(["image/jpeg", "image/png", "image/gif", "image/
 
 async function photoToBase64(url: string): Promise<{ b64: string; mimeType: string } | null> {
   try {
-    let fetchUrl = url
+    // supabase:// é bucket privado — busca direto com a service key (sem
+    // round-trip pra /api/media, que exige sessão de navegador que não existe
+    // numa chamada servidor-a-servidor como esta).
     if (url.startsWith("supabase://")) {
-      const { mediaUrl } = await import("@/lib/media-url")
-      fetchUrl = mediaUrl(url)
+      const { downloadFromStorage } = await import("@/lib/storage")
+      const withoutProtocol = url.replace("supabase://", "")
+      const slashIdx = withoutProtocol.indexOf("/")
+      const bucket = withoutProtocol.slice(0, slashIdx)
+      const objectName = withoutProtocol.slice(slashIdx + 1)
+      const file = await downloadFromStorage(bucket, objectName)
+      if (!file) return null
+      const mimeType = file.contentType.split(";")[0].trim()
+      if (!SUPPORTED_TYPES.has(mimeType)) return null
+      return { b64: file.buffer.toString("base64"), mimeType }
     }
 
+    const fetchUrl = url
     if (fetchUrl.startsWith("http")) {
       const res = await fetch(fetchUrl)
       if (!res.ok) return null
@@ -565,6 +576,8 @@ export async function suggestReturnDateAction(data: {
   returnIntervalDays: number | null
   lastAppointmentDate: string
 }): Promise<{ success: true; suggestedDate: string; explanation: string } | { success: false; error: string }> {
+  await requireSession()
+
   try {
     const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
     const intervalHint = data.returnIntervalDays

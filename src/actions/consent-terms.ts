@@ -88,6 +88,7 @@ export async function updateClientConsentRecordAction(
       .where(and(
         eq(consentTermRecords.clientId, clientId),
         eq(consentTermRecords.termId, termId),
+        eq(consentTermRecords.orgId, organizationId),
       ))
   } else {
     await db

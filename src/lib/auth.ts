@@ -9,6 +9,7 @@ import { db } from "@/db"
 import { users, organizations, organizationMembers } from "@/db/schema"
 import { uniqueSlug } from "@/lib/slug"
 import { REFERRAL_COOKIE, trialEndsAtFor } from "@/lib/referral"
+import { isRateLimited, recordFailure } from "@/lib/rate-limit"
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   session: {
@@ -26,17 +27,26 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           email: string
           password: string
         }
+        const normalizedEmail = email.toLowerCase().trim()
+
+        if (await isRateLimited("login", normalizedEmail)) return null
 
         const [user] = await db
           .select()
           .from(users)
-          .where(eq(users.email, email))
+          .where(eq(users.email, normalizedEmail))
           .limit(1)
 
-        if (!user || !user.password) return null
+        if (!user || !user.password) {
+          await recordFailure("login", normalizedEmail)
+          return null
+        }
 
         const valid = await compare(password, user.password)
-        if (!valid) return null
+        if (!valid) {
+          await recordFailure("login", normalizedEmail)
+          return null
+        }
 
         return {
           id: user.id,

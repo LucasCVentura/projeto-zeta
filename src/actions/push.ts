@@ -4,6 +4,7 @@ import { db } from "@/db"
 import { pushSubscriptions } from "@/db/schema"
 import { eq } from "drizzle-orm"
 import webpush from "web-push"
+import { assertAdmin } from "@/lib/admin-guard"
 
 webpush.setVapidDetails(
   process.env.VAPID_SUBJECT!,
@@ -15,6 +16,8 @@ export async function savePushSubscriptionAction(sub: {
   endpoint: string
   keys: { p256dh: string; auth: string }
 }) {
+  await assertAdmin()
+
   await db
     .insert(pushSubscriptions)
     .values({ endpoint: sub.endpoint, p256dh: sub.keys.p256dh, auth: sub.keys.auth })
@@ -22,6 +25,8 @@ export async function savePushSubscriptionAction(sub: {
 }
 
 export async function deletePushSubscriptionAction(endpoint: string) {
+  await assertAdmin()
+
   await db.delete(pushSubscriptions).where(eq(pushSubscriptions.endpoint, endpoint))
 }
 

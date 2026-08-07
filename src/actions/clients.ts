@@ -191,6 +191,14 @@ export async function updateClientAction(
 export async function updateImageConsentAction(clientId: string, consent: boolean | null) {
   const { organizationId } = await requireSession()
 
+  // clientAnamnesis não tem organizationId próprio — a posse é sempre via clients.id
+  const [ownedClient] = await db
+    .select({ id: clients.id })
+    .from(clients)
+    .where(and(eq(clients.id, clientId), eq(clients.organizationId, organizationId)))
+    .limit(1)
+  if (!ownedClient) return
+
   const [existing] = await db
     .select({ id: clientAnamnesis.id })
     .from(clientAnamnesis)

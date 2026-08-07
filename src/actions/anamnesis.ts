@@ -2,7 +2,7 @@
 
 import { db } from "@/db"
 import { anamnesisQuestions, anamnesisAnswers, organizations } from "@/db/schema"
-import { eq, asc } from "drizzle-orm"
+import { eq, asc, and } from "drizzle-orm"
 import { requireSession } from "@/lib/session"
 import { revalidatePath, revalidateTag } from "next/cache"
 
@@ -137,7 +137,7 @@ export async function deleteAnamnesisQuestionAction(id: string) {
 
   await db
     .delete(anamnesisQuestions)
-    .where(eq(anamnesisQuestions.id, id))
+    .where(and(eq(anamnesisQuestions.id, id), eq(anamnesisQuestions.organizationId, organizationId)))
 
   revalidatePath("/configuracoes")
 }
@@ -158,7 +158,7 @@ export async function getAnamnesisAnswersAction(clientId: string) {
     db
       .select()
       .from(anamnesisAnswers)
-      .where(eq(anamnesisAnswers.clientId, clientId))
+      .where(and(eq(anamnesisAnswers.clientId, clientId), eq(anamnesisAnswers.organizationId, organizationId)))
       .limit(1),
   ])
 
@@ -177,14 +177,14 @@ export async function saveAnamnesisAnswersAction(
   const existing = await db
     .select({ id: anamnesisAnswers.id })
     .from(anamnesisAnswers)
-    .where(eq(anamnesisAnswers.clientId, clientId))
+    .where(and(eq(anamnesisAnswers.clientId, clientId), eq(anamnesisAnswers.organizationId, organizationId)))
     .limit(1)
 
   if (existing.length > 0) {
     await db
       .update(anamnesisAnswers)
       .set({ answers, updatedAt: new Date() })
-      .where(eq(anamnesisAnswers.clientId, clientId))
+      .where(and(eq(anamnesisAnswers.clientId, clientId), eq(anamnesisAnswers.organizationId, organizationId)))
   } else {
     await db.insert(anamnesisAnswers).values({
       clientId,

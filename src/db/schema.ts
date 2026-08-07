@@ -7,6 +7,7 @@ import {
   boolean,
   unique,
   uniqueIndex,
+  index,
   primaryKey,
   integer,
   time,
@@ -597,6 +598,23 @@ export const passwordResetTokens = pgTable("password_reset_tokens", {
   usedAt: timestamp("used_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 })
+
+// ── auth_attempts ────────────────────────────────────────────────────────────
+// Throttle de login/reset de senha. Auth.js não tem rate limit embutido (só o
+// Supabase Auth tem) — cada tentativa falha vira uma linha aqui, e o limite é
+// contado por janela em vez de travar a conta (travar permitiria alguém travar
+// a conta da vítima de propósito).
+
+export const authAttempts = pgTable("auth_attempts", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  kind: text("kind").notNull(), // 'login' | 'password_reset'
+  identifier: text("identifier").notNull(), // e-mail normalizado
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("auth_attempts_kind_identifier_idx").on(table.kind, table.identifier, table.createdAt),
+])
 
 // ── client_anamnesis ──────────────────────────────────────────────────────────
 

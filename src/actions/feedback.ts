@@ -4,6 +4,7 @@ import { db } from "@/db"
 import { userFeedback, feedbackSummaries, organizations, users } from "@/db/schema"
 import { desc, eq } from "drizzle-orm"
 import { requireSession } from "@/lib/session"
+import { assertAdmin } from "@/lib/admin-guard"
 
 export async function submitFeedbackAction(content: string) {
   const { userId, organizationId } = await requireSession()
@@ -16,6 +17,8 @@ export async function submitFeedbackAction(content: string) {
 }
 
 export async function getLatestFeedbackSummaryAction() {
+  await assertAdmin()
+
   const [summary] = await db
     .select()
     .from(feedbackSummaries)
@@ -26,6 +29,8 @@ export async function getLatestFeedbackSummaryAction() {
 }
 
 export async function getAllFeedbackAction() {
+  await assertAdmin()
+
   return db
     .select({
       id: userFeedback.id,
