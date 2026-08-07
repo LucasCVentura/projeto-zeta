@@ -6,6 +6,7 @@ import { sendAdminPush } from "@/actions/push"
 import { toLocalDigits, phoneMatchCandidates, onlyDigits } from "@/lib/phone"
 
 const SESSION_TTL_MS = 2 * 60 * 60 * 1000  // 2 horas
+const ROUTED_TTL_MS = 7 * 24 * 60 * 60 * 1000  // 7 dias — depois disso, volta a perguntar o menu
 
 const BTN_SUPPORT    = "🛠 Suporte"
 const BTN_COMMERCIAL = "💬 Comercial"
@@ -22,8 +23,8 @@ function isOutOfHours(): boolean {
   return hour < 9  // 00h–08h59 = fora de horário
 }
 
-async function saveMessage(phone: string, direction: "inbound" | "outbound", content: string, queue?: string | null) {
-  await db.insert(adminChatMessages).values({ phone, direction, content, queue: queue ?? null })
+async function saveMessage(phone: string, direction: "inbound" | "outbound", content: string, queue?: string | null, senderName?: string | null) {
+  await db.insert(adminChatMessages).values({ phone, direction, content, queue: queue ?? null, senderName: senderName ?? null })
 }
 
 async function getOrCreateSession(phone: string) {
@@ -35,11 +36,20 @@ async function getOrCreateSession(phone: string) {
 
   if (!existing) return null
 
-  // Sessões roteadas (admin conversando diretamente) nunca expiram pelo bot
-  if (existing.state === "routed") return existing
+  const elapsed = Date.now() - new Date(existing.lastActivityAt).getTime()
+
+  // Sessões roteadas (admin conversando diretamente) ficam assim por mais tempo,
+  // pra não interromper uma conversa em andamento com o menu do bot — mas depois
+  // de uma semana sem nenhuma mensagem, trata como conversa nova de novo.
+  if (existing.state === "routed") {
+    if (elapsed > ROUTED_TTL_MS) {
+      await db.delete(chatSessions).where(eq(chatSessions.phone, phone))
+      return null
+    }
+    return existing
+  }
 
   // Demais estados expiram após 2h de inatividade → trata como nova sessão
-  const elapsed = Date.now() - new Date(existing.lastActivityAt).getTime()
   if (elapsed > SESSION_TTL_MS) {
     await db.delete(chatSessions).where(eq(chatSessions.phone, phone))
     return null
@@ -130,7 +140,7 @@ export async function handleInboundMessage(
   senderName?: string | null,
   opts?: { skipBot?: boolean }
 ) {
-  await saveMessage(phone, "inbound", text)
+  await saveMessage(phone, "inbound", text, null, senderName)
 
   // Avisa o admin por push sempre que chega mensagem — independe do bot ter algo a fazer
   sendAdminPush({
