@@ -1,7 +1,9 @@
 import Link from "next/link"
+import Image from "next/image"
 import { Mail, ArrowUpRight } from "lucide-react"
 import { BonsaiIcon } from "@/components/ui/bonsai-icon"
 import { KiraMark } from "@/components/ui/kira-mark"
+import { WhatsAppMessageCarousel } from "@/components/marketing/whatsapp-message-carousel"
 
 const features = [
   {
@@ -62,6 +64,51 @@ const features = [
     ),
     title: "Funciona no celular",
     description: "Interface otimizada para uso durante o atendimento, sem precisar de computador.",
+  },
+  {
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+        <rect x="3" y="4" width="18" height="18" rx="2" />
+        <path d="M16 2v4M8 2v4M3 10h18" />
+        <path d="M9 16l2 2 4-4" />
+      </svg>
+    ),
+    title: "Agendamento online",
+    description: "Sua cliente marca sozinha, direto do link, sem precisar criar conta nem trocar mensagem.",
+  },
+  {
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+        <path d="M20.59 13.41L13.42 20.6a2 2 0 0 1-2.83 0L2.5 12.5V2.5h10l8.09 8.09a2 2 0 0 1 0 2.82z" />
+        <circle cx="7" cy="7" r="1.5" fill="currentColor" stroke="none" />
+      </svg>
+    ),
+    title: "Cupons e vale-presentes",
+    description: "Crie e envie automático pelo WhatsApp, com QR code pra resgatar na hora do atendimento.",
+  },
+  {
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+        <polyline points="17 8 12 3 7 8" />
+        <line x1="12" y1="3" x2="12" y2="15" />
+      </svg>
+    ),
+    title: "Importação de clientes",
+    description: "Já tem uma lista em outro lugar? Importa tudo de uma planilha, sem cadastrar um por um.",
+  },
+  {
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+        <circle cx="9" cy="7" r="4" />
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+        <path d="M9 21v-2" />
+      </svg>
+    ),
+    title: "Equipe",
+    description: "Convide recepcionista, outro profissional ou financeiro — cada um vê só o que precisa.",
   },
 ]
 
@@ -241,66 +288,15 @@ export default function LandingPage() {
                 kiraclinic.com.br
               </div>
             </div>
-            {/* Mock UI */}
-            <div className="flex h-64 sm:h-80">
-              {/* Sidebar */}
-              <div className="hidden w-48 flex-col gap-1 border-r border-border bg-sidebar p-3 sm:flex">
-                {["Dashboard", "Agenda", "Clientes", "Financeiro", "Estoque"].map((item, i) => (
-                  <div
-                    key={item}
-                    className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium ${i === 0 ? "bg-primary/10 text-primary" : "text-muted-foreground"}`}
-                  >
-                    <div className={`h-1.5 w-1.5 rounded-full ${i === 0 ? "bg-primary" : "bg-muted-foreground/40"}`} />
-                    {item}
-                  </div>
-                ))}
-              </div>
-              {/* Content */}
-              <div className="flex-1 p-5 space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <div className="h-3 w-28 rounded bg-foreground/10" />
-                    <div className="h-2 w-16 rounded bg-foreground/5" />
-                  </div>
-                  <div className="h-7 w-24 rounded-full bg-primary/20" />
-                </div>
-                <div className="grid grid-cols-3 gap-3">
-                  {[["Atendimentos", "24"], ["Receita", "R$2.480"], ["Clientes", "38"]].map(([label, val]) => (
-                    <div key={label} className="rounded-xl border border-border bg-background p-3 space-y-1">
-                      <div className="text-[10px] text-muted-foreground">{label}</div>
-                      <div className="text-sm font-semibold">{val}</div>
-                    </div>
-                  ))}
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="rounded-xl border border-border bg-background p-3 space-y-2">
-                    <div className="h-2 w-20 rounded bg-foreground/10" />
-                    {[...Array(3)].map((_, i) => (
-                      <div key={i} className="flex items-center gap-2">
-                        <div className="h-6 w-6 rounded-full bg-primary/15" />
-                        <div className="space-y-0.5 flex-1">
-                          <div className="h-1.5 w-20 rounded bg-foreground/10" />
-                          <div className="h-1.5 w-12 rounded bg-foreground/5" />
-                        </div>
-                        <div className="h-4 w-12 rounded-full bg-green-500/10" />
-                      </div>
-                    ))}
-                  </div>
-                  <div className="rounded-xl border border-border bg-background p-3 space-y-2">
-                    <div className="h-2 w-24 rounded bg-foreground/10" />
-                    <div className="flex items-end gap-1 h-16">
-                      {[30, 50, 40, 70, 55, 80, 65].map((h, i) => (
-                        <div
-                          key={i}
-                          className="flex-1 rounded-sm bg-primary/20"
-                          style={{ height: `${h}%` }}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            {/* Print real do dashboard */}
+            <Image
+              src="/hero-dashboard.png"
+              alt="Dashboard do Kira mostrando agendamentos do dia, clientes e receita do mês"
+              width={2880}
+              height={1320}
+              priority
+              className="w-full h-auto"
+            />
           </div>
           {/* Glow under mockup */}
           <div className="absolute -bottom-8 left-1/2 h-16 w-2/3 -translate-x-1/2 rounded-full bg-primary/20 blur-2xl" />
@@ -340,6 +336,21 @@ export default function LandingPage() {
             ))}
           </div>
         </div>
+      </section>
+
+      {/* ── Mensagens automáticas ── */}
+      <section className="px-5 py-20 bg-primary/3">
+        <div className="mx-auto max-w-3xl text-center space-y-3">
+          <p className="text-sm font-medium text-primary">Sem escrever nada</p>
+          <h2 className="font-heading text-3xl font-bold sm:text-4xl">
+            É assim que sua cliente recebe cada mensagem
+          </h2>
+          <p className="mx-auto max-w-md text-muted-foreground">
+            Confirmação, lembrete, cupom, vale-presente e agradecimento pós-atendimento — tudo automático, direto no WhatsApp dela.
+          </p>
+        </div>
+
+        <WhatsAppMessageCarousel />
       </section>
 
       {/* ── Features ── */}
