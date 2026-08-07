@@ -474,7 +474,14 @@ function MessageArea({ phone, displayName, queue, orgName, lastInboundAt }: {
       </div>
 
       {/* Mensagens */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-1.5" style={{ background: "var(--muted)" }}>
+      <div
+        className="flex-1 overflow-y-auto px-4 py-4 space-y-1.5"
+        style={{ background: "var(--muted)" }}
+        onScroll={(e) => {
+          const el = e.currentTarget
+          isAtBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80
+        }}
+      >
         {messages.length === 0 && (
           <p className="text-center text-xs text-muted-foreground py-10">Nenhuma mensagem ainda.</p>
         )}
