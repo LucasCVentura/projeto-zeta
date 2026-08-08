@@ -19,12 +19,6 @@ function formatPhoneForPush(phone: string): string {
   return `(${local.slice(0, 2)}) ${local.slice(2)}`
 }
 
-function isOutOfHours(): boolean {
-  const now = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }))
-  const hour = now.getHours()
-  return hour < 9  // 00h–08h59 = fora de horário
-}
-
 async function saveMessage(phone: string, direction: "inbound" | "outbound", content: string, queue?: string | null, senderName?: string | null, answeredBy?: string | null) {
   await db.insert(adminChatMessages).values({ phone, direction, content, queue: queue ?? null, senderName: senderName ?? null, answeredBy: answeredBy ?? null })
 }
@@ -75,14 +69,6 @@ async function sendWelcome(phone: string, senderName?: string | null) {
   await sendWhatsAppQuickReply(phone, body, [BTN_SUPPORT, BTN_COMMERCIAL])
   await saveMessage(phone, "outbound", body)
   await upsertSession(phone, { state: "awaiting_selection", queue: null, userName: senderName ?? null, orgName: null })
-}
-
-async function sendOutOfHours(phone: string) {
-  const text = "Oi! 🌙 Nosso atendimento é das 9h às 24h. Já anotamos sua mensagem e te respondemos assim que estivermos disponíveis!"
-  await sendWhatsApp(phone, text)
-  await saveMessage(phone, "outbound", text)
-  // Mantém sessão em awaiting_selection para quando o usuário responder dentro do horário
-  await upsertSession(phone, { state: "awaiting_selection", queue: null, userName: null, orgName: null })
 }
 
 async function findUserByPhone(phone: string) {
@@ -163,11 +149,7 @@ export async function handleInboundMessage(
 
   // Sem sessão ou sessão expirada → nova conversa
   if (!session) {
-    if (isOutOfHours()) {
-      await sendOutOfHours(phone)
-    } else {
-      await sendWelcome(phone, senderName)
-    }
+    await sendWelcome(phone, senderName)
     return
   }
 
@@ -227,11 +209,7 @@ export async function handleInboundMessage(
     }
 
     // Não reconheceu → repete menu
-    if (isOutOfHours()) {
-      await sendOutOfHours(phone)
-    } else {
-      await sendWelcome(phone)
-    }
+    await sendWelcome(phone)
     return
   }
 
