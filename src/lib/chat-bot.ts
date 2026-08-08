@@ -1,14 +1,16 @@
 import { db } from "@/db"
-import { chatSessions, adminChatMessages, users, organizationMembers, organizations } from "@/db/schema"
-import { eq, and } from "drizzle-orm"
+import { chatSessions, adminChatMessages, users, organizationMembers, organizations, clients, appointments } from "@/db/schema"
+import { eq, and, or, inArray, desc } from "drizzle-orm"
 import { sendWhatsApp, sendWhatsAppQuickReply } from "@/lib/whatsapp-client"
 import { sendAdminPush } from "@/actions/push"
 import { toLocalDigits, phoneMatchCandidates, onlyDigits } from "@/lib/phone"
 import { answerFaqQuestion } from "@/lib/faq-bot"
+import { answerPatientNotice, buildPatientNoticeFallback } from "@/lib/patient-notice-bot"
 import { isRateLimited, recordFailure } from "@/lib/rate-limit"
 
 const SESSION_TTL_MS = 2 * 60 * 60 * 1000  // 2 horas
 const ROUTED_TTL_MS = 7 * 24 * 60 * 60 * 1000  // 7 dias — depois disso, volta a perguntar o menu
+const PATIENT_NOTICE_TTL_MS = 6 * 60 * 60 * 1000  // 6 horas — janela de silêncio depois do aviso pra paciente
 
 const BTN_SUPPORT    = "🛠 Suporte"
 const BTN_COMMERCIAL = "💬 Comercial"
@@ -39,6 +41,16 @@ async function getOrCreateSession(phone: string) {
   // de uma semana sem nenhuma mensagem, trata como conversa nova de novo.
   if (existing.state === "routed") {
     if (elapsed > ROUTED_TTL_MS) {
+      await db.delete(chatSessions).where(eq(chatSessions.phone, phone))
+      return null
+    }
+    return existing
+  }
+
+  // Aviso de "isso aqui não é a clínica" já mandado — fica em silêncio por um
+  // tempo, sem repetir o aviso a cada mensagem nova da mesma visita.
+  if (existing.state === "patient_notice_sent") {
+    if (elapsed > PATIENT_NOTICE_TTL_MS) {
       await db.delete(chatSessions).where(eq(chatSessions.phone, phone))
       return null
     }
@@ -96,6 +108,26 @@ async function findUserByPhone(phone: string) {
   return rows.find(r =>
     candidates.has(onlyDigits(r.phone ?? "")) || candidates.has(onlyDigits(r.whatsapp ?? ""))
   ) ?? null
+}
+
+// Pacientes de clínicas costumam responder o número do Kira achando que é o
+// WhatsApp da própria clínica (ele manda confirmação/lembrete/agradecimento).
+// Se o telefone bate com uma cliente cadastrada (não dona de conta), prioriza
+// o agendamento mais recente pra escolher a clínica quando houver mais de uma.
+async function findClientByPhone(phone: string) {
+  const candidates = phoneMatchCandidates(phone)
+  if (candidates.length === 0) return null
+
+  const [row] = await db
+    .select({ orgName: organizations.name, orgPhone: organizations.phone })
+    .from(clients)
+    .innerJoin(organizations, eq(organizations.id, clients.organizationId))
+    .leftJoin(appointments, eq(appointments.clientId, clients.id))
+    .where(or(inArray(clients.phone, candidates), inArray(clients.whatsapp, candidates)))
+    .orderBy(desc(appointments.date))
+    .limit(1)
+
+  return row ?? null
 }
 
 async function handleAwaitingCpf(phone: string, text: string) {
@@ -158,6 +190,32 @@ export async function handleInboundMessage(
 
   const session = await getOrCreateSession(phone)
 
+  // Já roteado → mensagem vai direto pro admin (sem bot)
+  if (session?.state === "routed") {
+    await upsertSession(phone, { lastActivityAt: new Date() })
+    return
+  }
+
+  // Paciente de alguma clínica respondendo o número do Kira achando que é o
+  // WhatsApp da própria clínica (ele manda confirmação/lembrete/agradecimento)
+  // — intercepta antes do menu Suporte/Comercial, que não faz sentido pra ela.
+  if (!session || session.state === "awaiting_selection") {
+    const isOwner = await findUserByPhone(phone)
+    if (!isOwner) {
+      const patient = await findClientByPhone(phone)
+      if (patient) {
+        const usedAi = process.env.AI_FAQ_ENABLED === "true"
+        const reply = usedAi
+          ? await answerPatientNotice(text, patient.orgName, patient.orgPhone)
+          : buildPatientNoticeFallback(patient.orgName, patient.orgPhone)
+        await sendWhatsApp(phone, reply)
+        await saveMessage(phone, "outbound", reply, null, null, usedAi ? "ai" : "bot")
+        await upsertSession(phone, { state: "patient_notice_sent", queue: null })
+        return
+      }
+    }
+  }
+
   // Sem sessão ou sessão expirada → nova conversa
   if (!session) {
     await sendWelcome(phone, senderName)
@@ -167,12 +225,6 @@ export async function handleInboundMessage(
   // Atualiza nome do contato se ainda não tiver
   if (senderName && !session.userName) {
     await upsertSession(phone, { userName: senderName })
-  }
-
-  // Já roteado → mensagem vai direto pro admin (sem bot)
-  if (session.state === "routed") {
-    await upsertSession(phone, { lastActivityAt: new Date() })
-    return
   }
 
   // Aguardando seleção
