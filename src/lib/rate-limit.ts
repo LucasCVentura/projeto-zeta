@@ -1,6 +1,6 @@
 import { db } from "@/db"
 import { authAttempts } from "@/db/schema"
-import { and, eq, gt, sql } from "drizzle-orm"
+import { and, eq, gt, lt, sql } from "drizzle-orm"
 
 type Kind = "login" | "password_reset" | "ai_faq"
 
@@ -32,6 +32,6 @@ export async function recordFailure(kind: Kind, identifier: string): Promise<voi
   // sem precisar de cron dedicado só pra isso
   if (Math.random() < 0.02) {
     const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000)
-    await db.delete(authAttempts).where(sql`${authAttempts.createdAt} < ${cutoff}`)
+    await db.delete(authAttempts).where(lt(authAttempts.createdAt, cutoff))
   }
 }

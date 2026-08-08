@@ -64,11 +64,22 @@ async function upsertSession(phone: string, patch: Partial<typeof chatSessions.$
 }
 
 async function sendWelcome(phone: string, senderName?: string | null) {
-  const body = "Oi! 👋 Bem-vindo ao Kira. Como posso te ajudar hoje?"
+  const body = "Olá! 👋 Sou o assistente virtual do Kira. Como posso te ajudar?"
 
   await sendWhatsAppQuickReply(phone, body, [BTN_SUPPORT, BTN_COMMERCIAL])
   await saveMessage(phone, "outbound", body)
   await upsertSession(phone, { state: "awaiting_selection", queue: null, userName: senderName ?? null, orgName: null })
+}
+
+// Tenta responder com a base de FAQ (ver src/lib/faq-bot.ts). Atrás de flag: só
+// roda de verdade quando AI_FAQ_ENABLED=true. Devolve null se não respondeu
+// (flag desligada, rate limit, ou pergunta fora da base).
+async function tryAiAnswer(phone: string, text: string): Promise<string | null> {
+  if (process.env.AI_FAQ_ENABLED !== "true") return null
+  if (await isRateLimited("ai_faq", phone)) return null
+  const { answered, reply } = await answerFaqQuestion(text)
+  await recordFailure("ai_faq", phone)
+  return answered && reply ? reply : null
 }
 
 async function findUserByPhone(phone: string) {
@@ -170,42 +181,23 @@ export async function handleInboundMessage(
     const isSupport    = normalized.includes("suporte") || normalized === "1"
     const isCommercial = normalized.includes("comercial") || normalized.includes("dúvidas") || normalized.includes("duvidas") || normalized === "2"
 
-    if (isSupport) {
-      // Tenta identificar pelo próprio número de telefone
-      const foundByPhone = await findUserByPhone(phone)
-      if (foundByPhone) {
-        await routeToSupport(phone, foundByPhone.userName, foundByPhone.orgName)
-        return
-      }
-      const reply = "Claro! Para localizar sua conta, me informa o CPF cadastrado no Kira:"
+    if (isSupport || isCommercial) {
+      const queue = isSupport ? "support" : "commercial"
+      const reply = "Claro! Me conta o que você precisa que eu já te ajudo 😊"
       await sendWhatsApp(phone, reply)
-      await saveMessage(phone, "outbound", reply, "support")
-      await upsertSession(phone, { state: "awaiting_cpf", queue: "support" })
+      await saveMessage(phone, "outbound", reply, queue)
+      await upsertSession(phone, { state: "awaiting_question", queue })
       return
     }
 
-    if (isCommercial) {
-      const reply = "Claro! Me conta sua dúvida que eu já te ajudo 😊"
-      await sendWhatsApp(phone, reply)
-      await saveMessage(phone, "outbound", reply, "commercial")
-      await upsertSession(phone, { state: "awaiting_commercial_question", queue: "commercial" })
+    // Não bateu com o menu — antes de só repetir, tenta responder com IA
+    const aiReply = await tryAiAnswer(phone, text)
+    if (aiReply) {
+      const faqReply = `${aiReply}\n\nSe quiser falar com alguém da equipe, é só digitar *suporte* ou *comercial*.`
+      await sendWhatsApp(phone, faqReply)
+      await saveMessage(phone, "outbound", faqReply, null, null, "ai")
+      await upsertSession(phone, { lastActivityAt: new Date() })
       return
-    }
-
-    // Não bateu com o menu — antes de só repetir, tenta responder com IA se
-    // a pergunta estiver na base de FAQ (ver src/lib/faq-bot.ts). Atrás de
-    // flag: só roda de verdade quando AI_FAQ_ENABLED=true.
-    if (process.env.AI_FAQ_ENABLED === "true" && !(await isRateLimited("ai_faq", phone))) {
-      const { answered, reply } = await answerFaqQuestion(text)
-      if (answered && reply) {
-        const faqReply = `${reply}\n\nSe quiser falar com alguém da equipe, é só digitar *suporte* ou *comercial*.`
-        await sendWhatsApp(phone, faqReply)
-        await saveMessage(phone, "outbound", faqReply, null, null, "ai")
-        await recordFailure("ai_faq", phone)
-        await upsertSession(phone, { lastActivityAt: new Date() })
-        return
-      }
-      await recordFailure("ai_faq", phone)
     }
 
     // Não reconheceu → repete menu
@@ -219,26 +211,38 @@ export async function handleInboundMessage(
     return
   }
 
-  // Escolheu "Comercial" e agora mandou a pergunta — tenta responder com IA
-  // antes de rotear pra humano (só rotear quando a IA realmente não souber).
-  if (session.state === "awaiting_commercial_question") {
-    if (process.env.AI_FAQ_ENABLED === "true" && !(await isRateLimited("ai_faq", phone))) {
-      const { answered, reply } = await answerFaqQuestion(text)
-      if (answered && reply) {
-        const faqReply = `${reply}\n\nPosso te ajudar com mais alguma coisa, ou prefere falar com alguém da equipe?`
-        await sendWhatsApp(phone, faqReply)
-        await saveMessage(phone, "outbound", faqReply, "commercial", null, "ai")
-        await recordFailure("ai_faq", phone)
-        await upsertSession(phone, { lastActivityAt: new Date() })
-        return
-      }
-      await recordFailure("ai_faq", phone)
+  // Escolheu Suporte ou Comercial e agora mandou a pergunta — tenta responder
+  // com IA antes de escalar pra humano (só escala quando a IA realmente não souber).
+  if (session.state === "awaiting_question") {
+    const queue = session.queue ?? "commercial"
+
+    const aiReply = await tryAiAnswer(phone, text)
+    if (aiReply) {
+      const faqReply = `${aiReply}\n\nPosso te ajudar com mais alguma coisa, ou prefere falar com alguém da equipe?`
+      await sendWhatsApp(phone, faqReply)
+      await saveMessage(phone, "outbound", faqReply, queue, null, "ai")
+      await upsertSession(phone, { lastActivityAt: new Date() })
+      return
     }
 
-    // IA não soube (ou está desligada) → segue pro humano, como já era antes
-    const reply = "Perfeito! 😊 Em instantes um de nossos atendentes vai falar com você. Aguarda um pouquinho!"
-    await sendWhatsApp(phone, reply)
-    await saveMessage(phone, "outbound", reply, "commercial")
+    // IA não soube (ou está desligada) → escala pra humano
+    const fallback = "Parece que eu ainda não tenho esse conhecimento 🤔 Vou chamar alguém do nosso time pra te responder melhor!"
+    await sendWhatsApp(phone, fallback)
+    await saveMessage(phone, "outbound", fallback, queue)
+
+    if (queue === "support") {
+      const foundByPhone = await findUserByPhone(phone)
+      if (foundByPhone) {
+        await routeToSupport(phone, foundByPhone.userName, foundByPhone.orgName)
+        return
+      }
+      const cpfReply = "Pra localizar sua conta, me informa o CPF cadastrado no Kira:"
+      await sendWhatsApp(phone, cpfReply)
+      await saveMessage(phone, "outbound", cpfReply, "support")
+      await upsertSession(phone, { state: "awaiting_cpf", queue: "support" })
+      return
+    }
+
     await upsertSession(phone, { state: "routed", queue: "commercial" })
     return
   }
