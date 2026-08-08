@@ -1084,7 +1084,7 @@ export const chatSessions = pgTable("chat_sessions", {
     .$defaultFn(() => crypto.randomUUID()),
 
   phone: text("phone").notNull().unique(),
-  // 'awaiting_selection' | 'awaiting_cpf' | 'routed'
+  // 'awaiting_selection' | 'awaiting_cpf' | 'awaiting_commercial_question' | 'routed'
   state: text("state").notNull().default("awaiting_selection"),
   // 'support' | 'commercial' | null
   queue: text("queue"),

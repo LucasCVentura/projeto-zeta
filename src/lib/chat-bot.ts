@@ -203,10 +203,10 @@ export async function handleInboundMessage(
     }
 
     if (isCommercial) {
-      const reply = "Perfeito! 😊 Em instantes um de nossos atendentes vai falar com você. Aguarda um pouquinho!"
+      const reply = "Claro! Me conta sua dúvida que eu já te ajudo 😊"
       await sendWhatsApp(phone, reply)
       await saveMessage(phone, "outbound", reply, "commercial")
-      await upsertSession(phone, { state: "routed", queue: "commercial" })
+      await upsertSession(phone, { state: "awaiting_commercial_question", queue: "commercial" })
       return
     }
 
@@ -238,6 +238,30 @@ export async function handleInboundMessage(
   // Aguardando CPF
   if (session.state === "awaiting_cpf") {
     await handleAwaitingCpf(phone, text)
+    return
+  }
+
+  // Escolheu "Comercial" e agora mandou a pergunta — tenta responder com IA
+  // antes de rotear pra humano (só rotear quando a IA realmente não souber).
+  if (session.state === "awaiting_commercial_question") {
+    if (process.env.AI_FAQ_ENABLED === "true" && !(await isRateLimited("ai_faq", phone))) {
+      const { answered, reply } = await answerFaqQuestion(text)
+      if (answered && reply) {
+        const faqReply = `${reply}\n\nPosso te ajudar com mais alguma coisa, ou prefere falar com alguém da equipe?`
+        await sendWhatsApp(phone, faqReply)
+        await saveMessage(phone, "outbound", faqReply, "commercial", null, "ai")
+        await recordFailure("ai_faq", phone)
+        await upsertSession(phone, { lastActivityAt: new Date() })
+        return
+      }
+      await recordFailure("ai_faq", phone)
+    }
+
+    // IA não soube (ou está desligada) → segue pro humano, como já era antes
+    const reply = "Perfeito! 😊 Em instantes um de nossos atendentes vai falar com você. Aguarda um pouquinho!"
+    await sendWhatsApp(phone, reply)
+    await saveMessage(phone, "outbound", reply, "commercial")
+    await upsertSession(phone, { state: "routed", queue: "commercial" })
     return
   }
 }
