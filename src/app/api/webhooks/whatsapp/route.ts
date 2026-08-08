@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 import { handleWhatsAppButtonReply, handleWhatsAppReplyByPhone } from "@/actions/whatsapp"
 import { logWhatsAppEvent } from "@/lib/whatsapp-logs"
 import { db } from "@/db"
-import { whatsappPendingConfirmations } from "@/db/schema"
-import { eq, sql } from "drizzle-orm"
+import { whatsappPendingConfirmations, adminChatMessages } from "@/db/schema"
+import { eq, and, gt } from "drizzle-orm"
 import { handleInboundMessage } from "@/lib/chat-bot"
 import { toWhatsAppDestination, onlyDigits } from "@/lib/phone"
 
@@ -80,15 +80,24 @@ export async function POST(req: NextRequest) {
 
           let recentlySent = false
           if (!isReplyToOurs) {
-            // Sem contexto: verifica se enviamos algo a esse número nas últimas 2h
-            // (cliente digitou no chat sem usar o "responder") — mesma lógica: sem menu do bot
-            const rows = await db.execute<{ cnt: number }>(sql`
-              SELECT COUNT(*)::int AS cnt FROM whatsapp_message_logs
-              WHERE destination = ${normalizedPhone}
-              AND created_at > NOW() - INTERVAL '2 hours'
-              LIMIT 1
-            `)
-            recentlySent = ((Array.isArray(rows) ? rows[0]?.cnt : rows.rows?.[0]?.cnt) ?? 0) > 0
+            // Sem contexto: verifica se um ATENDENTE (humano) mandou algo a esse número
+            // nas últimas 2h pelo chat do admin (cliente digitou sem usar "responder") —
+            // aí sim pula o menu do bot, pra não interromper quem já está sendo atendido.
+            // Importante: olha só admin_chat_messages com answered_by='human', não
+            // whatsapp_message_logs — esse último loga QUALQUER envio (inclusive as
+            // próprias mensagens automáticas do bot), o que silenciava o bot depois
+            // da primeira mensagem dele mesmo.
+            const rows = await db
+              .select({ id: adminChatMessages.id })
+              .from(adminChatMessages)
+              .where(and(
+                eq(adminChatMessages.phone, normalizedPhone),
+                eq(adminChatMessages.direction, "outbound"),
+                eq(adminChatMessages.answeredBy, "human"),
+                gt(adminChatMessages.createdAt, new Date(Date.now() - 2 * 60 * 60 * 1000)),
+              ))
+              .limit(1)
+            recentlySent = rows.length > 0
           }
 
           await handleInboundMessage(normalizedPhone, messageText, senderName, {
