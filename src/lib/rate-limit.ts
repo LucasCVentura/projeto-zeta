@@ -2,11 +2,12 @@ import { db } from "@/db"
 import { authAttempts } from "@/db/schema"
 import { and, eq, gt, sql } from "drizzle-orm"
 
-type Kind = "login" | "password_reset"
+type Kind = "login" | "password_reset" | "ai_faq"
 
 const LIMITS: Record<Kind, { maxAttempts: number; windowMinutes: number }> = {
   login: { maxAttempts: 10, windowMinutes: 15 },
   password_reset: { maxAttempts: 1, windowMinutes: 1 },
+  ai_faq: { maxAttempts: 10, windowMinutes: 60 },
 }
 
 // true = pode tentar. Não conta a chamada — só quem falhar de fato chama

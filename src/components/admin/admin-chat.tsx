@@ -496,6 +496,7 @@ function MessageArea({ phone, displayName, queue, orgName, lastInboundAt }: {
               )}>
                 <p className="text-sm whitespace-pre-wrap leading-snug">{msg.content}</p>
                 <div className="flex items-center justify-end gap-1 mt-1">
+                  {msg.answeredBy === "ai" && <span className="text-[10px] opacity-70">🤖 IA</span>}
                   {msg.templateUsed && <span className="text-[10px] opacity-50">template</span>}
                   <span className="text-[10px] opacity-50">{formatTime(msg.createdAt)}</span>
                 </div>

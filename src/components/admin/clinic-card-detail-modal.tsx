@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { getClinicCardDetailAction, type ClinicCard, type CardDetailResult } from "@/actions/admin"
-import { mediaUrl } from "@/lib/media-url"
 import { Loader2 } from "lucide-react"
 
 const CARD_LABELS: Record<ClinicCard, string> = {
@@ -62,14 +61,7 @@ export function ClinicCardDetailModal({ card, orgId, onClose }: Props) {
                 {data.rows.map((row, i) => (
                   <tr key={i} className="border-b border-border/50 last:border-0">
                     {data.columns.map(c => (
-                      <td key={c.key} className="px-2 py-2">
-                        {card === "photos" && c.key === "url" ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={mediaUrl(row[c.key])} alt="" className="size-10 rounded-md object-cover" />
-                        ) : (
-                          row[c.key]
-                        )}
-                      </td>
+                      <td key={c.key} className="px-2 py-2">{row[c.key]}</td>
                     ))}
                   </tr>
                 ))}

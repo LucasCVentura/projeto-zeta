@@ -1068,6 +1068,7 @@ export const adminChatMessages = pgTable("admin_chat_messages", {
   templateUsed: text("template_used"),     // nome do template, se outbound via template
   queue: text("queue"),                    // 'support' | 'commercial' | null
   readAt: timestamp("read_at"),
+  answeredBy: text("answered_by"),         // 'ai' | 'human' | 'bot' | null — quem gerou uma mensagem outbound
 
   createdAt: timestamp("created_at").notNull().defaultNow(),
 })

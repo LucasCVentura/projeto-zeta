@@ -4,6 +4,8 @@ import { eq, and } from "drizzle-orm"
 import { sendWhatsApp, sendWhatsAppQuickReply } from "@/lib/whatsapp-client"
 import { sendAdminPush } from "@/actions/push"
 import { toLocalDigits, phoneMatchCandidates, onlyDigits } from "@/lib/phone"
+import { answerFaqQuestion } from "@/lib/faq-bot"
+import { isRateLimited, recordFailure } from "@/lib/rate-limit"
 
 const SESSION_TTL_MS = 2 * 60 * 60 * 1000  // 2 horas
 const ROUTED_TTL_MS = 7 * 24 * 60 * 60 * 1000  // 7 dias — depois disso, volta a perguntar o menu
@@ -23,8 +25,8 @@ function isOutOfHours(): boolean {
   return hour < 9  // 00h–08h59 = fora de horário
 }
 
-async function saveMessage(phone: string, direction: "inbound" | "outbound", content: string, queue?: string | null, senderName?: string | null) {
-  await db.insert(adminChatMessages).values({ phone, direction, content, queue: queue ?? null, senderName: senderName ?? null })
+async function saveMessage(phone: string, direction: "inbound" | "outbound", content: string, queue?: string | null, senderName?: string | null, answeredBy?: string | null) {
+  await db.insert(adminChatMessages).values({ phone, direction, content, queue: queue ?? null, senderName: senderName ?? null, answeredBy: answeredBy ?? null })
 }
 
 async function getOrCreateSession(phone: string) {
@@ -206,6 +208,22 @@ export async function handleInboundMessage(
       await saveMessage(phone, "outbound", reply, "commercial")
       await upsertSession(phone, { state: "routed", queue: "commercial" })
       return
+    }
+
+    // Não bateu com o menu — antes de só repetir, tenta responder com IA se
+    // a pergunta estiver na base de FAQ (ver src/lib/faq-bot.ts). Atrás de
+    // flag: só roda de verdade quando AI_FAQ_ENABLED=true.
+    if (process.env.AI_FAQ_ENABLED === "true" && !(await isRateLimited("ai_faq", phone))) {
+      const { answered, reply } = await answerFaqQuestion(text)
+      if (answered && reply) {
+        const faqReply = `${reply}\n\nSe quiser falar com alguém da equipe, é só digitar *suporte* ou *comercial*.`
+        await sendWhatsApp(phone, faqReply)
+        await saveMessage(phone, "outbound", faqReply, null, null, "ai")
+        await recordFailure("ai_faq", phone)
+        await upsertSession(phone, { lastActivityAt: new Date() })
+        return
+      }
+      await recordFailure("ai_faq", phone)
     }
 
     // Não reconheceu → repete menu

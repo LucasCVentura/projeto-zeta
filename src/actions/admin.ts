@@ -327,8 +327,10 @@ export async function getClinicCardDetailAction(orgId: string, card: ClinicCard)
     }
 
     case "photos": {
+      // Sem miniatura de propósito — é dado sensível do cliente da clínica,
+      // o admin só precisa do quantitativo (quem, qual procedimento, quando).
       const rows = await db.select({
-        url: clientPhotos.url, clientName: clients.name,
+        clientName: clients.name,
         procedure: clientPhotos.procedure, takenAt: clientPhotos.takenAt,
       })
         .from(clientPhotos)
@@ -338,13 +340,11 @@ export async function getClinicCardDetailAction(orgId: string, card: ClinicCard)
 
       return {
         columns: [
-          { key: "url", label: "Foto" },
           { key: "clientName", label: "Cliente" },
           { key: "procedure", label: "Procedimento" },
           { key: "takenAt", label: "Data" },
         ],
         rows: rows.map(r => ({
-          url: r.url,
           clientName: r.clientName,
           procedure: r.procedure ?? "—",
           takenAt: fmtDate(r.takenAt + "T12:00:00"),
@@ -730,6 +730,7 @@ export async function getAdminChatMessagesAction(phone: string) {
     templateUsed: r.template_used ?? null,
     queue: r.queue ?? null,
     readAt: r.read_at ? new Date(r.read_at) : null,
+    answeredBy: r.answered_by ?? null,
     createdAt: new Date(r.created_at),
   }))
 }
@@ -761,6 +762,7 @@ export async function sendAdminChatMessageAction(
     phone: normalizedPhone,
     direction: "outbound",
     content,
+    answeredBy: "human",
   })
 
   // Marca sessão como roteada para que respostas cheguem direto ao admin sem passar pelo bot
